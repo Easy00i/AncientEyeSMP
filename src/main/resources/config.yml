@@ -1,0 +1,33 @@
+# Ancient Eye SMP - Configuration File
+# 1.21.11
+
+settings:
+  prefix: "§8[§dAncientEye§8] §f"
+  xp-per-kill: 10
+  max-level: 3
+
+# Eye Power Settings
+eyes:
+  VOID:
+    cooldown-primary: 10
+    cooldown-secondary: 15
+    dodge-chance: 0.1
+  STORM:
+    cooldown-primary: 8
+    cooldown-secondary: 20
+    lightning-damage: 5.0
+  METEOR:
+    cooldown-primary: 30
+    cooldown-secondary: 60
+    explosion-radius: 4.0
+
+# Event Settings
+events:
+  task-delay-minutes: 5
+  announce-winner: true
+
+messages:
+  no-permission: "§cYou don't have permission to use this!"
+  cooldown-msg: "§cWait {time}s before using this ability again."
+  trade-success: "§aTrade completed successfully!"
+  
