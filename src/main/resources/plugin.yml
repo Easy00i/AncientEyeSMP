@@ -1,0 +1,18 @@
+name: AncientEyeSMP
+version: 1.0
+main: com.ancienteye.AncientEyePlugin
+api-version: '1.21'
+commands:
+  smpstart:
+    description: Start your journey and get a random Eye.
+  eye:
+    description: Manage or view your Eye status.
+    aliases: [e]
+  trade:
+    description: Send a trade request to another player.
+  tradeaccept:
+    description: Accept a pending trade request.
+  event:
+    description: Admin command to manage Eye events.
+    permission: eye.admin
+    
