@@ -2,9 +2,12 @@ package com.ancienteye;
 
 import org.bukkit.Color;
 import org.bukkit.Particle;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Random;
 
 public enum EyeType {
-    // --- 20 BASIC EYES (Obtainable via /smpstart) ---
+    // --- 20 BASIC EYES (From /smpstart) ---
     NONE(null, null),
     VOID(Particle.PORTAL, Color.PURPLE),
     PHANTOM(Particle.SQUID_INK, Color.GRAY),
@@ -24,9 +27,9 @@ public enum EyeType {
     RAGE(Particle.ANGRY_VILLAGER, Color.RED),
     SPIRIT(Particle.WITCH, Color.LIME),
     TIME(Particle.NAUTILUS, Color.AQUA),
-    WARRIOR(Particle.SWEEP_ATTACK, Color.MAROON), // 20th Eye: Warrior
-    
-    // --- 5 EVENT-ONLY EYES (Exclusive - High Tier) ---
+    WARRIOR(Particle.SWEEP_ATTACK, Color.MAROON), // 20th Eye
+
+    // --- 5 EVENT-ONLY EYES (Exclusive) ---
     METEOR(Particle.LAVA, Color.ORANGE),
     MIRAGE(Particle.WHITE_SMOKE, Color.SILVER),
     OCEAN(Particle.WATER_DROP, Color.BLUE),
@@ -36,25 +39,23 @@ public enum EyeType {
     public final Particle particle;
     public final Color color;
 
-    // Constructor
     EyeType(Particle p, Color c) {
         this.particle = p;
         this.color = c;
     }
 
-    // Helper to check for Event Eyes
     public boolean isEventEye() {
         return this == METEOR || this == MIRAGE || this == OCEAN || this == ECLIPSE || this == GUARDIAN;
     }
 
-    // Helper to get only startable eyes for /smpstart (Random selection)
+    // Isse galti se /smpstart mein Event Eye nahi milegi
     public static EyeType getRandomStartEye() {
-        List<EyeType> eyes = new ArrayList<>();
+        List<EyeType> basicEyes = new ArrayList<>();
         for (EyeType type : values()) {
             if (type != NONE && !type.isEventEye()) {
-                eyes.add(type);
+                basicEyes.add(type);
             }
         }
-        return eyes.get(new java.util.Random().nextInt(eyes.size()));
+        return basicEyes.get(new Random().nextInt(basicEyes.size()));
     }
 }
