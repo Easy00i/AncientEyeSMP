@@ -39,6 +39,9 @@ public class PlayerDataManager {
         playerLevels.putIfAbsent(p.getUniqueId(), 1);
         saveData(); // Auto-save to data.yml
 
+        plugin.getAbilityLogic().applyPassiveEffects(p, newEye); 
+    }
+
         // Success message
         if (!isTrade) {
             p.sendMessage("§aYou have awakened the power of the " + newEye.name() + " Eye.");
