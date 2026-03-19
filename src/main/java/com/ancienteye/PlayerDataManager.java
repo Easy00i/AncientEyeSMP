@@ -58,8 +58,8 @@ public class PlayerDataManager {
         return playerEyes.getOrDefault(p.getUniqueId(), EyeType.NONE);
     }
 
-    public int getLevel(Player p) {
-        return playerLevels.getOrDefault(p.getUniqueId(), 1);
+    public int getXP(Player p) {
+    return playerXP.getOrDefault(p.getUniqueId(), 0);
     }
     
     public void addXp(Player p) {
