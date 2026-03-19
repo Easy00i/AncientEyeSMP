@@ -6,28 +6,53 @@ import java.util.Map;
 import java.util.UUID;
 
 public class CooldownManager {
-    // String format: UUID_PRIMARY or UUID_SECONDARY
+    private final AncientEyePlugin plugin;
+    // Key: UUID + "_P" or "_S" | Value: Expiry time in milliseconds
     private final Map<String, Long> cooldowns = new HashMap<>();
 
-    public boolean isOnCooldown(Player p, String abilityType) {
-        String key = p.getUniqueId().toString() + "_" + abilityType;
+    public CooldownManager(AncientEyePlugin plugin) {
+        this.plugin = plugin;
+    }
+
+    /**
+     * Checks if an ability is currently on cooldown.
+     * @param p The player to check.
+     * @param type "P" for Primary, "S" for Secondary.
+     * @return true if still on cooldown.
+     */
+    public boolean isOnCooldown(Player p, String type) {
+        String key = p.getUniqueId().toString() + "_" + type;
+        
         if (cooldowns.containsKey(key)) {
-            long timePassed = System.currentTimeMillis() - cooldowns.get(key);
-            if (timePassed < 10000) { // 10 seconds base cooldown
-                long timeLeft = (10000 - timePassed) / 1000;
-                p.sendMessage("§cAbility on cooldown! Wait " + timeLeft + "s.");
+            long remaining = cooldowns.get(key) - System.currentTimeMillis();
+            if (remaining > 0) {
+                p.sendMessage("§c§lWAIT! §7Cooldown: §f" + (remaining / 1000 + 1) + "s");
                 return true;
             }
         }
         return false;
     }
 
-    public void setCooldown(Player p, String abilityType, int baseCooldownSec) {
-        int level = AncientEyePlugin.get().getPlayerData().getLevel(p);
-        long actualCooldown = (baseCooldownSec - (level * 1)) * 1000L; // Level up reduces cooldown
+    /**
+     * Sets a new cooldown based on player level.
+     * @param p The player.
+     * @param type "P" or "S".
+     * @param baseSeconds The standard cooldown time.
+     */
+    public void setCooldown(Player p, String type, int baseSeconds) {
+        // Accessing DataManager via the plugin instance passed in constructor
+        int level = plugin.getDataManager().getLevel(p);
         
-        String key = p.getUniqueId().toString() + "_" + abilityType;
-        cooldowns.put(key, System.currentTimeMillis() - 10000 + actualCooldown);
+        // Ensure cooldown doesn't drop below 2 seconds (Balance)
+        int finalSeconds = Math.max(2, baseSeconds - (level - 1));
+        
+        String key = p.getUniqueId().toString() + "_" + type;
+        cooldowns.put(key, System.currentTimeMillis() + (finalSeconds * 1000L));
+    }
+
+    // Clean up memory when players leave (Optional but recommended)
+    public void removePlayer(UUID uuid) {
+        cooldowns.remove(uuid.toString() + "_P");
+        cooldowns.remove(uuid.toString() + "_S");
     }
 }
-
