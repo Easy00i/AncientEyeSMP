@@ -14,6 +14,8 @@ public class PlayerDataManager {
     private final AncientEyePlugin plugin;
     private final Map<UUID, EyeType> playerEyes = new HashMap<>();
     private final Map<UUID, Integer> playerLevels = new HashMap<>();
+    private final Map<UUID, Integer> playerXP = new HashMap<>();
+    
     private File dataFile;
     private FileConfiguration dataConfig;
 
