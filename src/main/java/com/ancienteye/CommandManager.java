@@ -53,17 +53,30 @@ public class CommandManager implements CommandExecutor, TabCompleter {
             
             case "eye" -> {
                 if (!p.hasPermission("eye.admin")) return true;
+                
+                // --- RELOAD COMMAND ---
+                if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
+                    plugin.reloadConfig();
+                    p.sendMessage("§a[AncientEye] Config reloaded successfully!");
+                    return true;
+                }
+
                 if (args.length == 3 && args[0].equalsIgnoreCase("give")) {
                     Player target = Bukkit.getPlayer(args[1]);
                     if (target == null) return true;
                     try {
                         EyeType eye = EyeType.valueOf(args[2].toUpperCase());
                         plugin.getPlayerData().setEye(target, eye, false);
+                        p.sendMessage("§aGave " + eye.name() + " to " + target.getName());
                     } catch (Exception e) { p.sendMessage("§cInvalid Eye!"); }
                 }
+                
                 if (args.length == 2 && args[0].equalsIgnoreCase("reset")) {
                     Player target = Bukkit.getPlayer(args[1]);
-                    if (target != null) plugin.getPlayerData().resetEye(target);
+                    if (target != null) {
+                        plugin.getPlayerData().setEye(target, EyeType.NONE, false);
+                        p.sendMessage("§aEye reset for " + target.getName());
+                    }
                 }
             }
             case "event" -> {
@@ -79,7 +92,6 @@ public class CommandManager implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    // --- TAB COMPLETER LOGIC ---
     @Override
     public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command cmd, @NotNull String alias, @NotNull String[] args) {
         List<String> completions = new ArrayList<>();
@@ -88,11 +100,10 @@ public class CommandManager implements CommandExecutor, TabCompleter {
             if (args.length == 1) {
                 completions.add("give");
                 completions.add("reset");
-            } else if (args.length == 2) {
-                // Sugget all online players
-                return null; // Returning null defaults to online players list
+                completions.add("reload"); // Tab completion for reload
+            } else if (args.length == 2 && !args[0].equalsIgnoreCase("reload")) {
+                return null; 
             } else if (args.length == 3 && args[0].equalsIgnoreCase("give")) {
-                // Suggest all EyeTypes from the Enum
                 return Arrays.stream(EyeType.values())
                         .map(Enum::name)
                         .filter(name -> !name.equals("NONE"))
@@ -105,7 +116,6 @@ public class CommandManager implements CommandExecutor, TabCompleter {
                 completions.add("start");
                 completions.add("stop");
             } else if (args.length == 2 && args[0].equalsIgnoreCase("start")) {
-                // Suggest only Event Eyes (Optional: or all Eyes)
                 return Arrays.stream(EyeType.values())
                         .map(Enum::name)
                         .filter(name -> !name.equals("NONE"))
@@ -114,7 +124,7 @@ public class CommandManager implements CommandExecutor, TabCompleter {
         }
 
         if (cmd.getName().equalsIgnoreCase("trade")) {
-            if (args.length == 1) return null; // Player suggestions
+            if (args.length == 1) return null; 
         }
 
         return completions;
