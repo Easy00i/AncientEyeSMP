@@ -7,7 +7,6 @@ import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
 
 public class AbilityTrigger implements Listener {
-
     private final AncientEyePlugin plugin;
 
     public AbilityTrigger(AncientEyePlugin plugin) {
