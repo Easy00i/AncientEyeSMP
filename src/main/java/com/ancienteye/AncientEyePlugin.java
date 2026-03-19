@@ -16,6 +16,9 @@ public class AncientEyePlugin extends JavaPlugin {
     public void onEnable() {
         instance = this;
         
+        // 0. Setup Config (Very Important!)
+        saveDefaultConfig();
+        
         // 1. Initialize Managers
         this.playerDataManager = new PlayerDataManager(this);
         this.cooldownManager = new CooldownManager(this);
@@ -29,25 +32,29 @@ public class AncientEyePlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(eventManager, this);
         getServer().getPluginManager().registerEvents(abilityLogic, this); 
 
-        // 3. Register Commands & Tab Completers
-        if (getCommand("smpstart") != null) {
-            getCommand("smpstart").setExecutor(commandManager);
-            getCommand("smpstart").setTabCompleter(commandManager);
-        }
-        if (getCommand("eye") != null) {
-            getCommand("eye").setExecutor(commandManager);
-            getCommand("eye").setTabCompleter(commandManager);
-        }
-        if (getCommand("trade") != null) {
-            getCommand("trade").setExecutor(commandManager);
-            getCommand("trade").setTabCompleter(commandManager);
-        }
-        if (getCommand("event") != null) {
-            getCommand("event").setExecutor(commandManager);
-            getCommand("event").setTabCompleter(commandManager);
-        }
+        // 3. Start Background Tasks (Particles)
+        // Har 5 ticks (0.25s) mein particles spawn honge
+        new ParticleTask(this).runTaskTimer(this, 0, 5L);
+
+        // 4. Register Commands
+        registerCommand("smpstart");
+        registerCommand("eye");
+        registerCommand("trade");
+        registerCommand("event");
+        
+        // Trade buttons ke liye ye do extra commands chahiye
+        registerCommand("tradeaccept");
+        registerCommand("tradereject");
 
         getLogger().info("Ancient Eye SMP Plugin Loaded Successfully!");
+    }
+
+    // Helper method to save space
+    private void registerCommand(String name) {
+        if (getCommand(name) != null) {
+            getCommand(name).setExecutor(commandManager);
+            getCommand(name).setTabCompleter(commandManager);
+        }
     }
 
     public static AncientEyePlugin get() { return instance; }
