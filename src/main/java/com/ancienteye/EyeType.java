@@ -34,7 +34,8 @@ public enum EyeType {
     MIRAGE(Particle.WHITE_SMOKE, Color.SILVER),
     OCEAN(Particle.DRIPPING_WATER, Color.BLUE),
     ECLIPSE(Particle.DRAGON_BREATH, Color.PURPLE),
-    GUARDIAN(Particle.TOTEM_OF_UNDYING, Color.fromRGB);
+    GUARDIAN(Particle.TOTEM_OF_UNDYING, Color.fromRGB(255, 215, 0));
+
 
     public final Particle particle;
     public final Color color;
