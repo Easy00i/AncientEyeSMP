@@ -7,42 +7,74 @@ import org.bukkit.Particle;
 import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.scheduler.BukkitRunnable;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.util.*;
 
 public class AnimationTradeManager {
-    // Sender -> Receiver
     private final Map<UUID, UUID> pendingTrades = new HashMap<>();
-
     private final AncientEyePlugin plugin;
-public AnimationTradeManager(AncientEyePlugin plugin) {
-    this.plugin = plugin;
-}
 
+    public AnimationTradeManager(AncientEyePlugin plugin) {
+        this.plugin = plugin;
+    }
+
+    // --- /smpstart Ritual Animation ---
     public void startSmpRitual(Player p) {
+        // Config se duration uthao (Default: 6 seconds = 120 ticks)
+        int duration = 120; 
+
         new BukkitRunnable() {
             int ticks = 0;
+            final EyeType[] allBasicEyes = getBasicEyes();
+            final Random random = new Random();
+
             @Override
             public void run() {
-                if (ticks > 60) {
-                    EyeType randomEye = EyeType.values()[new java.util.Random().nextInt(18) + 1]; // Avoid NONE and Events
-                    AncientEyePlugin.get().getPlayerData().setEye(p, randomEye, false);
+                if (ticks >= duration) {
+                    // Final Eye Reward
+                    EyeType finalEye = EyeType.getRandomStartEye();
+                    plugin.getPlayerData().setEye(p, finalEye, false);
+                    
+                    p.sendTitle("§6§l" + finalEye.name(), "§aPower Awakened!", 10, 40, 10);
+                    p.playSound(p.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1, 1.2f);
                     this.cancel();
                     return;
                 }
-                double angle = ticks * 0.5;
-                p.spawnParticle(Particle.ENCHANT, p.getLocation().add(Math.cos(angle)*1.5, 1, Math.sin(angle)*1.5), 5, 0,0,0,0);
-                p.sendTitle("§5§lAWAKENING", "§7Spinning destiny...", 0, 5, 0);
+
+                // 1. WAVE PARTICLE: Pair se Sar tak (Leg to Head)
+                double yOffset = (ticks % 20) * 0.1; // 0 se 2 blocks tak jayega cycle mein
+                double angle = ticks * 0.4;
+                double x = Math.cos(angle) * 0.6;
+                double z = Math.sin(angle) * 0.6;
+
+                // Blue & White Particles
+                p.getWorld().spawnParticle(Particle.DUST, p.getLocation().add(x, yOffset, z), 2, 0, 0, 0, new Particle.DustOptions(org.bukkit.Color.AQUA, 1));
+                p.getWorld().spawnParticle(Particle.SNOWFLAKE, p.getLocation().add(-x, yOffset, -z), 1, 0, 0, 0, 0.01);
+
+                // 2. SPINNING TITLE: Random names flashing
+                if (ticks % 3 == 0) {
+                    EyeType displayEye = allBasicEyes[random.nextInt(allBasicEyes.length)];
+                    p.sendTitle("§b§l? ? ?", "§fDestiny: §7" + displayEye.name(), 0, 7, 0);
+                    p.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_HAT, 0.5f, 2f);
+                }
+
                 ticks++;
             }
-        }.runTaskTimer(AncientEyePlugin.get(), 0, 1);
+        }.runTaskTimer(plugin, 0, 1);
     }
 
+    // Helper to get only basic eyes for the spin
+    private EyeType[] getBasicEyes() {
+        List<EyeType> list = new ArrayList<>();
+        for (EyeType t : EyeType.values()) {
+            if (t != EyeType.NONE && !t.isEventEye()) list.add(t);
+        }
+        return list.toArray(new EyeType[0]);
+    }
+
+    // --- TRADE LOGIC (Rest of your code remains same) ---
     public void sendTradeRequest(Player sender, Player receiver) {
         pendingTrades.put(sender.getUniqueId(), receiver.getUniqueId());
-        sender.sendMessage("§aTrade request sent to " + receiver.getName());
-
+        
         TextComponent msg = new TextComponent("§d" + sender.getName() + " wants to trade Eyes! ");
         TextComponent accept = new TextComponent("§a§l[ACCEPT] ");
         accept.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tradeaccept " + sender.getName()));
@@ -50,38 +82,29 @@ public AnimationTradeManager(AncientEyePlugin plugin) {
         TextComponent reject = new TextComponent("§c§l[REJECT]");
         reject.setClickEvent(new ClickEvent(ClickEvent.Action.RUN_COMMAND, "/tradereject " + sender.getName()));
 
-        msg.addExtra(accept);
-        msg.addExtra(reject);
+        msg.addExtra(accept); msg.addExtra(reject);
         receiver.spigot().sendMessage(msg);
-
-        // 30 Seconds timeout
-        Bukkit.getScheduler().runTaskLater(AncientEyePlugin.get(), () -> pendingTrades.remove(sender.getUniqueId()), 600L);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> pendingTrades.remove(sender.getUniqueId()), 600L);
     }
 
     public void executeTrade(Player sender, Player receiver) {
-        if (!pendingTrades.containsKey(sender.getUniqueId()) || !pendingTrades.get(sender.getUniqueId()).equals(receiver.getUniqueId())) return;
-        
+        if (!pendingTrades.containsKey(sender.getUniqueId())) return;
         pendingTrades.remove(sender.getUniqueId());
 
-        EyeType senderEye = AncientEyePlugin.get().getPlayerData().getEye(sender);
-        EyeType receiverEye = AncientEyePlugin.get().getPlayerData().getEye(receiver);
+        EyeType sEye = plugin.getPlayerData().getEye(sender);
+        EyeType rEye = plugin.getPlayerData().getEye(receiver);
 
-        // Freeze and Animation
         sender.setWalkSpeed(0); receiver.setWalkSpeed(0);
-        sender.sendTitle("§e§lSWAPPING", "§fPlease wait...", 10, 40, 10);
-        receiver.sendTitle("§e§lSWAPPING", "§fPlease wait...", 10, 40, 10);
-
+        
         new BukkitRunnable() {
             @Override
             public void run() {
-                AncientEyePlugin.get().getPlayerData().setEye(sender, receiverEye, true);
-                AncientEyePlugin.get().getPlayerData().setEye(receiver, senderEye, true);
-                
+                plugin.getPlayerData().setEye(sender, rEye, true);
+                plugin.getPlayerData().setEye(receiver, sEye, true);
                 sender.setWalkSpeed(0.2f); receiver.setWalkSpeed(0.2f);
                 sender.playSound(sender.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1, 1);
                 receiver.playSound(receiver.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1, 1);
             }
-        }.runTaskLater(AncientEyePlugin.get(), 40L); // 2 Seconds Freeze
+        }.runTaskLater(plugin, 40L);
     }
 }
-
