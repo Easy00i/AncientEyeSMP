@@ -65,7 +65,7 @@ public class PlayerDataManager {
     }
 
     public int getLevel(Player p) {
-    return playerLevel.getOrDefault(p.getUniqueId(), 1);
+    return playerLevels.getOrDefault(p.getUniqueId(), 1);
     }
     
     public void addXp(Player p) {
