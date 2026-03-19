@@ -2,13 +2,18 @@ package com.ancienteye;
 
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.event.Listener;
+import org.bukkit.inventory.Inventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.entity.*;
 import org.bukkit.potion.*;
 import org.bukkit.util.RayTraceResult;
 import org.bukkit.util.Vector;
 import java.util.*;
 
-public class AbilityLogic {
+public class AbilityLogic implements Listener {
+    
     private final AncientEyePlugin plugin;
     private final Map<String, Long> cooldowns = new HashMap<>();
 
