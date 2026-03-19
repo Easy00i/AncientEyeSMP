@@ -3,28 +3,25 @@ version: 1.0
 main: com.ancienteye.AncientEyePlugin
 api-version: '1.21'
 author: NotEasyOk
-description: A mystical SMP plugin featuring unique Eye abilities and trading.
+description: Unique Eye abilities and trading system.
 
 commands:
   smpstart:
-    description: Start your journey and get a random Eye.
-    usage: /smpstart
+    description: Start random Eye journey.
   eye:
-    description: Manage or view your Eye status.
+    description: Main command for GUI and Admin.
     aliases: [e]
-    usage: /eye <give|reset> <player> [type]
   trade:
-    description: Send a trade request to another player.
-    usage: /trade <player>
+    description: Send trade request.
   tradeaccept:
-    description: Accept a pending trade request.
-    usage: /tradeaccept <player>
+    description: Accept pending trade.
+  tradereject:
+    description: Reject pending trade.
   event:
-    description: Admin command to manage Eye events.
+    description: Manage Eye events.
     permission: eye.admin
-    usage: /event <start|stop> <type>
 
 permissions:
   eye.admin:
-    description: Allows access to admin commands for eyes and events.
+    description: Access to all admin features.
     default: op
