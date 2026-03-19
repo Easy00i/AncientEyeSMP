@@ -22,12 +22,12 @@ public class EyeManager implements Listener {
     public enum Eye {
         VOID(Particle.PORTAL, false), PHANTOM(Particle.SOUL, false), STORM(Particle.ENCHANTED_HIT, false),
         FROST(Particle.SNOWFLAKE, false), FLAME(Particle.FLAME, false), SHADOW(Particle.SQUID_INK, false),
-        TITAN(Particle.EXPLOSION_NORMAL, false), HUNTER(Particle.CRIT, false), GRAVITY(Particle.REVERSE_PORTAL, false),
-        WIND(Particle.CLOUD, false), POISON(Particle.SPELL_WITCH, false), LIGHT(Particle.END_ROD, false),
-        EARTH(Particle.BLOCK_CRACK, false), CRYSTAL(Particle.AMETHYST_BLOCK, false), ECHO(Particle.SONIC_BOOM, false),
-        RAGE(Particle.DAMAGE_INDICATOR, false), SPIRIT(Particle.TOTEM, false), TIME(Particle.NAUTILUS, false),
-        METEOR(Particle.LAVA, true), MIRAGE(Particle.DRAGON_BREATH, true), OCEAN(Particle.WATER_SPLASH, true),
-        ECLIPSE(Particle.SMOKE_LARGE, true), GUARDIAN(Particle.SPELL_INSTANT, true);
+        TITAN(Particle.EXPLOSION, false), HUNTER(Particle.CRIT, false), GRAVITY(Particle.REVERSE_PORTAL, false),
+        WIND(Particle.CLOUD, false), POISON(Particle.WITCH, false), LIGHT(Particle.END_ROD, false),
+        EARTH(Particle.BLOCK, false), CRYSTAL(Particle.DRAGON_BREATH, false), ECHO(Particle.SONIC_BOOM, false),
+        RAGE(Particle.DAMAGE_INDICATOR, false), SPIRIT(Particle.TOTEM_OF_UNDYING, false), TIME(Particle.NAUTILUS, false),
+        METEOR(Particle.LAVA, true), MIRAGE(Particle.DRAGON_BREATH, true), OCEAN(Particle.SPLASH, true),
+        ECLIPSE(Particle.LARGE_SMOKE, true), GUARDIAN(Particle.INSTANT_EFFECT, true);
 
         public final Particle particle;
         public final boolean isEventOnly;
