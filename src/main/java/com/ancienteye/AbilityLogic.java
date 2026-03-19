@@ -6,6 +6,8 @@ import org.bukkit.event.Listener;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.potion.PotionEffect;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.entity.*;
 import org.bukkit.potion.*;
 import org.bukkit.util.RayTraceResult;
@@ -813,6 +815,67 @@ public class AbilityLogic implements Listener {
         cooldowns.put(p.getUniqueId().toString() + type,
             System.currentTimeMillis() + (finalSec * 1000L));
     }
+
+    private void safeDamage(Player owner, Entity target, double damage) {
+    // Agar target koi zinda cheez hai aur wo khud player (owner) nahi hai
+    if (target instanceof LivingEntity le && target != owner) {
+        le.damage(damage, owner); // Sirf tabhi damage hoga
+    }
+ }
+
+        public void applyPassiveEffects(Player p, EyeType eye) {
+    // Pehle saare purane effects hata do taaki naya Eye lene par purana effect chala jaye
+    for (PotionEffect effect : p.getActivePotionEffects()) {
+        p.removePotionEffect(effect.getType());
+    }
+
+    // Agar Eye NONE hai, toh koi effect mat do
+    if (eye == EyeType.NONE || eye == null) return;
+
+    // Har Eye ke liye unique Permanent Effect (-1 = Infinite)
+    switch (eye) {
+        // --- Normal Eyes ---
+        case VOID -> p.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, -1, 0, false, false));
+        case PHANTOM -> p.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, -1, 0, false, false));
+        case STORM -> p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, -1, 1, false, false));
+        case FROST -> p.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, -1, 0, false, false)); // Cold immunity
+        case FLAME -> p.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, -1, 0, false, false));
+        case SHADOW -> p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, -1, 0, false, false));
+        case TITAN -> p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, -1, 1, false, false));
+        case HUNTER -> p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, -1, 1, false, false));
+        case GRAVITY -> p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, -1, 0, false, false));
+        case WIND -> p.addPotionEffect(new PotionEffect(PotionEffectType.JUMP_BOOST, -1, 1, false, false));
+        case POISON -> p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, -1, 0, false, false)); // Toxic blood regen
+        case LIGHT -> p.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, -1, 0, false, false)); 
+        case EARTH -> p.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, -1, 0, false, false));
+        case CRYSTAL -> p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, -1, 0, false, false));
+        case ECHO -> p.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, -1, 0, false, false));
+        case RAGE -> p.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, -1, 0, false, false));
+        case SPIRIT -> p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, -1, 0, false, false));
+        case TIME -> p.addPotionEffect(new PotionEffect(PotionEffectType.HASTE, -1, 1, false, false));
+        case WARRIOR -> p.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, -1, 1, false, false));
+
+        // --- Event Eyes (Super Powerful) ---
+        case METEOR -> {
+            p.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, -1, 0, false, false));
+            p.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, -1, 1, false, false));
+        }
+        case MIRAGE -> p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, -1, 2, false, false));
+        case OCEAN -> {
+            p.addPotionEffect(new PotionEffect(PotionEffectType.WATER_BREATHING, -1, 0, false, false));
+            p.addPotionEffect(new PotionEffect(PotionEffectType.CONDUIT_POWER, -1, 0, false, false));
+        }
+        case ECLIPSE -> {
+            p.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, -1, 0, false, false));
+            p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, -1, 1, false, false));
+        }
+        case GUARDIAN -> {
+            p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, -1, 2, false, false));
+            p.addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, -1, 1, false, false));
+        }
+    }
+    }
+        
 
     // =====================================================================
     //  GUI SYSTEM  (/eye command)  — unchanged
