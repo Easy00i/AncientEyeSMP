@@ -13,6 +13,11 @@ public class PlayerDataManager {
     public void setEye(Player p, EyeType newEye, boolean isTrade) {
         EyeType oldEye = getEye(p);
         
+        private final AncientEyePlugin plugin;
+public PlayerDataManager(AncientEyePlugin plugin) {
+    this.plugin = plugin;
+    }
+     
         // Remove old eye if exists
         if (oldEye != EyeType.NONE && oldEye != null && !isTrade) {
             p.sendMessage("§cYou have lost the power of the " + oldEye.name() + " Eye.");
