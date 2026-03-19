@@ -149,6 +149,7 @@ public class AbilityLogic implements Listener {
     private void setCooldown(Player p, String type, int seconds) {
         int level = plugin.getDataManager().getLevel(p);
         int finalTime = Math.max(2, seconds - (level - 1));
-        cooldowns.put(p.getUniqueId().toString() + type, System.currentTimeMillis() + (finalTime * 1000L));
+        String key = p.getUniqueId().toString() + type;
+       cooldowns.put(key, System.currentTimeMillis() + (finalTime * 1000L));
     }
 }
