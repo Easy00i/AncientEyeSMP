@@ -15,6 +15,11 @@ public class AnimationTradeManager {
     // Sender -> Receiver
     private final Map<UUID, UUID> pendingTrades = new HashMap<>();
 
+    private final AncientEyePlugin plugin;
+public AnimationTradeManager(AncientEyePlugin plugin) {
+    this.plugin = plugin;
+}
+
     public void startSmpRitual(Player p) {
         new BukkitRunnable() {
             int ticks = 0;
