@@ -52,9 +52,18 @@ public class CommandManager implements CommandExecutor, TabCompleter {
             case "tradereject" -> p.sendMessage("§cTrade rejected.");
             
             case "eye" -> {
-                if (!p.hasPermission("eye.admin")) return true;
+                // --- GUI COMMAND (Available to All Players) ---
+                if (args.length == 1 && args[0].equalsIgnoreCase("gui")) {
+                    plugin.getAbilityLogic().openEyeGUI(p);
+                    return true;
+                }
+
+                // --- ADMIN COMMANDS ---
+                if (!p.hasPermission("eye.admin")) {
+                    p.sendMessage("§cNo permission to use admin commands!");
+                    return true;
+                }
                 
-                // --- RELOAD COMMAND ---
                 if (args.length == 1 && args[0].equalsIgnoreCase("reload")) {
                     plugin.reloadConfig();
                     p.sendMessage("§a[AncientEye] Config reloaded successfully!");
@@ -63,12 +72,12 @@ public class CommandManager implements CommandExecutor, TabCompleter {
 
                 if (args.length == 3 && args[0].equalsIgnoreCase("give")) {
                     Player target = Bukkit.getPlayer(args[1]);
-                    if (target == null) return true;
+                    if (target == null) { p.sendMessage("§cPlayer not found!"); return true; }
                     try {
                         EyeType eye = EyeType.valueOf(args[2].toUpperCase());
                         plugin.getPlayerData().setEye(target, eye, false);
                         p.sendMessage("§aGave " + eye.name() + " to " + target.getName());
-                    } catch (Exception e) { p.sendMessage("§cInvalid Eye!"); }
+                    } catch (Exception e) { p.sendMessage("§cInvalid Eye Type!"); }
                 }
                 
                 if (args.length == 2 && args[0].equalsIgnoreCase("reset")) {
@@ -98,20 +107,26 @@ public class CommandManager implements CommandExecutor, TabCompleter {
 
         if (cmd.getName().equalsIgnoreCase("eye")) {
             if (args.length == 1) {
-                completions.add("give");
-                completions.add("reset");
-                completions.add("reload"); // Tab completion for reload
-            } else if (args.length == 2 && !args[0].equalsIgnoreCase("reload")) {
-                return null; 
-            } else if (args.length == 3 && args[0].equalsIgnoreCase("give")) {
+                completions.add("gui");
+                if (sender.hasPermission("eye.admin")) {
+                    completions.add("give");
+                    completions.add("reset");
+                    completions.add("reload");
+                }
+            } else if (args.length == 2 && sender.hasPermission("eye.admin")) {
+                if (args[0].equalsIgnoreCase("give") || args[0].equalsIgnoreCase("reset")) {
+                    return null; // Online player names
+                }
+            } else if (args.length == 3 && args[0].equalsIgnoreCase("give") && sender.hasPermission("eye.admin")) {
                 return Arrays.stream(EyeType.values())
                         .map(Enum::name)
                         .filter(name -> !name.equals("NONE"))
+                        .filter(name -> name.toLowerCase().startsWith(args[2].toLowerCase()))
                         .collect(Collectors.toList());
             }
         }
 
-        if (cmd.getName().equalsIgnoreCase("event")) {
+        if (cmd.getName().equalsIgnoreCase("event") && sender.hasPermission("eye.admin")) {
             if (args.length == 1) {
                 completions.add("start");
                 completions.add("stop");
@@ -119,14 +134,17 @@ public class CommandManager implements CommandExecutor, TabCompleter {
                 return Arrays.stream(EyeType.values())
                         .map(Enum::name)
                         .filter(name -> !name.equals("NONE"))
+                        .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
                         .collect(Collectors.toList());
             }
         }
 
         if (cmd.getName().equalsIgnoreCase("trade")) {
-            if (args.length == 1) return null; 
+            if (args.length == 1) return null; // Player names
         }
 
-        return completions;
+        return completions.stream()
+                .filter(s -> s.toLowerCase().startsWith(args[args.length-1].toLowerCase()))
+                .collect(Collectors.toList());
     }
 }
