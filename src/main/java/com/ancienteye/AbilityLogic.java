@@ -11,7 +11,7 @@ import java.util.*;
 
 public class AbilityLogic implements Listener {
     private final AncientEyePlugin plugin;
-    private final Map<UUID, Long> cooldowns = new HashMap<>();
+    private final Map<String, Long> cooldowns = new HashMap<>();
 
     public AbilityLogic(AncientEyePlugin plugin) { this.plugin = plugin; }
 
