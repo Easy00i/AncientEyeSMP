@@ -25,16 +25,27 @@ public class AncientEyePlugin extends JavaPlugin {
         this.commandManager = new CommandManager(this);
 
         // 2. Register Listeners 
-        // FIX: AbilityTrigger class only needs 'this' as per your constructor
         getServer().getPluginManager().registerEvents(new AbilityTrigger(this), this);
         getServer().getPluginManager().registerEvents(eventManager, this);
         getServer().getPluginManager().registerEvents(abilityLogic, this); 
 
-        // 3. Register Commands
-        if (getCommand("smpstart") != null) getCommand("smpstart").setExecutor(commandManager);
-        if (getCommand("eye") != null) getCommand("eye").setExecutor(commandManager);
-        if (getCommand("trade") != null) getCommand("trade").setExecutor(commandManager);
-        if (getCommand("event") != null) getCommand("event").setExecutor(commandManager);
+        // 3. Register Commands & Tab Completers
+        if (getCommand("smpstart") != null) {
+            getCommand("smpstart").setExecutor(commandManager);
+            getCommand("smpstart").setTabCompleter(commandManager);
+        }
+        if (getCommand("eye") != null) {
+            getCommand("eye").setExecutor(commandManager);
+            getCommand("eye").setTabCompleter(commandManager);
+        }
+        if (getCommand("trade") != null) {
+            getCommand("trade").setExecutor(commandManager);
+            getCommand("trade").setTabCompleter(commandManager);
+        }
+        if (getCommand("event") != null) {
+            getCommand("event").setExecutor(commandManager);
+            getCommand("event").setTabCompleter(commandManager);
+        }
 
         getLogger().info("Ancient Eye SMP Plugin Loaded Successfully!");
     }
