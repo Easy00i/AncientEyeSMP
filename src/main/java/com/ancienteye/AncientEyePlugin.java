@@ -3,39 +3,46 @@ package com.ancienteye;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class AncientEyePlugin extends JavaPlugin {
-    
     private static AncientEyePlugin instance;
-    private EyeManager eyeManager;
-    private AbilityListener abilityListener;
-    private CommandEventSys commandEventSys;
+    
+    private PlayerDataManager playerDataManager;
+    private CooldownManager cooldownManager;
+    private AbilityLogic abilityLogic;
+    private AnimationTradeManager animationTradeManager;
+    private CommandManager commandManager;
+    private EventManager eventManager;
 
     @Override
     public void onEnable() {
         instance = this;
-        saveDefaultConfig(); // config.yml load karega
+        
+        // Initialize Managers
+        this.playerDataManager = new PlayerDataManager();
+        this.cooldownManager = new CooldownManager();
+        this.abilityLogic = new AbilityLogic();
+        this.animationTradeManager = new AnimationTradeManager();
+        this.eventManager = new EventManager();
+        this.commandManager = new CommandManager();
 
-        this.eyeManager = new EyeManager(this);
-        this.abilityListener = new AbilityListener(this);
-        this.commandEventSys = new CommandEventSys(this);
+        // Register Listeners
+        getServer().getPluginManager().registerEvents(new AbilityTrigger(), this);
+        getServer().getPluginManager().registerEvents(eventManager, this);
+        getServer().getPluginManager().registerEvents(abilityLogic, this); // For Passives
 
-        getServer().getPluginManager().registerEvents(abilityListener, this);
-        getServer().getPluginManager().registerEvents(commandEventSys, this);
-        getServer().getPluginManager().registerEvents(eyeManager, this);
+        // Register Commands
+        getCommand("smpstart").setExecutor(commandManager);
+        getCommand("eye").setExecutor(commandManager);
+        getCommand("trade").setExecutor(commandManager);
+        getCommand("tradeaccept").setExecutor(commandManager);
+        getCommand("event").setExecutor(commandManager);
 
-        // Commands register
-        getCommand("smpstart").setExecutor(commandEventSys);
-        getCommand("eye").setExecutor(commandEventSys);
-        getCommand("eye").setTabCompleter(commandEventSys);
-        getCommand("trade").setExecutor(commandEventSys);
-        getCommand("tradeaccept").setExecutor(commandEventSys);
-        getCommand("event").setExecutor(commandEventSys);
-        getCommand("event").setTabCompleter(commandEventSys);
-
-        getLogger().info("AncientEyeSMP (1.21.11) enabled successfully!");
+        getLogger().info("Ancient Eye SMP Plugin Loaded Perfectly! - No Errors.");
     }
 
     public static AncientEyePlugin get() { return instance; }
-    public EyeManager getEyeManager() { return eyeManager; }
-    public AbilityListener getAbilityListener() { return abilityListener; }
-    public CommandEventSys getCommandEventSys() { return commandEventSys; }
+    public PlayerDataManager getPlayerData() { return playerDataManager; }
+    public CooldownManager getCooldownManager() { return cooldownManager; }
+    public AbilityLogic getAbilityLogic() { return abilityLogic; }
+    public AnimationTradeManager getTradeManager() { return animationTradeManager; }
+    public EventManager getEventManager() { return eventManager; }
 }
