@@ -8,6 +8,11 @@ import org.bukkit.entity.Player;
 
 public class CommandManager implements CommandExecutor {
 
+    private final AncientEyePlugin plugin;
+public CommandManager(AncientEyePlugin plugin) {
+    this.plugin = plugin;
+}
+
     @Override
     public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
         if (!(sender instanceof Player p)) return true;
