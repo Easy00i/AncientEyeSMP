@@ -21,7 +21,7 @@ public enum EyeType {
     WIND(Particle.CLOUD, Color.WHITE),
     POISON(Particle.SNEEZE, Color.GREEN),
     LIGHT(Particle.GLOW, Color.YELLOW),
-    EARTH(Particle.CRITTER, Color.fromRGB(139, 69, 19)),
+    EARTH(Particle.ENCHANTED_HIT, Color.fromRGB(139, 69, 19)),
     CRYSTAL(Particle.INSTANT_EFFECT, Color.FUCHSIA),
     ECHO(Particle.SONIC_BOOM, Color.TEAL),
     RAGE(Particle.ANGRY_VILLAGER, Color.RED),
@@ -32,7 +32,7 @@ public enum EyeType {
     // --- 5 EVENT-ONLY EYES (Exclusive) ---
     METEOR(Particle.LAVA, Color.ORANGE),
     MIRAGE(Particle.WHITE_SMOKE, Color.SILVER),
-    OCEAN(Particle.WATER_DROP, Color.BLUE),
+    OCEAN(Particle.DRIPPING_WATER, Color.BLUE),
     ECLIPSE(Particle.DRAGON_BREATH, Color.PURPLE),
     GUARDIAN(Particle.TOTEM_OF_UNDYING, Color.GOLD);
 
