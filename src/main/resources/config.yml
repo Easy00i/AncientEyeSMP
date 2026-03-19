@@ -1,33 +1,42 @@
-# Ancient Eye SMP - Configuration File
-# 1.21.11
+name: AncientEyeSMP
+version: 1.0
+author: NotEasyOk
 
 settings:
   prefix: "§8[§dAncientEye§8] §f"
   xp-per-kill: 10
   max-level: 3
 
-# Eye Power Settings
 eyes:
   VOID:
     cooldown-primary: 10
     cooldown-secondary: 15
-    dodge-chance: 0.1
   STORM:
     cooldown-primary: 8
     cooldown-secondary: 20
-    lightning-damage: 5.0
   METEOR:
     cooldown-primary: 30
     cooldown-secondary: 60
-    explosion-radius: 4.0
+  FLAME:
+    cooldown-primary: 12
+    cooldown-secondary: 25
+  OCEAN:
+    cooldown-primary: 15
+    cooldown-secondary: 25
 
-# Event Settings
-events:
-  task-delay-minutes: 5
-  announce-winner: true
+event-settings:
+  tasks:
+    - "Kill 1 Player"
+    - "Break 10 Diamonds"
+    - "Survive 2 Minutes"
+    - "Kill 20 Zombies"
+    - "Fish 5 Items"
+    - "Break 64 Iron Ore"
+    - "Craft 1 Golden Apple"
 
 messages:
-  no-permission: "§cYou don't have permission to use this!"
-  cooldown-msg: "§cWait {time}s before using this ability again."
-  trade-success: "§aTrade completed successfully!"
-  
+  no-permission: "§cNo permission!"
+  cooldown-msg: "§cWait {time}s!"
+  trade-success: "§aTrade successful!"
+  event-start: "§6§lEVENT: §e§l{type}"
+  task-complete: "§aTASK DONE! Next: {task}"
