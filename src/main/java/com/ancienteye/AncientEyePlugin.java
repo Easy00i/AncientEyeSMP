@@ -16,31 +16,36 @@ public class AncientEyePlugin extends JavaPlugin {
     public void onEnable() {
         instance = this;
         
-        // Initialize Managers
-        this.playerDataManager = new PlayerDataManager();
-        this.cooldownManager = new CooldownManager();
-        this.abilityLogic = new AbilityLogic();
-        this.animationTradeManager = new AnimationTradeManager();
-        this.eventManager = new EventManager();
-        this.commandManager = new CommandManager();
+        // 1. Initialize Managers (Pass 'this' to satisfy the constructors)
+        this.playerDataManager = new PlayerDataManager(this);
+        this.cooldownManager = new CooldownManager(this);
+        this.abilityLogic = new AbilityLogic(this);
+        this.animationTradeManager = new AnimationTradeManager(this);
+        this.eventManager = new EventManager(this);
+        
+        // CommandManager usually needs the plugin instance too
+        this.commandManager = new CommandManager(this);
 
-        // Register Listeners
-        getServer().getPluginManager().registerEvents(new AbilityTrigger(), this);
+        // 2. Register Listeners (Pass necessary instances to the triggers)
+        getServer().getPluginManager().registerEvents(new AbilityTrigger(this, abilityLogic), this);
         getServer().getPluginManager().registerEvents(eventManager, this);
-        getServer().getPluginManager().registerEvents(abilityLogic, this); // For Passives
+        getServer().getPluginManager().registerEvents(abilityLogic, this); 
 
-        // Register Commands
+        // 3. Register Commands
         getCommand("smpstart").setExecutor(commandManager);
         getCommand("eye").setExecutor(commandManager);
         getCommand("trade").setExecutor(commandManager);
-        getCommand("tradeaccept").setExecutor(commandManager);
         getCommand("event").setExecutor(commandManager);
 
-        getLogger().info("Ancient Eye SMP Plugin Loaded Perfectly! - No Errors.");
+        getLogger().info("Ancient Eye SMP Plugin Loaded Successfully!");
     }
 
     public static AncientEyePlugin get() { return instance; }
     public PlayerDataManager getPlayerData() { return playerDataManager; }
+    
+    // Compatibility method if other classes use 'getDataManager'
+    public PlayerDataManager getDataManager() { return playerDataManager; }
+    
     public CooldownManager getCooldownManager() { return cooldownManager; }
     public AbilityLogic getAbilityLogic() { return abilityLogic; }
     public AnimationTradeManager getTradeManager() { return animationTradeManager; }
