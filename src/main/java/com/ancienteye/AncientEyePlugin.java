@@ -31,7 +31,9 @@ public class AncientEyePlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(new AbilityTrigger(this), this);
         getServer().getPluginManager().registerEvents(eventManager, this);
         getServer().getPluginManager().registerEvents(abilityLogic, this); 
+        getServer().getPluginManager().registerEvents(new PlayerJoinListener(this), this);
 
+        
         // 3. Start Background Tasks (Particles)
         // Har 5 ticks (0.25s) mein particles spawn honge
         new ParticleTask(this).runTaskTimer(this, 0, 5L);
