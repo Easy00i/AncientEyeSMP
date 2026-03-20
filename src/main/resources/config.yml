@@ -161,10 +161,8 @@ event-eyes:
 #  EVENT SETTINGS
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 event-settings:
-
   # Win animation duration (ticks — 200 = 10 seconds)
   win-animation-ticks: 200
-
   # Tasks pool — 3 random tasks are assigned to each player
   tasks:
     - "Kill 1 Player"
