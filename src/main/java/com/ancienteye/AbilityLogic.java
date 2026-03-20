@@ -848,7 +848,7 @@ public class AbilityLogic implements Listener {
         case TITAN -> p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, -1, 1, false, false));
         case HUNTER -> p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, -1, 1, false, false));
         case GRAVITY -> p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, -1, 0, false, false));
-        case WIND -> p.addPotionEffect(new PotionEffect(PotionEffectType.JUMP_BOOST, -1, 1, false, false));
+        case WIND -> p.addPotionEffect(new PotionEffect(PotionEffectType.JUMP, -1, 1, false, false));
         case POISON -> p.addPotionEffect(new PotionEffect(PotionEffectType.REGENERATION, -1, 0, false, false)); // Toxic blood regen
         case LIGHT -> p.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, -1, 0, false, false)); 
         case EARTH -> p.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, -1, 0, false, false));
