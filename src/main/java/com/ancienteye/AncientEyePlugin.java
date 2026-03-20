@@ -55,23 +55,17 @@ public class AncientEyePlugin extends JavaPlugin {
         getLogger().info("Ancient Eye SMP Plugin Loaded Successfully!");
     }
 
-    @Override
-public void onDisable() {
-    // 1. Sabhi online players ki speed aur effects reset karo
-    for (Player p : Bukkit.getOnlinePlayers()) {
-        // Agar koi trade ke beech mein freeze tha, toh use wapas normal karo
-        p.setWalkSpeed(0.2f); 
-        p.removePotionEffect(PotionEffectType.JUMP_BOOST);
-        p.removePotionEffect(PotionEffectType.LEVITATION);
-        
-        // 2. Event scoreboard bhi saaf kar do taaki reload ke baad glitch na ho
-        if (getEventManager() != null && getEventManager().isActive()) {
-             p.setScoreboard(Bukkit.getScoreboardManager().getNewScoreboard());
+        @Override
+    public void onDisable() {
+        for (org.bukkit.entity.Player p : org.bukkit.Bukkit.getOnlinePlayers()) {
+            p.setWalkSpeed(0.2f);
+            // 1.21.1 mein JUMP_BOOST ab JUMP hai
+            p.removePotionEffect(org.bukkit.potion.PotionEffectType.JUMP);
+            p.removePotionEffect(org.bukkit.potion.PotionEffectType.LEVITATION);
         }
+        org.bukkit.Bukkit.getLogger().info("[AncientEye] Disabled!");
     }
-    
-    Bukkit.getLogger().info("[AncientEye] Plugin disabled and players reset!");
-}
+
 
     // Helper method to save space
     private void registerCommand(String name) {
