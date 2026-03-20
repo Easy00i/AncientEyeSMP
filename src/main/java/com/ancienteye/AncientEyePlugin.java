@@ -1,14 +1,10 @@
 package com.ancienteye;
 
-import org.bukkit.Bukkit;
-import org.bukkit.entity.Player;
-import org.bukkit.potion.PotionEffectType;
-import org.bukkit.attribute.Attribute;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public class AncientEyePlugin extends JavaPlugin {
     private static AncientEyePlugin instance;
-    
+
     private PlayerDataManager playerDataManager;
     private CooldownManager cooldownManager;
     private AbilityLogic abilityLogic;
@@ -19,27 +15,25 @@ public class AncientEyePlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         instance = this;
-        
-        // 0. Setup Config (Very Important!)
+
+        // 0. Setup Config
         saveDefaultConfig();
-        
+
         // 1. Initialize Managers
-        this.playerDataManager = new PlayerDataManager(this);
-        this.cooldownManager = new CooldownManager(this);
-        this.abilityLogic = new AbilityLogic(this);
+        this.playerDataManager    = new PlayerDataManager(this);
+        this.cooldownManager      = new CooldownManager(this);
+        this.abilityLogic         = new AbilityLogic(this);
         this.animationTradeManager = new AnimationTradeManager(this);
-        this.eventManager = new EventManager(this);
-        this.commandManager = new CommandManager(this);
+        this.eventManager         = new EventManager(this);
+        this.commandManager       = new CommandManager(this);
 
-        // 2. Register Listeners 
-        getServer().getPluginManager().registerEvents(new AbilityTrigger(this), this);
-        getServer().getPluginManager().registerEvents(eventManager, this);
-        getServer().getPluginManager().registerEvents(abilityLogic, this); 
-        getServer().getPluginManager().registerEvents(new PlayerJoinListener(this), this);
+        // 2. Register Listeners
+        getServer().getPluginManager().registerEvents(new AbilityTrigger(this),      this);
+        getServer().getPluginManager().registerEvents(eventManager,                  this);
+        getServer().getPluginManager().registerEvents(abilityLogic,                  this);
+        getServer().getPluginManager().registerEvents(new PlayerJoinListener(this),  this);
 
-        
-        // 3. Start Background Tasks (Particles)
-        // Har 5 ticks (0.25s) mein particles spawn honge
+        // 3. Start Background Tasks
         new ParticleTask(this).runTaskTimer(this, 0, 5L);
 
         // 4. Register Commands
@@ -47,27 +41,30 @@ public class AncientEyePlugin extends JavaPlugin {
         registerCommand("eye");
         registerCommand("trade");
         registerCommand("event");
-        
-        // Trade buttons ke liye ye do extra commands chahiye
         registerCommand("tradeaccept");
         registerCommand("tradereject");
 
         getLogger().info("Ancient Eye SMP Plugin Loaded Successfully!");
     }
 
-        @Override
+    @Override
     public void onDisable() {
+        // FIX 1: playerDataManager null-check — agar onEnable mein crash hua ho
+        // toh playerDataManager null hoga aur saveData crash karega
+        if (playerDataManager != null) {
+            playerDataManager.saveAllData();
+        }
+
+        // FIX 2: Sirf online players ka cleanup — getOnlinePlayers() already safe hai
         for (org.bukkit.entity.Player p : org.bukkit.Bukkit.getOnlinePlayers()) {
             p.setWalkSpeed(0.2f);
-            // 1.21.1 mein JUMP_BOOST ab JUMP hai
             p.removePotionEffect(org.bukkit.potion.PotionEffectType.JUMP_BOOST);
             p.removePotionEffect(org.bukkit.potion.PotionEffectType.LEVITATION);
         }
+
         org.bukkit.Bukkit.getLogger().info("[AncientEye] Disabled!");
     }
 
-
-    // Helper method to save space
     private void registerCommand(String name) {
         if (getCommand(name) != null) {
             getCommand(name).setExecutor(commandManager);
@@ -75,11 +72,11 @@ public class AncientEyePlugin extends JavaPlugin {
         }
     }
 
-    public static AncientEyePlugin get() { return instance; }
-    public PlayerDataManager getPlayerData() { return playerDataManager; }
-    public PlayerDataManager getDataManager() { return playerDataManager; }
-    public CooldownManager getCooldownManager() { return cooldownManager; }
-    public AbilityLogic getAbilityLogic() { return abilityLogic; }
-    public AnimationTradeManager getTradeManager() { return animationTradeManager; }
-    public EventManager getEventManager() { return eventManager; }
+    public static AncientEyePlugin get()              { return instance; }
+    public PlayerDataManager getPlayerData()           { return playerDataManager; }
+    public PlayerDataManager getDataManager()          { return playerDataManager; }
+    public CooldownManager getCooldownManager()        { return cooldownManager; }
+    public AbilityLogic getAbilityLogic()              { return abilityLogic; }
+    public AnimationTradeManager getTradeManager()     { return animationTradeManager; }
+    public EventManager getEventManager()              { return eventManager; }
 }
