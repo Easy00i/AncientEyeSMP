@@ -2,10 +2,14 @@ package com.ancienteye;
 
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.Bukkit;
+import org.bukkit.entity.Player;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.attribute.Attribute;
+import org.bukkit.Particle;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.entity.*;
@@ -120,7 +124,7 @@ public class AbilityLogic implements Listener {
             // ----------------------------------------------------------
             case TITAN -> {
                 world.spawnParticle(Particle.EXPLOSION, loc, 3, 0.5, 0, 0.5, 0);
-                world.spawnParticle(Particle.BLOCK_CRUMBLE, loc, 80, 1, 0.1, 1, 0.15,
+                world.spawnParticle(Particle.DUST_PLUME, loc, 80, 1, 0.1, 1, 0.15,
                     Material.STONE.createBlockData());
                 world.spawnParticle(Particle.DUST, loc, 50, 1.5, 0.2, 1.5, 0,
                     new Particle.DustOptions(Color.fromRGB(100, 60, 30), 2.5f));
@@ -194,7 +198,7 @@ public class AbilityLogic implements Listener {
             // 13. EARTH EYE  –  Earth Wall (wall in front of player)
             // ----------------------------------------------------------
             case EARTH -> {
-                world.spawnParticle(Particle.BLOCK_CRUMBLE, loc, 60, 0.5, 0.5, 0.5, 0.1,
+                world.spawnParticle(Particle.DUST_PLUME, loc, 60, 0.5, 0.5, 0.5, 0.1,
                     Material.DIRT.createBlockData());
                 world.playSound(loc, Sound.BLOCK_GRAVEL_BREAK, 1f, 0.5f);
                 spawnWall(p);
@@ -238,7 +242,7 @@ public class AbilityLogic implements Listener {
             case SPIRIT -> {
                 double heal = 4.0 * dmgMod;
                 p.setHealth(Math.min(p.getHealth() + heal, p.getAttribute(
-                    org.bukkit.attribute.Attribute.MAX_HEALTH).getValue()));
+                    org.bukkit.attribute.Attribute.GENERIC_MAX_HEALTH).getValue()));
                 world.spawnParticle(Particle.TOTEM_OF_UNDYING, loc, 60, 0.4, 0.8, 0.4, 0.08);
                 world.spawnParticle(Particle.HEART, loc, 10, 0.5, 0.5, 0.5, 0.05);
                 world.playSound(loc, Sound.ENTITY_WITCH_CELEBRATE, 1f, 1.3f);
@@ -289,7 +293,7 @@ public class AbilityLogic implements Listener {
                         world.spawnParticle(Particle.EXPLOSION, impact, 4, 0.8, 0, 0.8, 0);
                         world.spawnParticle(Particle.FLAME, impact, 80, 2, 0.2, 2, 0.12);
                         world.spawnParticle(Particle.LAVA, impact, 20, 1.5, 0.1, 1.5, 0.1);
-                        world.spawnParticle(Particle.BLOCK_CRUMBLE, impact, 60, 1.5, 0.1, 1.5, 0.2,
+                        world.spawnParticle(Particle.DUST_PLUME, impact, 60, 1.5, 0.1, 1.5, 0.2,
                             Material.MAGMA_BLOCK.createBlockData());
                         world.playSound(impact, Sound.ENTITY_GENERIC_EXPLODE, 1f, 0.7f);
                         world.playSound(impact, Sound.BLOCK_STONE_BREAK, 1f, 0.4f);
@@ -544,9 +548,9 @@ public class AbilityLogic implements Listener {
             // 13. EARTH EYE  –  Earth Slam (smash ground, knockback)
             // ----------------------------------------------------------
             case EARTH -> {
-                world.spawnParticle(Particle.BLOCK_CRUMBLE, loc, 100, 2, 0.1, 2, 0.2,
+                world.spawnParticle(Particle.DUST_PLUME, loc, 100, 2, 0.1, 2, 0.2,
                     Material.DIRT.createBlockData());
-                world.spawnParticle(Particle.BLOCK_CRUMBLE, loc, 60, 2, 0.1, 2, 0.2,
+                world.spawnParticle(Particle.DUST_PLUME, loc, 60, 2, 0.1, 2, 0.2,
                     Material.STONE.createBlockData());
                 world.spawnParticle(Particle.EXPLOSION, loc, 2, 0.5, 0, 0.5, 0);
                 world.playSound(loc, Sound.BLOCK_STONE_BREAK, 1f, 0.4f);
@@ -690,7 +694,7 @@ public class AbilityLogic implements Listener {
             case GUARDIAN -> {
                 world.spawnParticle(Particle.EXPLOSION, loc, 4, 1, 0, 1, 0);
                 world.spawnParticle(Particle.TOTEM_OF_UNDYING, loc, 100, 3, 1, 3, 0.1);
-                world.spawnParticle(Particle.BLOCK_CRUMBLE, loc, 80, 3, 0.1, 3, 0.2,
+                world.spawnParticle(Particle.DUST_PLUME, loc, 80, 3, 0.1, 3, 0.2,
                     Material.STONE.createBlockData());
                 world.playSound(loc, Sound.ENTITY_IRON_GOLEM_ATTACK, 1f, 0.3f);
                 world.playSound(loc, Sound.ENTITY_GENERIC_EXPLODE, 0.9f, 0.5f);
