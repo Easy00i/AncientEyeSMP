@@ -114,22 +114,38 @@ public class EventManager implements Listener {
 
         // --- STOP EVENT METHOD ---
     public void stopEvent() {
-        if (!active) return;
+    // 1. Agar event active nahi hai toh kuch mat karo
+    if (!active) return;
 
-        active = false;
-        if (timerTask != null) {
-            timerTask.cancel();
-            timerTask = null;
-        }
-
-        // Scoreboard saaf karo aur message bhejo
-        for (Player p : Bukkit.getOnlinePlayers()) {
-            p.setScoreboard(Bukkit.getScoreboardManager().getNewScoreboard());
-            p.sendTitle("§c§lEVENT STOPPED", "§7Event cancel by admin", 10, 40, 10);
-        }
-
-        Bukkit.broadcastMessage("§c§l[AncientEye] §7Running event has been stopped.");
+    // 2. Sabse pehle sari processing band karo
+    active = false;
+    
+    if (timerTask != null) {
+        timerTask.cancel();
+        timerTask = null;
     }
+
+    // 3. Clear all stored data (Taki koi purana task baki na rahe)
+    taskProgress.clear();
+    playerTasks.clear();
+    blockCount.clear();
+
+    // 4. Sabka SCOREBOARD aur SIDEBAR remove karo (Normal condition mein wapas)
+    for (Player p : Bukkit.getOnlinePlayers()) {
+        Scoreboard board = p.getScoreboard();
+        // Humne startEvent mein objective ka naam "event" rakha tha
+        Objective obj = board.getObjective("event"); 
+        
+        if (obj != null) {
+            obj.unregister(); // Ye sidebar ko screen se bilkul delete kar dega
+        }
+        
+        p.sendTitle("§c§lEVENT STOPPED", "§7SAdmin.", 10, 40, 10);
+    }
+
+    Bukkit.broadcastMessage("§c§l[AncientEye] §7Event cancel by Admin .");
+}
+
 
 
     // ══════════════════════════════════════════════════════════════════════════
