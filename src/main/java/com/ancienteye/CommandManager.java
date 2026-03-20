@@ -52,13 +52,11 @@ public class CommandManager implements CommandExecutor, TabCompleter {
             case "tradereject" -> p.sendMessage("§cTrade rejected.");
             
             case "eye" -> {
-                // --- GUI COMMAND (Available to All Players) ---
                 if (args.length == 1 && args[0].equalsIgnoreCase("gui")) {
                     plugin.getAbilityLogic().openEyeGUI(p);
                     return true;
                 }
 
-                // --- ADMIN COMMANDS ---
                 if (!p.hasPermission("eye.admin")) {
                     p.sendMessage("§cNo permission to use admin commands!");
                     return true;
@@ -90,11 +88,30 @@ public class CommandManager implements CommandExecutor, TabCompleter {
             }
             case "event" -> {
                 if (!p.hasPermission("eye.admin")) return true;
-                if (args.length == 2 && args[0].equalsIgnoreCase("start")) {
-                    try {
-                        EyeType eventEye = EyeType.valueOf(args[1].toUpperCase());
-                        plugin.getEventManager().startEvent(eventEye);
-                    } catch (Exception e) { p.sendMessage("§cInvalid Event Eye!"); }
+                
+                if (args.length >= 1) {
+                    // --- START LOGIC ---
+                    if (args[0].equalsIgnoreCase("start")) {
+                        if (args.length >= 3) {
+                            try {
+                                EyeType eventEye = EyeType.valueOf(args[1].toUpperCase());
+                                long duration = EventManager.parseTime(args[2]);
+
+                                if (duration <= 0) {
+                                    p.sendMessage("§cInvalid time! Use: 10m, 30m, 1h, etc.");
+                                    return true;
+                                }
+                                plugin.getEventManager().startEvent(eventEye, duration);
+                            } catch (Exception e) { p.sendMessage("§cInvalid Event Eye Type!"); }
+                        } else {
+                            p.sendMessage("§cUsage: /event start <EyeType> <Time>");
+                        }
+                    } 
+                    // --- STOP LOGIC (Added) ---
+                    else if (args[0].equalsIgnoreCase("stop")) {
+                        plugin.getEventManager().stopEvent();
+                        p.sendMessage("§a[AncientEye] Current event stopped.");
+                    }
                 }
             }
         }
@@ -115,7 +132,7 @@ public class CommandManager implements CommandExecutor, TabCompleter {
                 }
             } else if (args.length == 2 && sender.hasPermission("eye.admin")) {
                 if (args[0].equalsIgnoreCase("give") || args[0].equalsIgnoreCase("reset")) {
-                    return null; // Online player names
+                    return null; 
                 }
             } else if (args.length == 3 && args[0].equalsIgnoreCase("give") && sender.hasPermission("eye.admin")) {
                 return Arrays.stream(EyeType.values())
@@ -129,18 +146,23 @@ public class CommandManager implements CommandExecutor, TabCompleter {
         if (cmd.getName().equalsIgnoreCase("event") && sender.hasPermission("eye.admin")) {
             if (args.length == 1) {
                 completions.add("start");
-                completions.add("stop");
+                completions.add("stop"); // Added
             } else if (args.length == 2 && args[0].equalsIgnoreCase("start")) {
                 return Arrays.stream(EyeType.values())
                         .map(Enum::name)
                         .filter(name -> !name.equals("NONE"))
                         .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
                         .collect(Collectors.toList());
+            } else if (args.length == 3 && args[0].equalsIgnoreCase("start")) {
+                completions.add("5m");
+                completions.add("10m");
+                completions.add("30m");
+                completions.add("1h");
             }
         }
 
         if (cmd.getName().equalsIgnoreCase("trade")) {
-            if (args.length == 1) return null; // Player names
+            if (args.length == 1) return null;
         }
 
         return completions.stream()
