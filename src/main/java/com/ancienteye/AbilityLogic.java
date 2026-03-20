@@ -1317,4 +1317,18 @@ public class AbilityLogic implements Listener {
         for (int i = 0; i < bars; i++) { if (i == done) sb.append("§7"); sb.append("┃"); }
         return sb.toString();
     }
+
+    private void applySafeDamage(Player owner, Location loc, double radius, double damage) {
+    // Aas-paas ke entities dhoondo
+    loc.getWorld().getNearbyEntities(loc, radius, radius, radius).forEach(entity -> {
+        // Check: Entity 'Living' ho aur 'Owner' na ho
+        if (entity instanceof LivingEntity victim && !entity.equals(owner)) {
+            // Damage + Multiplier apply karo
+            victim.damage(damage * getDmg(owner), owner);
+            
+            // Visual feedback (Optional)
+            victim.getWorld().spawnParticle(Particle.CRIT, victim.getLocation().add(0, 1, 0), 5);
+        }
+    });
+   }
 }
