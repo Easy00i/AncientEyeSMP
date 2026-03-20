@@ -112,6 +112,26 @@ public class EventManager implements Listener {
         startTimerTask(tasks);
     }
 
+        // --- STOP EVENT METHOD ---
+    public void stopEvent() {
+        if (!active) return;
+
+        active = false;
+        if (timerTask != null) {
+            timerTask.cancel();
+            timerTask = null;
+        }
+
+        // Scoreboard saaf karo aur message bhejo
+        for (Player p : Bukkit.getOnlinePlayers()) {
+            p.setScoreboard(Bukkit.getScoreboardManager().getNewScoreboard());
+            p.sendTitle("§c§lEVENT STOPPED", "§7Event cancel by admin", 10, 40, 10);
+        }
+
+        Bukkit.broadcastMessage("§c§l[AncientEye] §7Running event has been stopped.");
+    }
+
+
     // ══════════════════════════════════════════════════════════════════════════
     //  TIMER TASK  — runs every second
     // ══════════════════════════════════════════════════════════════════════════
