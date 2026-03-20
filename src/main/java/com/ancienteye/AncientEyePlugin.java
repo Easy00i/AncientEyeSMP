@@ -11,6 +11,7 @@ public class AncientEyePlugin extends JavaPlugin {
     private AnimationTradeManager animationTradeManager;
     private CommandManager commandManager;
     private EventManager eventManager;
+    private EyeHUDTask eyeHUDTask;  // ADD
 
     @Override
     public void onEnable() {
@@ -20,21 +21,25 @@ public class AncientEyePlugin extends JavaPlugin {
         saveDefaultConfig();
 
         // 1. Initialize Managers
-        this.playerDataManager    = new PlayerDataManager(this);
-        this.cooldownManager      = new CooldownManager(this);
-        this.abilityLogic         = new AbilityLogic(this);
+        this.playerDataManager     = new PlayerDataManager(this);
+        this.cooldownManager       = new CooldownManager(this);
+        this.abilityLogic          = new AbilityLogic(this);
         this.animationTradeManager = new AnimationTradeManager(this);
-        this.eventManager         = new EventManager(this);
-        this.commandManager       = new CommandManager(this);
+        this.eventManager          = new EventManager(this);
+        this.commandManager        = new CommandManager(this);
 
         // 2. Register Listeners
-        getServer().getPluginManager().registerEvents(new AbilityTrigger(this),      this);
-        getServer().getPluginManager().registerEvents(eventManager,                  this);
-        getServer().getPluginManager().registerEvents(abilityLogic,                  this);
-        getServer().getPluginManager().registerEvents(new PlayerJoinListener(this),  this);
+        getServer().getPluginManager().registerEvents(new AbilityTrigger(this),     this);
+        getServer().getPluginManager().registerEvents(eventManager,                 this);
+        getServer().getPluginManager().registerEvents(abilityLogic,                 this);
+        getServer().getPluginManager().registerEvents(new PlayerJoinListener(this), this);
 
         // 3. Start Background Tasks
         new ParticleTask(this).runTaskTimer(this, 0, 5L);
+
+        // ADD — Eye HUD icon (offhand, resource pack se colored eye dikhega)
+        this.eyeHUDTask = new EyeHUDTask(this);
+        eyeHUDTask.runTaskTimer(this, 20L, 20L);
 
         // 4. Register Commands
         registerCommand("smpstart");
@@ -49,13 +54,15 @@ public class AncientEyePlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        // FIX 1: playerDataManager null-check — agar onEnable mein crash hua ho
-        // toh playerDataManager null hoga aur saveData crash karega
+        // ADD — HUD items sab players ke offhand se hata do
+        if (eyeHUDTask != null) {
+            eyeHUDTask.clearAllHudItems();
+        }
+
         if (playerDataManager != null) {
             playerDataManager.saveAllData();
         }
 
-        // FIX 2: Sirf online players ka cleanup — getOnlinePlayers() already safe hai
         for (org.bukkit.entity.Player p : org.bukkit.Bukkit.getOnlinePlayers()) {
             p.setWalkSpeed(0.2f);
             p.removePotionEffect(org.bukkit.potion.PotionEffectType.JUMP_BOOST);
@@ -79,4 +86,5 @@ public class AncientEyePlugin extends JavaPlugin {
     public AbilityLogic getAbilityLogic()              { return abilityLogic; }
     public AnimationTradeManager getTradeManager()     { return animationTradeManager; }
     public EventManager getEventManager()              { return eventManager; }
+    public EyeHUDTask getEyeHUDTask()                 { return eyeHUDTask; }  // ADD
 }
