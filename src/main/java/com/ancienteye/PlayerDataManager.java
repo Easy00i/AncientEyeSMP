@@ -40,7 +40,6 @@ public class PlayerDataManager {
         saveData(); // Auto-save to data.yml
 
         plugin.getAbilityLogic().applyPassiveEffects(p, newEye); 
-    }
 
         // Success message
         if (!isTrade) {
