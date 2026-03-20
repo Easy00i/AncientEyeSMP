@@ -1,0 +1,203 @@
+# ╔══════════════════════════════════════════════════════════════════╗
+# ║              AncientEye SMP — config.yml                        ║
+# ║              Plugin by NotEasyOk                                ║
+# ╚══════════════════════════════════════════════════════════════════╝
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  GENERAL SETTINGS
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+settings:
+  prefix: "§8[§dAncientEye§8] §f"
+  xp-per-kill: 10
+  max-level: 3
+
+  level-xp:
+    1: 100
+    2: 250
+
+  damage-multiplier:
+    1: 1.0
+    2: 1.2
+    3: 1.5
+
+  cooldown-reduction-per-level: 2
+  min-cooldown: 2
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  COOLDOWNS  (seconds)
+#  Primary   = SHIFT + F
+#  Secondary = SHIFT + Q
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+cooldowns:
+
+  void:
+    primary:   10
+    secondary: 15
+
+  phantom:
+    primary:   12
+    secondary: 20
+
+  storm:
+    primary:   8
+    secondary: 20
+
+  frost:
+    primary:   12
+    secondary: 18
+
+  flame:
+    primary:   12
+    secondary: 25
+
+  shadow:
+    primary:   10
+    secondary: 22
+
+  titan:
+    primary:   14
+    secondary: 20
+
+  hunter:
+    primary:   10
+    secondary: 20
+
+  gravity:
+    primary:   12
+    secondary: 18
+
+  wind:
+    primary:   10
+    secondary: 18
+
+  poison:
+    primary:   12
+    secondary: 20
+
+  light:
+    primary:   12
+    secondary: 22
+
+  earth:
+    primary:   14
+    secondary: 22
+
+  crystal:
+    primary:   14
+    secondary: 22
+
+  echo:
+    primary:   12
+    secondary: 20
+
+  rage:
+    primary:   14
+    secondary: 22
+
+  spirit:
+    primary:   16
+    secondary: 24
+
+  time:
+    primary:   14
+    secondary: 20
+
+  warrior:
+    primary:   12
+    secondary: 20
+
+  meteor:
+    primary:   30
+    secondary: 60
+
+  mirage:
+    primary:   25
+    secondary: 45
+
+  ocean:
+    primary:   15
+    secondary: 25
+
+  eclipse:
+    primary:   20
+    secondary: 40
+
+  guardian:
+    primary:   20
+    secondary: 45
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  EVENT EYE ABILITY VALUES
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+event-eyes:
+
+  meteor:
+    primary-damage:   14.0
+    primary-radius:   8
+    secondary-damage: 6.0
+    secondary-count:  8
+
+  mirage:
+    primary-damage:   4.0
+
+  ocean:
+    primary-damage:   8.0
+    primary-radius:   12
+    secondary-damage: 6.0
+
+  eclipse:
+    primary-damage:   13.0
+    primary-radius:   9
+
+  guardian:
+    secondary-damage: 15.0
+    secondary-radius: 20
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  EVENT SETTINGS
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+event-settings:
+  win-animation-ticks: 200
+  tasks:
+    - "Kill 1 Player"
+    - "Break 10 Diamonds"
+    - "Survive 2 Minutes"
+    - "Kill 20 Zombies"
+    - "Fish 5 Items"
+    - "Break 64 Iron"
+    - "Craft 1 Golden Apple"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  TRADE SETTINGS
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+trade:
+  max-distance:    100
+  animation-ticks: 100
+  request-timeout: 30
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  ANIMATION SETTINGS
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+animation:
+  smp-spin-ticks: 160
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+#  MESSAGES
+#  {time}   — cooldown seconds remaining
+#  {type}   — eye type name
+#  {task}   — task description
+#  {player} — player name
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+messages:
+  no-permission:    "§cYou do not have permission to use this command."
+  cooldown-msg:     "§c§lCOOLDOWN §7— {time}s remaining"
+  trade-success:    "§aTrade successful! Eye transferred."
+  event-start:      "§6§lEVENT STARTED: §e§l{type} EYE"
+  task-complete:    "§a§l✓ Task complete! §eNext: §f{task}"
+  eye-bound:        "§5§l✨ {player} has successfully bound the {type} Eye!"
+  no-eye:           "§cYou do not have an Eye bound to your soul."
+  already-has-eye:  "§cYou already have an Eye. Trade it away before getting a new one."
+  eye-given:        "§a{type} Eye has been given to {player}."
+  event-not-active: "§cNo event is currently active."
+  invalid-eye:      "§cInvalid Eye type. Check spelling and try again."
+  invalid-time:     "§cInvalid time format. Example: 10m, 1h30m, 90s"
