@@ -60,7 +60,7 @@ public class AncientEyePlugin extends JavaPlugin {
         for (org.bukkit.entity.Player p : org.bukkit.Bukkit.getOnlinePlayers()) {
             p.setWalkSpeed(0.2f);
             // 1.21.1 mein JUMP_BOOST ab JUMP hai
-            p.removePotionEffect(org.bukkit.potion.PotionEffectType.JUMP);
+            p.removePotionEffect(org.bukkit.potion.PotionEffectType.JUMP_BOOST);
             p.removePotionEffect(org.bukkit.potion.PotionEffectType.LEVITATION);
         }
         org.bukkit.Bukkit.getLogger().info("[AncientEye] Disabled!");
