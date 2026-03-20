@@ -90,6 +90,9 @@ public class PlayerDataManager {
         dataConfig = YamlConfiguration.loadConfiguration(dataFile);
     }
 
+    // Public method — called by onDisable() to force-save before shutdown
+    public void saveAllData() { saveData(); }
+
     private void saveData() {
         for (UUID uuid : playerEyes.keySet()) {
             String path = "players." + uuid;
