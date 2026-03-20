@@ -29,99 +29,75 @@ settings:
 #  Secondary = SHIFT + Q
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 cooldowns:
-
   void:
     primary:   10
     secondary: 15
-
   phantom:
     primary:   12
     secondary: 20
-
   storm:
     primary:   8
     secondary: 20
-
   frost:
     primary:   12
     secondary: 18
-
   flame:
     primary:   12
     secondary: 25
-
   shadow:
     primary:   10
     secondary: 22
-
   titan:
     primary:   14
     secondary: 20
-
   hunter:
     primary:   10
     secondary: 20
-
   gravity:
     primary:   12
     secondary: 18
-
   wind:
     primary:   10
     secondary: 18
-
   poison:
     primary:   12
     secondary: 20
-
   light:
     primary:   12
     secondary: 22
-
   earth:
     primary:   14
     secondary: 22
-
   crystal:
     primary:   14
     secondary: 22
-
   echo:
     primary:   12
     secondary: 20
-
   rage:
     primary:   14
     secondary: 22
-
   spirit:
     primary:   16
     secondary: 24
-
   time:
     primary:   14
     secondary: 20
-
   warrior:
     primary:   12
     secondary: 20
-
   meteor:
     primary:   30
     secondary: 60
-
   mirage:
     primary:   25
     secondary: 45
-
   ocean:
     primary:   15
     secondary: 25
-
   eclipse:
     primary:   20
     secondary: 40
-
   guardian:
     primary:   20
     secondary: 45
@@ -130,25 +106,20 @@ cooldowns:
 #  EVENT EYE ABILITY VALUES
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 event-eyes:
-
   meteor:
     primary-damage:   14.0
     primary-radius:   8
     secondary-damage: 6.0
     secondary-count:  8
-
   mirage:
     primary-damage:   4.0
-
   ocean:
     primary-damage:   8.0
     primary-radius:   12
     secondary-damage: 6.0
-
   eclipse:
     primary-damage:   13.0
     primary-radius:   9
-
   guardian:
     secondary-damage: 15.0
     secondary-radius: 20
@@ -157,7 +128,6 @@ event-eyes:
 #  EVENT SETTINGS
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 event-settings:
-  win-animation-ticks: 200
   tasks:
     - "Kill 1 Player"
     - "Break 10 Diamonds"
