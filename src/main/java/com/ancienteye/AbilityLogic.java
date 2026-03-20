@@ -80,8 +80,8 @@ public class AbilityLogic implements Listener {
     //  PRIMARY  (SHIFT + F)
     // ══════════════════════════════════════════════════════════════════════
     public void activatePrimary(Player p, EyeType eye) {
-        if (checkCD(p, "P")) return;
-        setCD(p, "P", 12);
+        if (plugin.getCooldownManager().isOnCooldown(p, "P")) return;
+       plugin.getCooldownManager().setCooldown(p, "P", 12); // 12 seconds
         Location loc = p.getLocation().clone();
         Vector   dir = p.getEyeLocation().getDirection().normalize();
         double   dm  = getDmg(p);
@@ -589,8 +589,8 @@ public class AbilityLogic implements Listener {
     //  SECONDARY  (SHIFT + Q)
     // ══════════════════════════════════════════════════════════════════════
     public void activateSecondary(Player p, EyeType eye) {
-        if (checkCD(p, "S")) return;
-        setCD(p, "S", 20);
+        if (plugin.getCooldownManager().isOnCooldown(p, "S")) return;
+plugin.getCooldownManager().setCooldown(p, "S", 12); // 12 seconds
         Location loc = p.getLocation().clone();
         Vector   dir = p.getEyeLocation().getDirection().normalize();
         double   dm  = getDmg(p);
@@ -1204,15 +1204,7 @@ public class AbilityLogic implements Listener {
         w.spawnParticle(Particle.DRAGON_BREATH,  l, 30, 0.3, 0.5, 0.3, 0.06);
         for(int i=0;i<14;i++){double a=Math.toRadians(i*(360.0/14));w.spawnParticle(Particle.PORTAL,l.clone().add(Math.cos(a)*1.4,0.5,Math.sin(a)*1.4),3,0,0,0,0.09);}
     }
-    private boolean checkCD(Player p, String t) {
-        String k=p.getUniqueId()+t;
-        if(cooldowns.containsKey(k)&&cooldowns.get(k)>System.currentTimeMillis()){p.sendMessage("§c§lCOOLDOWN §7— "+(cooldowns.get(k)-System.currentTimeMillis())/1000+"s");return true;}
-        return false;
-    }
-    private void setCD(Player p, String t, int sec) {
-        int cd=Math.max(2,sec-(plugin.getPlayerData().getLevel(p)*2));
-        cooldowns.put(p.getUniqueId()+t, System.currentTimeMillis()+cd*1000L);
-    }
+
     private double ecfg(String eye, String key, double def) { return plugin.getConfig().getDouble("event-eyes."+eye+"."+key, def); }
     private ItemStack pane(Material mat) { ItemStack i=new ItemStack(mat); ItemMeta m=i.getItemMeta(); m.setDisplayName("§r"); i.setItemMeta(m); return i; }
     private String progressBar(int cur, int max) {
