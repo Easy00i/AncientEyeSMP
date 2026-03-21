@@ -70,14 +70,30 @@ public class PlayerDataManager {
         return playerLevels.getOrDefault(p.getUniqueId(), 1);
     }
 
-    public void addXp(Player p) {
-        int current = getLevel(p);
-        if (current < 3) {
-            playerLevels.put(p.getUniqueId(), current + 1);
-            saveData();
-            p.sendMessage("§e§lLEVEL UP! §fYour Eye is now Level " + (current + 1));
-        }
+    public void addXp(Player p, int amount) {
+    UUID id = p.getUniqueId();
+    int currentLevel = getLevel(p);
+    if (currentLevel >= 3) return; // Max level check
+
+    int currentXP = getXP(p);
+    int totalXP = currentXP + amount;
+    int maxXP = 100; 
+
+    if (totalXP >= maxXP) {
+        playerLevels.put(id, currentLevel + 1);
+        playerXP.put(id, 0);
+        p.sendMessage("§e§lLEVEL UP! §fLevel §6" + (currentLevel + 1));
+        p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+    } else {
+        playerXP.put(id, totalXP);
     }
+    
+    // ⭐ Action Bar par live update dikhana
+    p.sendActionBar("§bAncient XP: §f" + getXP(p) + " §8/ §f100");
+    
+    saveData(); // Data save logic
+}
+
 
     // ── DATA.YML ──────────────────────────────────────────────────────────────
 
