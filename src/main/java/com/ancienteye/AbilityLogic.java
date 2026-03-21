@@ -118,27 +118,35 @@ public class AbilityLogic implements Listener {
                 }.runTaskTimer(plugin, 0, 1);
             }
 
-            // 3. STORM — Lightning Dash  [NO self-damage: strikeLightningEffect]
-            case STORM -> {
-                w.spawnParticle(Particle.ELECTRIC_SPARK, loc, 80, 0.8, 1, 0.8, 0.12);
-                p.setVelocity(dir.clone().multiply(2.5).setY(0.3));
-                w.playSound(loc, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.8f, 1.3f);
-                Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                    Location land = p.getLocation();
-                    w.strikeLightningEffect(land);
-                    w.spawnParticle(Particle.ELECTRIC_SPARK, land, 100, 0.8, 1.5, 0.8, 0.18);
-                    for (int i = 0; i < 16; i++) { double a = Math.toRadians(i * 22.5);
-                        w.spawnParticle(Particle.ELECTRIC_SPARK, land.clone().add(Math.cos(a)*2.5,0.2,Math.sin(a)*2.5), 4, 0, 0.5, 0, 0.08);
-                    }
-                    land.getWorld().getNearbyEntities(land, 3, 3, 3).forEach(e -> {
-                        if (e instanceof LivingEntity le && e != p) {
-                            Vector vel = e.getLocation().toVector().subtract(land.toVector()).normalize().multiply(1.8).setY(0.7);
-                            le.damage(5.0 * dm, p);
-                            Bukkit.getScheduler().runTaskLater(plugin, () -> { if (e.isValid()) e.setVelocity(vel); }, 1L);
-                        }
-                    });
-                }, 8L);
-            }
+case STORM -> {
+    double dmg = ecfg("STORM", "primary-damage", 12.0);
+    LivingEntity target = aim(p, 30.0); // 30 block range tak aim
+    
+    if (target == null) {
+        p.sendMessage("§cKoi target nahi mila!");
+        return;
+    }
+
+    Location tLoc = target.getLocation();
+    w.strikeLightningEffect(tLoc); // Visual lightning
+    w.playSound(tLoc, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 2f, 1f);
+
+    // Masterpiece Animation: Blocks udne wala effect
+    for (int i = 0; i < 8; i++) {
+        FallingBlock fb = w.spawnFallingBlock(tLoc.clone().add(0, 0.5, 0), w.getBlockAt(tLoc.clone().subtract(0, 1, 0)).getBlockData());
+        fb.setVelocity(new Vector((Math.random() - 0.5) * 0.5, 0.6 + Math.random(), (Math.random() - 0.5) * 0.5));
+        fb.setDropItem(false);
+    }
+
+    // Explosion aur Particles
+    w.spawnParticle(Particle.EXPLOSION_HUGE, tLoc, 1);
+    w.spawnParticle(Particle.FLASH, tLoc, 5);
+    w.spawnParticle(Particle.ELECTRIC_SPARK, tLoc, 50, 1, 1, 1, 0.1);
+
+    // Safe Damage (Target ko lagega, Owner ko nahi)
+    applySafeDamage(p, tLoc, 4.0, dmg);
+}
+
 
             // 4. FROST — Ice Slide
             case FROST -> {
@@ -452,153 +460,173 @@ public class AbilityLogic implements Listener {
             }
 
             // ═══ EVENT EYES ══════════════════════════════════════════════════
+// METEOR PRIMARY
+case METEOR -> {
+    double dmg = ecfg("METEOR", "primary-damage", 15.0);
+    p.setVelocity(p.getLocation().getDirection().multiply(1.8).setY(1.5));
+    w.playSound(p.getLocation(), Sound.ENTITY_ENDER_DRAGON_FLAP, 1.5f, 0.5f);
+    
+    new BukkitRunnable() {
+        public void run() {
+            if (!p.isOnline() || p.isDead()) { cancel(); return; }
+            
+            // ⭐ OWNER SAFE: Hawa mein fall damage jama nahi hoga
+            p.setFallDistance(0.0f); 
+            
+            // Epic aag ki trail jab player hawa mein hai
+            w.spawnParticle(Particle.FLAME, p.getLocation(), 20, 0.5, 0.5, 0.5, 0.05);
+            w.spawnParticle(Particle.CAMPFIRE_COSY_SMOKE, p.getLocation(), 10, 0.3, 0.3, 0.3, 0.02);
 
-            // E1. METEOR — 6 total strikes: 1 main crash + 5 ring strikes around it
-            case METEOR -> {
-                double eDmg = ecfg("meteor","primary-damage", 14.0) * dm;
-                int    eRad = (int) ecfg("meteor","primary-radius", 8);
-                // Fire resistance so owner never burns from own meteor
-                p.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, ticks(120, dr), 0));
-                w.spawnParticle(Particle.FLAME, loc, 50, 0.5, 0.3, 0.5, 0.1);
-                p.setVelocity(new Vector(0, 3.5, 0));
-                w.playSound(loc, Sound.ENTITY_BLAZE_SHOOT, 1f, 0.5f);
-                Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                    if (!p.isOnline()) return;
-                    w.spawnParticle(Particle.FLAME, p.getLocation(), 80, 1, 2, 1, 0.18);
-                    p.setVelocity(new Vector(0, -5.5, 0));
-                    w.playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 1f, 0.5f);
-                    // Impact after fall
-                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                        if (!p.isOnline()) return;
-                        Location imp = p.getLocation();
-                        // Strike 1 — main crash (full power, owner excluded)
-                        doMeteorStrike(p, w, imp, eDmg, eRad);
-                        // Strikes 2–6 — ring around impact, 60% power, staggered
-                        for (int k = 1; k <= 5; k++) {
-                            final int fk = k;
-                            Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                                double ang = (fk - 1) * (Math.PI * 2.0 / 5);
-                                Location sp = imp.clone().add(
-                                    Math.cos(ang) * (eRad * 0.55),
-                                    0,
-                                    Math.sin(ang) * (eRad * 0.55)
-                                );
-                                doMeteorStrike(p, w, sp, eDmg * 0.60, (int)(eRad * 0.65));
-                            }, fk * 8L);
-                        }
-                    }, 18L);
-                }, 15L);
-            }
-
-            // E2. MIRAGE — Mirage Army
-            case MIRAGE -> {
-                double eDmg = ecfg("mirage","primary-damage", 4.0) * dm;
-                w.playSound(loc, Sound.ENTITY_ENDERMAN_SCREAM,       0.8f, 1.5f);
-                w.playSound(loc, Sound.ENTITY_ILLUSIONER_CAST_SPELL, 1f,   1.0f);
-                for (int i = 0; i < 5; i++) { final int fi = i;
-                    double a = i * (Math.PI * 2 / 5);
-                    Location cl = loc.clone().add(Math.cos(a)*3.2, 0, Math.sin(a)*3.2);
-                    w.spawnParticle(Particle.CLOUD,   cl, 50, 0.3, 1.2, 0.3, 0.05);
-                    w.spawnParticle(Particle.SMOKE,   cl, 30, 0.2, 0.9, 0.2, 0.03);
-                    w.spawnParticle(Particle.END_ROD, cl, 12, 0.1, 0.5, 0.1, 0.02);
-                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                        cl.getWorld().getNearbyEntities(cl, 4, 4, 4).forEach(e -> {
-                            if (e instanceof LivingEntity le && e != p) {
-                                le.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, ticks(50, dr), 0));
-                                le.addPotionEffect(new PotionEffect(PotionEffectType.NAUSEA,    ticks(70, dr), 0));
-                                le.damage(eDmg, p);
-                            }
-                        });
-                        w.spawnParticle(Particle.CLOUD, cl, 25, 0.3, 0.9, 0.3, 0.04);
-                    }, (fi + 1) * 10L);
+            // Zameen par takrane ka check (falling down)
+            if (p.getVelocity().getY() < -0.1 && p.isOnGround()) {
+                w.playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 3f, 0.5f);
+                w.spawnParticle(Particle.EXPLOSION_HUGE, p.getLocation(), 4);
+                w.spawnParticle(Particle.LAVA, p.getLocation(), 80, 3, 1, 3, 0.5);
+                
+                // Shockwave particles
+                for(int i = 0; i < 360; i+=10) {
+                    Location circle = p.getLocation().add(Math.cos(Math.toRadians(i))*4, 0.2, Math.sin(Math.toRadians(i))*4);
+                    w.spawnParticle(Particle.FLAME, circle, 2, 0, 0, 0, 0.2);
                 }
-            }
-
-            // E3. OCEAN — Tidal Crash  [knockback 1 tick after damage]
-            case OCEAN -> {
-                double eDmg = ecfg("ocean","primary-damage", 8.0) * dm;
-                int    eRad = (int) ecfg("ocean","primary-radius", 12);
-                w.spawnParticle(Particle.SPLASH,     loc, 250, 3.5, 0.8, 3.5, 0.45);
-                w.spawnParticle(Particle.BUBBLE_POP, loc, 120, 3.0, 0.8, 3.0, 0.15);
-                w.spawnParticle(Particle.RAIN,       loc, 180, 5,   2,   5,   0.18);
-                for (int wave = 1; wave <= 4; wave++) { final int fw = wave;
-                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                        double wr = fw * 3.0;
-                        for (int i = 0; i < 28; i++) { double a = Math.toRadians(i * (360.0/28));
-                            w.spawnParticle(Particle.SPLASH, loc.clone().add(Math.cos(a)*wr,0.6,Math.sin(a)*wr), 6, 0, 0.4, 0, 0.12);
-                        }
-                    }, wave * 5L);
-                }
-                w.playSound(loc, Sound.ENTITY_GUARDIAN_ATTACK, 1f, 0.3f);
-                w.playSound(loc, Sound.BLOCK_WATER_AMBIENT,    1f, 0.2f);
-                p.getNearbyEntities(eRad, eRad, eRad).forEach(e -> {
+                
+                applySafeDamage(p, p.getLocation(), 7.0, dmg);
+                
+                // Dushmano ko hawa mein uchhalna (Unhe girne par fall damage padega!)
+                p.getLocation().getWorld().getNearbyEntities(p.getLocation(), 7, 7, 7).forEach(e -> {
                     if (e instanceof LivingEntity le && e != p) {
-                        Vector vel = e.getLocation().toVector().subtract(loc.toVector()).normalize().multiply(4.0).setY(0.9);
-                        le.damage(eDmg, p);
-                        le.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, ticks(80, dr), 2));
-                        Bukkit.getScheduler().runTaskLater(plugin, () -> { if (e.isValid()) e.setVelocity(vel); }, 1L);
+                        Vector push = le.getLocation().toVector().subtract(p.getLocation().toVector()).normalize();
+                        le.setVelocity(push.multiply(2.5).setY(1.2)); // Huge knockback
                     }
                 });
-            }
-
-            // E4. ECLIPSE — Eclipse Blast  [knockback 1 tick after damage]
-            case ECLIPSE -> {
-                double eDmg = ecfg("eclipse","primary-damage", 13.0) * dm;
-                int    eRad = (int) ecfg("eclipse","primary-radius", 9);
-                w.spawnParticle(Particle.PORTAL,         loc, 180, 3, 3, 3, 0.22);
-                w.spawnParticle(Particle.REVERSE_PORTAL, loc, 120, 2.5, 2.5, 2.5, 0.16);
-                w.spawnParticle(Particle.DRAGON_BREATH,  loc,  80, 2, 2, 2, 0.09);
-                w.spawnParticle(Particle.DUST,           loc,  70, 3, 3, 3, 0, new Particle.DustOptions(Color.BLACK, 4f));
-                w.spawnParticle(Particle.EXPLOSION,      loc,   6, 1.2, 0, 1.2, 0);
-                for (int ring = 1; ring <= 3; ring++) { final int fr = ring;
-                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                        double r = fr * eRad / 3.0;
-                        for (int i = 0; i < 24; i++) { double a = Math.toRadians(i*15);
-                            w.spawnParticle(Particle.DRAGON_BREATH, loc.clone().add(Math.cos(a)*r,0.5,Math.sin(a)*r), 4, 0, 0.2, 0, 0.03);
-                        }
-                    }, ring * 3L);
-                }
-                w.playSound(loc, Sound.ENTITY_WITHER_SHOOT,         1f, 0.5f);
-                w.playSound(loc, Sound.ENTITY_ELDER_GUARDIAN_CURSE, 0.8f, 0.4f);
-                p.getNearbyEntities(eRad, eRad, eRad).forEach(e -> {
-                    if (e instanceof LivingEntity le && e != p) {
-                        Vector vel = e.getLocation().toVector().subtract(loc.toVector()).normalize().multiply(2.8).setY(1.2);
-                        le.damage(eDmg, p);
-                        le.addPotionEffect(new PotionEffect(PotionEffectType.WITHER,    ticks(120, dr), 2));
-                        le.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, ticks(80,  dr), 1));
-                        Bukkit.getScheduler().runTaskLater(plugin, () -> { if (e.isValid()) e.setVelocity(vel); }, 1L);
-                        w.spawnParticle(Particle.DRAGON_BREATH, le.getLocation(), 25, 0.4, 0.7, 0.4, 0.04);
-                    }
-                });
-            }
-
-            // E5. GUARDIAN — Guardian Dome
-            case GUARDIAN -> {
-                p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, ticks(300, dr), 5));
-                p.addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, ticks(200, dr), 3));
-                for (double a = 0; a < Math.PI*2; a += Math.PI/18)
-                    for (double b = 0; b <= Math.PI/2; b += Math.PI/12) {
-                        double rx = Math.sin(b)*Math.cos(a)*5, ry = Math.cos(b)*5, rz = Math.sin(b)*Math.sin(a)*5;
-                        w.spawnParticle(Particle.TOTEM_OF_UNDYING, loc.clone().add(rx,ry+0.5,rz), 1, 0, 0, 0, 0.01);
-                        if (b%(Math.PI/6)<0.01)
-                            w.spawnParticle(Particle.END_ROD, loc.clone().add(rx,ry+0.5,rz), 1, 0, 0, 0, 0.005);
-                    }
-                w.spawnParticle(Particle.TOTEM_OF_UNDYING, loc, 100, 2, 2.5, 2, 0.08);
-                w.playSound(loc, Sound.BLOCK_BEACON_ACTIVATE,    1f, 0.7f);
-                w.playSound(loc, Sound.ENTITY_IRON_GOLEM_REPAIR, 1f, 1.0f);
-                p.getNearbyEntities(8, 8, 8).forEach(e -> {
-                    if (e instanceof Player ally && e != p) {
-                        ally.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, ticks(200, dr), 3));
-                        ally.addPotionEffect(new PotionEffect(PotionEffectType.ABSORPTION, ticks(160, dr), 2));
-                        w.spawnParticle(Particle.TOTEM_OF_UNDYING, ally.getLocation(), 30, 0.4, 1, 0.4, 0.05);
-                        ally.sendTitle("§a§l🛡 DOME PROTECTED!", "§fGuardian's Blessing!", 5, 50, 10);
-                    }
-                });
-                p.sendTitle("§6§l🛡 GUARDIAN DOME!", "§7+Resistance V  +Absorption III", 5, 60, 10);
+                cancel();
             }
         }
-        p.playSound(loc, Sound.ENTITY_ENDER_EYE_DEATH, 0.8f, 1f);
-    }
+    }.runTaskTimer(plugin, 5, 1);
+}
+
+
+            // MIRAGE PRIMARY
+case MIRAGE -> {
+    w.playSound(p.getLocation(), Sound.ENTITY_ILLUSIONER_PREPARE_MIRROR, 1f, 1f);
+    new BukkitRunnable() {
+        int ticks = 0;
+        public void run() {
+            if (ticks++ >= 100 || !p.isOnline() || p.isDead()) { cancel(); return; } // 5 seconds
+            
+            // 3 Clones (Particles rotating around player)
+            for (int i = 0; i < 3; i++) {
+                double angle = (ticks * 0.2) + (i * (Math.PI * 2 / 3)); // Math magic for rotation
+                Location clone = p.getLocation().clone().add(Math.cos(angle) * 3, 1, Math.sin(angle) * 3);
+                
+                // Human shape particles
+                w.spawnParticle(Particle.SPELL_WITCH, clone, 10, 0.2, 0.8, 0.2, 0.05);
+                w.spawnParticle(Particle.PORTAL, clone, 15, 0.3, 1.0, 0.3, 0.1);
+            }
+        }
+    }.runTaskTimer(plugin, 0, 1);
+}
+
+// OCEAN PRIMARY
+case OCEAN -> {
+    double dmg = ecfg("OCEAN", "primary-damage", 12.0);
+    w.playSound(p.getLocation(), Sound.ENTITY_DOLPHIN_SPLASH, 2f, 0.5f);
+    
+    new BukkitRunnable() {
+        int ticks = 0;
+        Location wave = p.getLocation().clone().add(0, 0.5, 0);
+        Vector dir = p.getLocation().getDirection().setY(0).normalize().multiply(1.2); // Wave speed
+        
+        public void run() {
+            if (ticks++ >= 15 || !p.isOnline()) { cancel(); return; } // Range
+            
+            wave.add(dir); // Wave aage badh rahi hai
+            
+            // Wall of Water (Tsunami animation)
+            for(double x = -2; x <= 2; x+=0.5) {
+                for(double y = 0; y <= 2; y+=0.5) {
+                    Vector side = new Vector(-dir.getZ(), 0, dir.getX()).normalize().multiply(x);
+                    Location partLoc = wave.clone().add(side).add(0, y, 0);
+                    w.spawnParticle(Particle.WATER_DROP, partLoc, 5, 0.1, 0.1, 0.1, 0.5);
+                    w.spawnParticle(Particle.BUBBLE_POP, partLoc, 2, 0.1, 0.1, 0.1, 0.1);
+                }
+            }
+            
+            w.playSound(wave, Sound.BLOCK_WATER_AMBIENT, 0.5f, 1.5f);
+            applySafeDamage(p, wave, 3.0, dmg);
+            
+            // Push enemies along with the wave
+            wave.getWorld().getNearbyEntities(wave, 3, 3, 3).forEach(e -> {
+                if (e instanceof LivingEntity le && e != p) {
+                    le.setVelocity(dir.clone().multiply(1.5).setY(0.4));
+                }
+            });
+        }
+    }.runTaskTimer(plugin, 0, 1);
+}
+
+
+            // ECLIPSE PRIMARY
+case ECLIPSE -> {
+    double dmg = ecfg("ECLIPSE", "primary-damage", 18.0);
+    w.playSound(p.getLocation(), Sound.ENTITY_WITHER_SHOOT, 1f, 0.5f);
+    
+    new BukkitRunnable() {
+        double radius = 0.5;
+        public void run() {
+            if (radius > 8.0 || !p.isOnline()) { cancel(); return; }
+            
+            // Expanding hollow sphere of dark energy
+            for (double t = 0; t <= Math.PI; t += Math.PI / 10) {
+                for (double r = 0; r <= 2 * Math.PI; r += Math.PI / 10) {
+                    double x = radius * Math.sin(t) * Math.cos(r);
+                    double y = radius * Math.sin(t) * Math.sin(r) + 1;
+                    double z = radius * Math.cos(t);
+                    Location part = p.getLocation().clone().add(x, y, z);
+                    w.spawnParticle(Particle.SQUID_INK, part, 1, 0, 0, 0, 0);
+                    w.spawnParticle(Particle.DRAGON_BREATH, part, 1, 0, 0, 0, 0.01);
+                }
+            }
+            
+            applySafeDamage(p, p.getLocation(), radius, dmg); // Damage as it expands
+            w.playSound(p.getLocation(), Sound.ENTITY_ENDER_DRAGON_FLAP, 0.5f, 1.5f);
+            radius += 1.5; // Tezi se bada hoga
+        }
+    }.runTaskTimer(plugin, 0, 2);
+}
+
+
+            /// GUARDIAN PRIMARY
+case GUARDIAN -> {
+    w.playSound(p.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 2f, 1.2f);
+    
+    new BukkitRunnable() {
+        int ticks = 0;
+        public void run() {
+            if (ticks++ >= 120 || !p.isOnline() || p.isDead()) { 
+                w.playSound(p.getLocation(), Sound.BLOCK_BEACON_DEACTIVATE, 2f, 1.2f);
+                cancel(); return; 
+            } // 6 seconds dome
+            
+            // Beautiful Half-Sphere (Dome) Animation
+            for (double t = 0; t <= Math.PI / 2; t += Math.PI / 10) { // Math.PI/2 makes it a dome, not full sphere
+                for (double r = 0; r <= 2 * Math.PI; r += Math.PI / 10) {
+                    double x = 5.0 * Math.sin(t) * Math.cos(r);
+                    double y = 5.0 * Math.cos(t); // Top half
+                    double z = 5.0 * Math.sin(t) * Math.sin(r);
+                    w.spawnParticle(Particle.ENCHANTMENT_TABLE, p.getLocation().clone().add(x, y, z), 1, 0,0,0,0);
+                }
+            }
+            
+            // Protection to allies and self
+            p.getWorld().getNearbyEntities(p.getLocation(), 5, 5, 5).forEach(e -> {
+                if (e instanceof Player ally) {
+                    ally.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 40, 1));
+                }
+            });
+        }
+    }.runTaskTimer(plugin, 0, 3);
+}
+
 
     // ══════════════════════════════════════════════════════════════════════
     //  SECONDARY  (SHIFT + Q)
@@ -649,22 +677,39 @@ public class AbilityLogic implements Listener {
                 p.sendTitle("§b§lPHANTOM REVEAL", "§7All invisible players exposed!", 5, 50, 10);
             }
 
-            // 3. STORM — Thunder Strike  [strikeLightningEffect — no self-damage]
             case STORM -> {
-                LivingEntity tgt = aim(p, 30);
-                if (tgt != null) {
-                    w.spawnParticle(Particle.ELECTRIC_SPARK, loc, 60, 0.5, 1, 0.5, 0.12);
-                    for (int i = 0; i < 3; i++) { final int fi = i;
-                        Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                            if (!tgt.isValid()) return;
-                            w.strikeLightningEffect(tgt.getLocation());
-                            w.spawnParticle(Particle.ELECTRIC_SPARK, tgt.getLocation(), 80, 0.6, 1.2, 0.6, 0.15);
-                            tgt.damage(4.5 * dm, p);
-                        }, fi * 8L);
-                    }
-                    w.playSound(loc, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 1f, 0.8f);
-                } else p.sendMessage("§7No target in range.");
+    double qDmg = ecfg("STORM", "secondary-damage", 10.0);
+    w.playSound(p.getLocation(), Sound.ITEM_TRIDENT_THUNDER, 2f, 0.5f);
+    
+    new BukkitRunnable() {
+        double radius = 1.0;
+        public void run() {
+            if (radius > 8.0 || !p.isOnline()) { cancel(); return; }
+
+            // Blue Electric Ring Animation
+            for (double a = 0; a < Math.PI * 2; a += Math.PI / (radius * 3)) {
+                double x = Math.cos(a) * radius;
+                double z = Math.sin(a) * radius;
+                Location ring = p.getLocation().clone().add(x, 0.2, z);
+                w.spawnParticle(Particle.ELECTRIC_SPARK, ring, 1, 0, 0, 0, 0);
+                if (radius > 4) w.spawnParticle(Particle.CLOUD, ring, 1, 0, 0, 0, 0.02);
             }
+
+            // Damage aur Knockback (Owner is Safe)
+            applySafeDamage(p, p.getLocation(), radius, qDmg);
+            
+            p.getWorld().getNearbyEntities(p.getLocation(), radius, 2, radius).forEach(e -> {
+                if (e instanceof LivingEntity le && e != p) {
+                    Vector push = le.getLocation().toVector().subtract(p.getLocation().toVector()).normalize();
+                    le.setVelocity(push.multiply(1.8).setY(0.5));
+                }
+            });
+
+            radius += 1.5;
+        }
+    }.runTaskTimer(plugin, 0, 1);
+}
+
 
             // 4. FROST — Freeze Trap
             case FROST -> {
@@ -998,32 +1043,34 @@ public class AbilityLogic implements Listener {
 
             // ═══ EVENT SECONDARY ══════════════════════════════════════════════
 
-            // E3. OCEAN — Ocean Prison  [knockback 1 tick after damage]
-            case OCEAN -> {
-                double eDmg = ecfg("ocean","secondary-damage", 6.0) * dm;
-                w.spawnParticle(Particle.SPLASH,           loc, 180, 3, 1.2, 3, 0.28);
-                w.spawnParticle(Particle.BUBBLE_POP,       loc, 120, 3, 1.2, 3, 0.14);
-                w.spawnParticle(Particle.BUBBLE_COLUMN_UP, loc,  70, 2.5, 0.6, 2.5, 0.06);
-                for (int s = 0; s < 5; s++) { final int fs = s;
-                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                        double r = 5.5 - fs * 0.8;
-                        for (int i = 0; i < 24; i++) { double a = Math.toRadians(i*15) + fs * 0.9;
-                            w.spawnParticle(Particle.SPLASH, loc.clone().add(Math.cos(a)*r,fs*0.25,Math.sin(a)*r), 4, 0, 0, 0, 0.06);
+            // OCEAN SECONDARY
+case OCEAN -> {
+    w.playSound(p.getLocation(), Sound.ITEM_BUCKET_FILL, 2f, 0.5f);
+    
+    p.getWorld().getNearbyEntities(p.getLocation(), 6, 6, 6).forEach(e -> {
+        if (e instanceof LivingEntity le && e != p) {
+            le.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 80, 4)); // Super Slow
+            
+            new BukkitRunnable() {
+                int ticks = 0;
+                public void run() {
+                    if (ticks++ >= 80 || le.isDead()) { cancel(); return; } // 4 seconds prison
+                    
+                    // Sphere (Bubble) Animation Math around the enemy
+                    for(double i = 0; i < Math.PI; i += Math.PI/6) {
+                        for(double j = 0; j < 2*Math.PI; j += Math.PI/6) {
+                            double x = 1.5 * Math.sin(i) * Math.cos(j);
+                            double y = 1.5 * Math.sin(i) * Math.sin(j) + 1; // Center at body
+                            double z = 1.5 * Math.cos(i);
+                            w.spawnParticle(Particle.WATER_SPLASH, le.getLocation().clone().add(x,y,z), 1, 0,0,0,0);
                         }
-                    }, s * 4L);
-                }
-                w.playSound(loc, Sound.ENTITY_GUARDIAN_ATTACK, 1f, 0.3f);
-                w.playSound(loc, Sound.BLOCK_WATER_AMBIENT,    1f, 0.2f);
-                p.getNearbyEntities(10, 10, 10).forEach(e -> {
-                    if (e instanceof LivingEntity le && e != p) {
-                        Vector vel = loc.toVector().subtract(e.getLocation().toVector()).normalize().multiply(2.5);
-                        le.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, ticks(140, dr), 4));
-                        le.addPotionEffect(new PotionEffect(PotionEffectType.WITHER,   ticks(60,  dr), 0));
-                        le.damage(eDmg, p);
-                        Bukkit.getScheduler().runTaskLater(plugin, () -> { if (e.isValid()) e.setVelocity(vel); }, 1L);
                     }
-                });
-            }
+                }
+            }.runTaskTimer(plugin, 0, 3);
+        }
+    });
+}
+
 
             // E4. ECLIPSE — Shadow Phase
             case ECLIPSE -> {
@@ -1074,40 +1121,43 @@ public class AbilityLogic implements Listener {
                 p.sendTitle("§6§l⚡ TITAN SHOCKWAVE!", "§7The ground shatters!", 5, 70, 15);
             }
 
-            // E1. METEOR secondary (2nd ability)
-            case METEOR -> {
-                double eDmg = ecfg("meteor","secondary-damage", 8.0) * dm;
-                // Flame trail + area ignite
-                p.addPotionEffect(new PotionEffect(PotionEffectType.FIRE_RESISTANCE, ticks(80, dr), 0));
-                w.spawnParticle(Particle.FLAME, loc, 120, 3, 0.5, 3, 0.15);
-                w.spawnParticle(Particle.LAVA,  loc,  40, 2.5, 0.3, 2.5, 0.12);
-                w.playSound(loc, Sound.ENTITY_BLAZE_SHOOT, 1f, 0.7f);
-                p.getNearbyEntities(6, 6, 6).forEach(e -> {
-                    if (e instanceof LivingEntity le && e != p) {
-                        le.setFireTicks(ticks(120, dr));
-                        le.damage(eDmg, p);
-                        w.spawnParticle(Particle.FLAME, le.getLocation(), 20, 0.4, 0.8, 0.4, 0.1);
-                    }
-                });
-            }
-
-            // E2. MIRAGE secondary
-            case MIRAGE -> {
-                // Mirage blink — 3 fake positions + invis
-                p.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, ticks(80, dr), 0));
-                p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED,        ticks(60, dr), 2));
-                for (int i = 0; i < 3; i++) {
-                    double a = i * (Math.PI * 2 / 3);
-                    Location fake = loc.clone().add(Math.cos(a)*4, 0, Math.sin(a)*4);
-                    w.spawnParticle(Particle.CLOUD, fake, 40, 0.3, 1.2, 0.3, 0.05);
-                    w.spawnParticle(Particle.END_ROD, fake, 10, 0.2, 0.8, 0.2, 0.02);
+            /// METEOR SECONDARY
+case METEOR -> {
+    double mDmg = ecfg("METEOR", "secondary-damage", 8.0);
+    w.playSound(p.getLocation(), Sound.ENTITY_GHAST_WARN, 1f, 0.5f);
+    
+    for (int i = 0; i < 8; i++) { // 8 Meteors
+        Location dropLoc = p.getLocation().clone().add((Math.random() * 14) - 7, 12, (Math.random() * 14) - 7);
+        new BukkitRunnable() {
+            Location current = dropLoc.clone();
+            public void run() {
+                if (current.getBlock().getType().isSolid()) { // Zameen par takraya
+                    w.spawnParticle(Particle.EXPLOSION_LARGE, current, 2);
+                    w.playSound(current, Sound.ENTITY_DRAGON_FIREBALL_EXPLODE, 1f, 1f);
+                    applySafeDamage(p, current, 4.0, mDmg);
+                    cancel(); return;
                 }
-                w.playSound(loc, Sound.ENTITY_ILLUSIONER_CAST_SPELL, 1f, 1.5f);
-                p.sendTitle("§e§lMIRAGE SHIFT", "§7You flicker away...", 5, 40, 10);
+                // Falling animation
+                w.spawnParticle(Particle.LAVA, current, 10, 0.3, 0.5, 0.3, 0.05);
+                w.spawnParticle(Particle.FLAME, current, 15, 0.4, 0.4, 0.4, 0.1);
+                current.subtract(0, 0.8, 0); // Tezi se neeche aana
             }
-        }
-        p.playSound(loc, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.8f, 0.5f);
+        }.runTaskTimer(plugin, i * 4, 1); // Ek ke baad ek girenge
     }
+}
+// MIRAGE SECONDARY
+case MIRAGE -> {
+    w.playSound(p.getLocation(), Sound.ENTITY_BAT_TAKEOFF, 1.5f, 0.8f);
+    w.playSound(p.getLocation(), Sound.BLOCK_CONDUIT_DEACTIVATE, 1.5f, 2.0f);
+    
+    // Epic Smoke Poof
+    w.spawnParticle(Particle.CAMPFIRE_COSY_SMOKE, p.getLocation(), 80, 1.5, 1.5, 1.5, 0.05);
+    w.spawnParticle(Particle.SQUID_INK, p.getLocation(), 50, 1, 1, 1, 0.1);
+    
+    p.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 120, 0)); // 6 secs
+    p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 120, 2));        // Speed 3
+}
+
 
     // ══════════════════════════════════════════════════════════════════════
     //  PASSIVE EFFECTS
