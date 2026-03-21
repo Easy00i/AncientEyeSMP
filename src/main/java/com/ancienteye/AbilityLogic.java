@@ -139,7 +139,7 @@ case STORM -> {
     }
 
     // Explosion aur Particles
-    w.spawnParticle(Particle.EXPLOSION_HUGE, tLoc, 1);
+    w.spawnParticle(Particle.EXPLOSION_EMITTER, tLoc, 1);
     w.spawnParticle(Particle.FLASH, tLoc, 5);
     w.spawnParticle(Particle.ELECTRIC_SPARK, tLoc, 50, 1, 1, 1, 0.1);
 
@@ -480,7 +480,7 @@ case METEOR -> {
             // Zameen par takrane ka check (falling down)
             if (p.getVelocity().getY() < -0.1 && p.isOnGround()) {
                 w.playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 3f, 0.5f);
-                w.spawnParticle(Particle.EXPLOSION_HUGE, p.getLocation(), 4);
+                w.spawnParticle(Particle.EXPLOSION_EMITTER, p.getLocation(), 4);
                 w.spawnParticle(Particle.LAVA, p.getLocation(), 80, 3, 1, 3, 0.5);
                 
                 // Shockwave particles
@@ -519,7 +519,7 @@ case MIRAGE -> {
                 Location clone = p.getLocation().clone().add(Math.cos(angle) * 3, 1, Math.sin(angle) * 3);
                 
                 // Human shape particles
-                w.spawnParticle(Particle.SPELL_WITCH, clone, 10, 0.2, 0.8, 0.2, 0.05);
+                w.spawnParticle(Particle.WITCH, clone, 10, 0.2, 0.8, 0.2, 0.05);
                 w.spawnParticle(Particle.PORTAL, clone, 15, 0.3, 1.0, 0.3, 0.1);
             }
         }
@@ -546,7 +546,7 @@ case OCEAN -> {
                 for(double y = 0; y <= 2; y+=0.5) {
                     Vector side = new Vector(-dir.getZ(), 0, dir.getX()).normalize().multiply(x);
                     Location partLoc = wave.clone().add(side).add(0, y, 0);
-                    w.spawnParticle(Particle.WATER_DROP, partLoc, 5, 0.1, 0.1, 0.1, 0.5);
+                    w.spawnParticle(Particle.DRIPPING_WATER, partLoc, 5, 0.1, 0.1, 0.1, 0.5);
                     w.spawnParticle(Particle.BUBBLE_POP, partLoc, 2, 0.1, 0.1, 0.1, 0.1);
                 }
             }
@@ -613,14 +613,14 @@ case GUARDIAN -> {
                     double x = 5.0 * Math.sin(t) * Math.cos(r);
                     double y = 5.0 * Math.cos(t); // Top half
                     double z = 5.0 * Math.sin(t) * Math.sin(r);
-                    w.spawnParticle(Particle.ENCHANTMENT_TABLE, p.getLocation().clone().add(x, y, z), 1, 0,0,0,0);
+                    w.spawnParticle(Particle.ENCHANT, p.getLocation().clone().add(x, y, z), 1, 0,0,0,0);
                 }
             }
             
             // Protection to allies and self
             p.getWorld().getNearbyEntities(p.getLocation(), 5, 5, 5).forEach(e -> {
                 if (e instanceof Player ally) {
-                    ally.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 40, 1));
+                    ally.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 40, 1));
                  }
              });
          }
@@ -1054,7 +1054,7 @@ case OCEAN -> {
     
     p.getWorld().getNearbyEntities(p.getLocation(), 6, 6, 6).forEach(e -> {
         if (e instanceof LivingEntity le && e != p) {
-            le.addPotionEffect(new PotionEffect(PotionEffectType.SLOW, 80, 4)); // Super Slow
+            le.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 80, 4)); // Super Slow
             
             new BukkitRunnable() {
                 int ticks = 0;
@@ -1067,7 +1067,7 @@ case OCEAN -> {
                             double x = 1.5 * Math.sin(i) * Math.cos(j);
                             double y = 1.5 * Math.sin(i) * Math.sin(j) + 1; // Center at body
                             double z = 1.5 * Math.cos(i);
-                            w.spawnParticle(Particle.WATER_SPLASH, le.getLocation().clone().add(x,y,z), 1, 0,0,0,0);
+                            w.spawnParticle(Particle.SPLASH, le.getLocation().clone().add(x,y,z), 1, 0,0,0,0);
                         }
                     }
                 }
@@ -1137,7 +1137,7 @@ case METEOR -> {
             Location current = dropLoc.clone();
             public void run() {
                 if (current.getBlock().getType().isSolid()) { // Zameen par takraya
-                    w.spawnParticle(Particle.EXPLOSION_LARGE, current, 2);
+                    w.spawnParticle(Particle.EXPLOSION, current, 2);
                     w.playSound(current, Sound.ENTITY_DRAGON_FIREBALL_EXPLODE, 1f, 1f);
                     applySafeDamage(p, current, 4.0, mDmg);
                     cancel(); return;
