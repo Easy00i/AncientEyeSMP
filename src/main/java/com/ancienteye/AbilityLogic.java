@@ -1203,12 +1203,11 @@ case METEOR -> {
         }
     }
 
-    // ══════════════════════════════════════════════════════════════════════
+        // ══════════════════════════════════════════════════════════════════════
     //  GUI  — XP auto-refreshes every second while the inventory is open
     // ══════════════════════════════════════════════════════════════════════
     public void openEyeGUI(Player p) {
         Inventory gui = Bukkit.createInventory(null, 54, "§8Your Ancient Eye Status");
-        // Draw border/fill
         ItemStack border = pane(Material.PURPLE_STAINED_GLASS_PANE);
         ItemStack fill   = pane(Material.BLACK_STAINED_GLASS_PANE);
         for (int i = 0; i < 54; i++)
@@ -1220,7 +1219,6 @@ case METEOR -> {
         // Refresh slot 22 every second — live XP update
         new BukkitRunnable() {
             public void run() {
-                // Stop if player closed GUI or logged off
                 if (!p.isOnline()) { cancel(); return; }
                 Inventory top = p.getOpenInventory().getTopInventory();
                 if (top == null || !p.getOpenInventory().getTitle().equals("§8Your Ancient Eye Status")) {
@@ -1236,7 +1234,8 @@ case METEOR -> {
         EyeType type  = plugin.getPlayerData().getEye(p);
         int     level = plugin.getPlayerData().getLevel(p);
         int     xp    = plugin.getPlayerData().getXP(p);
-        int     maxXP = 100;
+        // FIX: maxXP level ke hisaab se — L1=30, L2=35, L3=50
+        int     maxXP = getMaxXPForLevel(level);
         String  bar   = progressBar(xp, maxXP);
         String  col   = level==3?"§e§l":level==2?"§b§l":"§7§l";
 
@@ -1263,6 +1262,15 @@ case METEOR -> {
         return eye;
     }
 
+    // FIX: Level ke hisaab se maxXP — PlayerDataManager se match karta hai
+    private int getMaxXPForLevel(int level) {
+        return switch (level) {
+            case 1  -> 30;
+            case 2  -> 35;
+            default -> 50;
+        };
+    }
+
     // ══════════════════════════════════════════════════════════════════════
     //  HELPERS
     // ══════════════════════════════════════════════════════════════════════
@@ -1279,28 +1287,18 @@ case METEOR -> {
         return l == 3 ? 2.0 : l == 2 ? 1.5 : 1.0;
     }
 
-    /**
-     * Applies duration multiplier and returns an int tick count.
-     * Base is always the raw design value; level scales it up.
-     */
     private int ticks(int base, double durMul) {
         return (int)(base * durMul);
     }
 
-    /**
-     * Reads cooldown (seconds) from config.yml:
-     *   cooldowns.<eye_lowercase>.<type>   e.g.  cooldowns.void.primary
-     * Falls back to 12s. Subtracts 2s per level above 1. Min 2s.
-     */
     private int getCd(Player p, EyeType eye, String type) {
         String key = "cooldowns." + eye.name().toLowerCase() + "." + type;
         int base = plugin.getConfig().getInt(key, 12);
         int lvl  = plugin.getPlayerData().getLevel(p);
-        int reduction = (lvl - 1) * 2;           // L2: -2s   L3: -4s
+        int reduction = (lvl - 1) * 2;
         return Math.max(2, base - reduction);
     }
 
-    /** Performs one meteor strike at a position — owner (p) is always excluded. */
     private void doMeteorStrike(Player p, World w, Location pos, double dmg, int rad) {
         w.strikeLightningEffect(pos);
         w.spawnParticle(Particle.EXPLOSION,  pos, 4, 1.2, 0, 1.2, 0);
@@ -1314,7 +1312,7 @@ case METEOR -> {
         w.playSound(pos, Sound.ENTITY_GENERIC_EXPLODE,        1f, 0.4f);
         w.playSound(pos, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.8f, 0.6f);
         pos.getWorld().getNearbyEntities(pos, rad, rad, rad).forEach(e -> {
-            if (e instanceof LivingEntity le && e != p) {          // owner safe
+            if (e instanceof LivingEntity le && e != p) {
                 Vector vel = e.getLocation().toVector().subtract(pos.toVector()).normalize().multiply(3.2).setY(1.8);
                 le.damage(dmg, p);
                 le.setFireTicks(100);
@@ -1371,34 +1369,27 @@ case METEOR -> {
         return i;
     }
 
+    // FIX: progressBar ab level-aware maxXP use karta hai
     private String progressBar(int cur, int max) {
-    int bars = 12;
-    // XP 100 se zyada na ho GUI mein isliye Math.min use kiya
-    int done = (int)((double)Math.min(cur, max) / max * bars);
-    
-    StringBuilder sb = new StringBuilder();
-    for (int i = 0; i < bars; i++) {
-        if (i < done) {
-            sb.append("§a┃"); // Jo XP mil gaya wo Green
-        } else {
-            sb.append("§7┃"); // Jo baki hai wo Gray
+        int bars = 12;
+        int done = (int)((double)Math.min(cur, max) / max * bars);
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < bars; i++) {
+            if (i < done) {
+                sb.append("§a┃");
+            } else {
+                sb.append("§7┃");
+            }
         }
+        return sb.toString();
     }
-    return sb.toString();
-}
-
 
     private void applySafeDamage(Player owner, Location loc, double radius, double damage) {
-    // Aas-paas ke entities dhoondo
-    loc.getWorld().getNearbyEntities(loc, radius, radius, radius).forEach(entity -> {
-        // Check: Entity 'Living' ho aur 'Owner' na ho
-        if (entity instanceof LivingEntity victim && !entity.equals(owner)) {
-            // Damage + Multiplier apply karo
-            victim.damage(damage * getDmg(owner), owner);
-            
-            // Visual feedback (Optional)
-            victim.getWorld().spawnParticle(Particle.CRIT, victim.getLocation().add(0, 1, 0), 5);
-        }
-    });
-   }
+        loc.getWorld().getNearbyEntities(loc, radius, radius, radius).forEach(entity -> {
+            if (entity instanceof LivingEntity victim && !entity.equals(owner)) {
+                victim.damage(damage * getDmg(owner), owner);
+                victim.getWorld().spawnParticle(Particle.CRIT, victim.getLocation().add(0, 1, 0), 5);
+            }
+        });
+    }
 }
