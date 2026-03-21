@@ -76,6 +76,60 @@ public class AbilityLogic implements Listener {
         }
     }
 
+    ════════════════════════════════════════════════════════════════════
+@EventHandler
+public void onFootstep(org.bukkit.event.player.PlayerMoveEvent e) {
+    Player mover = e.getPlayer();
+
+    // Sirf ground movement — jump/fall ignore
+    if (!mover.isOnGround()) return;
+
+    // Har 10 ticks ek baar check — performance ke liye
+    if (mover.getTicksLived() % 10 != 0) return;
+
+    // Koi bhi ECHO eye holder nearby check karo
+    for (Player owner : Bukkit.getOnlinePlayers()) {
+        if (owner.getUniqueId().equals(mover.getUniqueId())) continue;
+        EyeType ownerEye = plugin.getPlayerData().getEye(owner);
+        if (ownerEye != EyeType.ECHO) continue;
+
+        double distSq = owner.getLocation().distanceSquared(mover.getLocation());
+        if (distSq > 20 * 20) continue; // 20 block range
+
+        // Owner ko signal — action bar par dikhao
+        double dist = Math.sqrt(distSq);
+        String dir  = getDirectionLabel(owner, mover);
+        owner.sendActionBar("§3👣 §f" + mover.getName()
+            + " §7footstep §b" + (int)dist + "§7 blocks §3" + dir);
+
+        // Footstep particle — sirf owner ko dikhao
+        owner.spawnParticle(Particle.SONIC_BOOM,
+            mover.getLocation().add(0, 0.1, 0), 1, 0, 0, 0, 0);
+
+        // Footstep damage — 0.5 damage har step (passive)
+        if (mover instanceof LivingEntity le) {
+            // Sirf enemies — agar mover bhi ECHO hai toh skip
+            EyeType moverEye = plugin.getPlayerData().getEye(mover);
+            if (moverEye != EyeType.ECHO) {
+                le.damage(0.5, owner);
+            }
+        }
+    }
+}
+
+// Direction label helper
+private String getDirectionLabel(Player from, Player to) {
+    double dx = to.getLocation().getX() - from.getLocation().getX();
+    double dz = to.getLocation().getZ() - from.getLocation().getZ();
+    double angle = Math.toDegrees(Math.atan2(dz, dx));
+    double yaw   = (from.getLocation().getYaw() + 90) % 360;
+    double rel   = ((angle - yaw) % 360 + 360) % 360;
+    if (rel < 45 || rel >= 315) return "▲ Front";
+    if (rel < 135)              return "▶ Right";
+    if (rel < 225)              return "▼ Behind";
+    return                             "◀ Left";
+}
+
     // ══════════════════════════════════════════════════════════════════════
     //  PRIMARY  (SHIFT + F)
     // ══════════════════════════════════════════════════════════════════════
@@ -360,29 +414,61 @@ case LIGHT -> {
                 w.playSound(loc, Sound.BLOCK_AMETHYST_BLOCK_CHIME,   1f, 1.2f);
                 p.sendTitle("§b§l💎 CRYSTAL SHIELD", "§7Resistance V Active!", 5, 45, 10);
             }
+═══════════════════════════════════════════════════════════════════
+case ECHO -> {
+    // Sonic boom origin
+    w.spawnParticle(Particle.SONIC_BOOM, loc, 1, 0, 0, 0, 0);
+    w.playSound(loc, Sound.ENTITY_ELDER_GUARDIAN_CURSE,    0.8f, 1.8f);
+    w.playSound(loc, Sound.ENTITY_ELDER_GUARDIAN_AMBIENT,  0.5f, 2.0f);
 
-            // 15. ECHO — Echo Pulse
-            case ECHO -> {
-                w.spawnParticle(Particle.SONIC_BOOM, loc, 1, 0, 0, 0, 0);
-                w.playSound(loc, Sound.ENTITY_ELDER_GUARDIAN_CURSE, 0.8f, 1.6f);
-                for (int ring = 1; ring <= 5; ring++) { final int fr = ring;
-                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                        double r = fr * 3.0;
-                        for (int i = 0; i < 30; i++) { double a = Math.toRadians(i*12);
-                            w.spawnParticle(Particle.END_ROD, loc.clone().add(Math.cos(a)*r,0.8,Math.sin(a)*r), 1, 0, 0, 0, 0);
-                        }
-                    }, ring * 5L);
-                }
-                p.getNearbyEntities(20, 20, 20).forEach(e -> {
-                    if (e instanceof LivingEntity le && e != p) {
-                        le.setGlowing(true);
-                        le.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, ticks(30, dr), 0));
-                        w.spawnParticle(Particle.END_ROD, le.getLocation(), 15, 0.4, 0.8, 0.4, 0.04);
-                        Bukkit.getScheduler().runTaskLater(plugin, () -> { if (le.isValid()) le.setGlowing(false); }, ticks(140, dr));
-                    }
-                });
-                p.sendTitle("§3§lSONAR PULSE", "§7All enemies revealed!", 5, 50, 10);
+    // 5 expanding sonar rings
+    for (int ring = 1; ring <= 5; ring++) {
+        final int fr = ring;
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            double r = fr * 3.5; // ring expands outward
+            int    pts = 32;
+            for (int i = 0; i < pts; i++) {
+                double a = Math.toRadians(i * (360.0 / pts));
+                // Main ring
+                w.spawnParticle(Particle.END_ROD,
+                    loc.clone().add(Math.cos(a)*r, 0.5, Math.sin(a)*r),
+                    1, 0, 0, 0, 0);
+                // Inner ring slightly smaller
+                w.spawnParticle(Particle.SONIC_BOOM,
+                    loc.clone().add(Math.cos(a)*(r-0.3), 0.5, Math.sin(a)*(r-0.3)),
+                    1, 0, 0, 0, 0);
             }
+            // Vertical ring (Y plane)
+            for (int i = 0; i < 24; i++) {
+                double a = Math.toRadians(i * 15);
+                w.spawnParticle(Particle.END_ROD,
+                    loc.clone().add(0, Math.cos(a)*r*0.4 + r*0.3, Math.sin(a)*r),
+                    1, 0, 0, 0, 0);
+            }
+        }, ring * 4L);
+    }
+
+    // Reveal nearby players — glow + action bar
+    p.getNearbyEntities(20, 20, 20).forEach(e -> {
+        if (!(e instanceof LivingEntity le) || e == p) return;
+
+        le.setGlowing(true);
+        w.spawnParticle(Particle.END_ROD, le.getLocation(), 15, 0.4, 0.8, 0.4, 0.04);
+
+        // Glow hat jaata hai baad mein
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (le.isValid()) le.setGlowing(false);
+        }, ticks(140, dr));
+
+        // Owner ko dikhao kaun reveal hua
+        if (le instanceof Player ep) {
+            p.sendActionBar("§3🔍 §fRevealed: §b" + ep.getName());
+        }
+    });
+
+    p.sendTitle("§3§lSONAR PULSE", "§7All enemies revealed!", 5, 50, 10);
+}
+
 
             // 16. RAGE — Rage Mode
             case RAGE -> {
@@ -1008,32 +1094,90 @@ case LIGHT -> {
                     }
                 });
             }
+═══════════════════════════════════════════════════════════════════
+case ECHO -> {
+    // Check aim — agar koi target aim mein hai toh focused blast
+    LivingEntity tgt = aim(p, 25);
 
-            // 15. ECHO — Echo Blast  [knockback 1 tick after damage]
-            case ECHO -> {
-                LivingEntity tgt = aim(p, 25);
-                if (tgt != null) {
-                    w.spawnParticle(Particle.SONIC_BOOM, tgt.getLocation(), 2, 0, 0, 0, 0);
-                    w.spawnParticle(Particle.END_ROD,    tgt.getLocation(), 70, 1, 1.5, 1, 0.1);
-                    Vector vel = tgt.getLocation().toVector().subtract(loc.toVector()).normalize().multiply(4.0).setY(1.0);
-                    tgt.damage(9.0 * dm, p);
-                    tgt.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, ticks(60, dr), 0));
-                    tgt.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS,  ticks(80, dr), 2));
-                    Bukkit.getScheduler().runTaskLater(plugin, () -> { if (tgt.isValid()) tgt.setVelocity(vel); }, 1L);
-                    w.playSound(loc, Sound.ENTITY_ELDER_GUARDIAN_CURSE, 1f, 0.4f);
-                } else {
-                    w.spawnParticle(Particle.SONIC_BOOM, loc, 2, 0, 0, 0, 0);
-                    w.spawnParticle(Particle.END_ROD,    loc, 90, 4, 4, 4, 0.08);
-                    w.playSound(loc, Sound.ENTITY_ELDER_GUARDIAN_AMBIENT, 1f, 0.3f);
-                    p.getNearbyEntities(12, 12, 12).forEach(e -> {
-                        if (e instanceof LivingEntity le && e != p) {
-                            Vector vel = e.getLocation().toVector().subtract(loc.toVector()).normalize().multiply(2.5).setY(0.5);
-                            le.damage(5.0 * dm, p);
-                            Bukkit.getScheduler().runTaskLater(plugin, () -> { if (e.isValid()) e.setVelocity(vel); }, 1L);
-                        }
-                    });
+    if (tgt != null) {
+        // ── FOCUSED BLAST — aim par direct sonic boom ─────────────
+        w.spawnParticle(Particle.SONIC_BOOM, tgt.getLocation(), 3, 0, 0, 0, 0);
+        w.spawnParticle(Particle.END_ROD,    tgt.getLocation(), 70, 1, 1.5, 1, 0.1);
+        w.playSound(loc, Sound.ENTITY_ELDER_GUARDIAN_CURSE, 1f, 0.4f);
+        w.playSound(loc, Sound.ENTITY_WARDEN_SONIC_BOOM,    1f, 1.0f);
+
+        // Beam line from owner to target — sonic wave path
+        Location beam = p.getEyeLocation().clone();
+        Vector   step = tgt.getLocation().toVector()
+                .subtract(p.getEyeLocation().toVector()).normalize().multiply(0.6);
+        double   dist = p.getEyeLocation().distance(tgt.getLocation());
+        int      steps = (int)(dist / 0.6);
+        for (int i = 0; i < steps; i++) {
+            beam.add(step);
+            w.spawnParticle(Particle.END_ROD,   beam, 2, 0.04, 0.04, 0.04, 0);
+            w.spawnParticle(Particle.SONIC_BOOM, beam, 1, 0, 0, 0, 0);
+            if (i % 3 == 0)
+                w.spawnParticle(Particle.WHITE_ASH, beam, 2, 0.05, 0.05, 0.05, 0.02);
+        }
+
+        // Damage + knockback
+        Vector vel = tgt.getLocation().toVector()
+                .subtract(loc.toVector()).normalize().multiply(4.0).setY(1.0);
+        tgt.damage(9.0 * dm, p);
+        tgt.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, ticks(80, dr), 2));
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (tgt.isValid()) tgt.setVelocity(vel);
+        }, 1L);
+
+    } else {
+        // ── AOE SHOCKWAVE — koi aim nahi, circle mein blast ───────
+        w.spawnParticle(Particle.SONIC_BOOM, loc, 4, 0, 0, 0, 0);
+        w.spawnParticle(Particle.END_ROD,    loc, 90, 4, 4, 4, 0.08);
+        w.playSound(loc, Sound.ENTITY_ELDER_GUARDIAN_AMBIENT, 1f, 0.3f);
+        w.playSound(loc, Sound.ENTITY_WARDEN_SONIC_BOOM,      1f, 0.7f);
+
+        // 5 expanding shockwave rings — high animation
+        for (int ring = 1; ring <= 5; ring++) {
+            final int fr = ring;
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                double r   = fr * 2.2;
+                int    pts = 36;
+                for (int i = 0; i < pts; i++) {
+                    double a = Math.toRadians(i * (360.0 / pts));
+
+                    // Ground ring
+                    w.spawnParticle(Particle.END_ROD,
+                        loc.clone().add(Math.cos(a)*r, 0.15, Math.sin(a)*r),
+                        1, 0, 0, 0, 0);
+                    // Mid ring
+                    w.spawnParticle(Particle.SONIC_BOOM,
+                        loc.clone().add(Math.cos(a)*r, 1.0,  Math.sin(a)*r),
+                        1, 0, 0, 0, 0);
+                    // Top ring
+                    w.spawnParticle(Particle.END_ROD,
+                        loc.clone().add(Math.cos(a)*r, 2.0,  Math.sin(a)*r),
+                        1, 0, 0, 0, 0);
                 }
-            }
+                // Sound at each ring expansion
+                w.playSound(loc, Sound.ENTITY_ELDER_GUARDIAN_CURSE, 0.6f,
+                    0.3f + fr * 0.15f);
+            }, fr * 3L);
+        }
+
+        // Damage + knockback sab nearby enemies
+        p.getNearbyEntities(12, 12, 12).forEach(e -> {
+            if (!(e instanceof LivingEntity le) || e == p) return;
+            Vector vel = e.getLocation().toVector()
+                    .subtract(loc.toVector()).normalize().multiply(2.5).setY(0.5);
+            le.damage(5.0 * dm, p);
+            le.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, ticks(60, dr), 1));
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                if (e.isValid()) e.setVelocity(vel);
+            }, 1L);
+            w.spawnParticle(Particle.SONIC_BOOM, le.getLocation(), 1, 0, 0, 0, 0);
+        });
+    }
+}
 
             // 16. RAGE — Rage Smash  [knockback 1 tick after damage]
             case RAGE -> {
