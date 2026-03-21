@@ -709,7 +709,6 @@ case GUARDIAN -> {
             radius += 1.5;
         }
     }.runTaskTimer(plugin, 0, 1);
-}
 
 
             // 4. FROST — Freeze Trap
