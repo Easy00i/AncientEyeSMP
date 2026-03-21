@@ -519,12 +519,12 @@ case ECHO -> {
                 w.playSound(loc, Sound.BLOCK_BEACON_AMBIENT, 1f, 0.2f);
                 p.getNearbyEntities(10, 10, 10).forEach(e -> {
                     if (e instanceof LivingEntity le && e != p) {
-                        le.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, ticks(120, dr), 5));
-                        le.addPotionEffect(new PotionEffect(PotionEffectType.WITHER,   ticks(60,  dr), 1));
+                        le.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, ticks(160, dr), 5));
+                        le.addPotionEffect(new PotionEffect(PotionEffectType.WITHER,   ticks(160,  dr), 1));
                         w.spawnParticle(Particle.REVERSE_PORTAL, le.getLocation(), 20, 0.3, 0.6, 0.3, 0.06);
                     }
                 });
-                p.sendTitle("§d§lTIME SLOW", "§7Enemies frozen in time!", 5, 50, 10);
+                p.sendTitle("§d§lTIME SLOW", "§7Enemies frozen in time!", 5, 100, 10);
             }
 
             // 19. WARRIOR — War Cry
@@ -655,34 +655,67 @@ case OCEAN -> {
 }
 
 
-            // ECLIPSE PRIMARY
-case ECLIPSE -> {
-    double dmg = ecfg("ECLIPSE", "primary-damage", 18.0);
-    w.playSound(p.getLocation(), Sound.ENTITY_WITHER_SHOOT, 1f, 0.5f);
-    
-    new BukkitRunnable() {
-        double radius = 0.5;
-        public void run() {
-            if (radius > 8.0 || !p.isOnline()) { cancel(); return; }
-            
-            // Expanding hollow sphere of dark energy
-            for (double t = 0; t <= Math.PI; t += Math.PI / 10) {
-                for (double r = 0; r <= 2 * Math.PI; r += Math.PI / 10) {
-                    double x = radius * Math.sin(t) * Math.cos(r);
-                    double y = radius * Math.sin(t) * Math.sin(r) + 1;
-                    double z = radius * Math.cos(t);
-                    Location part = p.getLocation().clone().add(x, y, z);
-                    w.spawnParticle(Particle.SQUID_INK, part, 1, 0, 0, 0, 0);
-                    w.spawnParticle(Particle.DRAGON_BREATH, part, 1, 0, 0, 0, 0.01);
+            // ECLIPSE PRIMARY (1.21.1 Version)
+            case ECLIPSE -> {
+                double dmg = ecfg("ECLIPSE", "primary-damage", 18.0);
+                // Aim logic for target
+                LivingEntity target = aim(p, 30.0);
+
+                if (target == null) {
+                    p.sendMessage("§c§l» §7Koi target nahi mila!");
+                    return;
                 }
+
+                w.playSound(p.getLocation(), Sound.ENTITY_WITHER_SHOOT, 1f, 0.5f);
+                p.sendMessage("§8§l» §7Eclipse energy target par lock ho gayi hai...");
+
+                new BukkitRunnable() {
+                    int ticks = 0;
+                    
+                    public void run() {
+                        // 1.21.1 Safety Check
+                        if (target == null || !target.isValid() || target.isDead() || ticks >= 100) {
+                            
+                            // --- 5 SECONDS BAAD BOOM (TNT BLAST) ---
+                            Location finalLoc = target.getLocation().add(0, 1, 0);
+                            
+                            // 1.21.1 Sounds
+                            w.playSound(finalLoc, Sound.ENTITY_GENERIC_EXPLODE, 2f, 0.5f);
+                            w.playSound(finalLoc, Sound.ENTITY_DRAGON_FIREBALL_EXPLODE, 1f, 0.2f);
+                            
+                            // 1.21.1 Particles (Updated Names)
+                            w.spawnParticle(Particle.EXPLOSION_EMITTER, finalLoc, 3); // Large Explosion
+                            w.spawnParticle(Particle.EXPLOSION, finalLoc, 15, 0.5, 0.5, 0.5, 0.1);
+                            w.spawnParticle(Particle.DRAGON_BREATH, finalLoc, 40, 0.4, 0.4, 0.4, 0.05);
+                            w.spawnParticle(Particle.FLASH, finalLoc, 2);
+                            
+                            // Damage
+                            applySafeDamage(p, finalLoc, 5.0, dmg);
+                            
+                            cancel();
+                            return;
+                        }
+
+                        // --- BLACK BALL ANIMATION (1.21.1 Particles) ---
+                        Location midBody = target.getLocation().add(0, 1, 0);
+                        
+                        // Rotating Ring
+                        for (int i = 0; i < 4; i++) {
+                            double angle = (ticks * 0.4) + (i * (Math.PI * 2 / 4));
+                            double x = Math.cos(angle) * 0.7;
+                            double z = Math.sin(angle) * 0.7;
+                            // 1.21.1 mein SQUID_INK ki jagah sirf SQUID_INK ya GUST_EMITTER try kar sakte ho
+                            w.spawnParticle(Particle.SQUID_INK, midBody.clone().add(x, 0, z), 3, 0.05, 0.05, 0.05, 0.01);
+                        }
+                        
+                        // Center Core
+                        w.spawnParticle(Particle.WITCH, midBody, 5, 0.2, 0.2, 0.2, 0.02);
+                        w.spawnParticle(Particle.ENTITY_EFFECT, midBody, 10, 0.1, 0.1, 0.1, 0); // Black effect ke liye
+
+                        ticks += 2;
+                    }
+                }.runTaskTimer(plugin, 0, 2);
             }
-            
-            applySafeDamage(p, p.getLocation(), radius, dmg); // Damage as it expands
-            w.playSound(p.getLocation(), Sound.ENTITY_ENDER_DRAGON_FLAP, 0.5f, 1.5f);
-            radius += 1.5; // Tezi se bada hoga
-        }
-    }.runTaskTimer(plugin, 0, 2);
-}
 
 
             /// GUARDIAN PRIMARY
@@ -1220,17 +1253,93 @@ case ECHO -> {
                 p.sendTitle("§7§l👁 PHANTOM ESCAPE", "§8Speed IV — Invisible!", 5, 60, 10);
             }
 
-            // 18. TIME — (secondary placeholder — currently same eye, no secondary defined originally)
-            case TIME -> {
-                // TIME has no secondary in original — reuse primary logic as a smaller pulse
-                p.getNearbyEntities(6, 6, 6).forEach(e -> {
-                    if (e instanceof LivingEntity le && e != p) {
-                        le.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, ticks(80, dr), 4));
-                        w.spawnParticle(Particle.REVERSE_PORTAL, le.getLocation(), 15, 0.3, 0.6, 0.3, 0.05);
-                    }
-                });
-                w.playSound(loc, Sound.BLOCK_BEACON_AMBIENT, 1f, 0.4f);
+    case TIME -> {
+    // Aim direction — jis taraf dekh raha hai bilkul usi taraf
+    Vector dashDir = p.getEyeLocation().getDirection().normalize();
+
+    // Start location save karo
+    Location startLoc = p.getLocation().clone();
+
+    // Origin burst
+    w.spawnParticle(Particle.ELECTRIC_SPARK, loc, 60, 0.3, 0.5, 0.3, 0.15);
+    w.spawnParticle(Particle.FLASH,          loc, 2,  0,   0,   0,   0);
+    w.spawnParticle(Particle.REVERSE_PORTAL, loc, 30, 0.4, 0.6, 0.4, 0.1);
+    w.playSound(loc, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.6f, 2.0f);
+    w.playSound(loc, Sound.ENTITY_ELDER_GUARDIAN_CURSE,   0.4f, 2.0f);
+
+    // High speed dash velocity — aim direction mein 10 block
+    // setVelocity se instant force — light speed feel
+    p.setVelocity(dashDir.clone().multiply(3.5).setY(
+        dashDir.getY() > 0.1 ? dashDir.getY() * 3.5 : 0.15
+    ));
+
+    // Fall damage nahi hoga
+    p.setFallDistance(0f);
+
+    // Trail animation — dash ke peeche electric + flash particles
+    new BukkitRunnable() {
+        int    t         = 0;
+        double trailAngle = 0;
+
+        @Override
+        public void run() {
+            if (t++ >= 12) {
+                // Dash end burst
+                Location endLoc = p.getLocation();
+                w.spawnParticle(Particle.ELECTRIC_SPARK, endLoc, 50, 0.4, 0.6, 0.4, 0.12);
+                w.spawnParticle(Particle.FLASH,          endLoc,  2, 0,   0,   0,   0);
+                w.spawnParticle(Particle.END_ROD,        endLoc, 20, 0.3, 0.5, 0.3, 0.08);
+                w.playSound(endLoc, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 0.7f, 1.8f);
+                // Fall damage reset
+                p.setFallDistance(0f);
+                cancel();
+                return;
             }
+
+            trailAngle += 0.6;
+            Location cur = p.getLocation();
+
+            // ── Main trail — electric spark peeche se nikal ta hai ──
+            w.spawnParticle(Particle.ELECTRIC_SPARK, cur,
+                8, 0.2, 0.3, 0.2, 0.08);
+
+            // ── Flash strobe — speed of light feel ─────────────────
+            if (t % 2 == 0) {
+                w.spawnParticle(Particle.FLASH, cur, 1, 0, 0, 0, 0);
+            }
+
+            // ── Reverse portal — time distortion effect ─────────────
+            w.spawnParticle(Particle.REVERSE_PORTAL, cur,
+                5, 0.2, 0.4, 0.2, 0.06);
+
+            // ── Rotating electric ring — orbit karta hua trail ──────
+            for (int i = 0; i < 6; i++) {
+                double a = trailAngle + Math.toRadians(i * 60);
+                double r = 0.4;
+                w.spawnParticle(Particle.ELECTRIC_SPARK,
+                    cur.clone().add(Math.cos(a)*r, 0.5 + Math.sin(a)*0.3, Math.sin(a)*r),
+                    1, 0, 0, 0, 0.04);
+            }
+
+            // ── END_ROD ghost trail ──────────────────────────────────
+            w.spawnParticle(Particle.END_ROD, cur,
+                3, 0.1, 0.2, 0.1, 0.02);
+
+            // Fall damage reset har tick
+            p.setFallDistance(0f);
+
+            // Velocity maintain karo agar player ruk jaaye
+            if (t < 8) {
+                Vector cur_vel = p.getVelocity();
+                if (cur_vel.lengthSquared() < 1.5) {
+                    p.setVelocity(dashDir.clone().multiply(2.0).setY(
+                        cur_vel.getY()
+                    ));
+                }
+            }
+        }
+    }.runTaskTimer(plugin, 0, 1);
+}
 
             // 19. WARRIOR — Warrior Charge
             case WARRIOR -> {
