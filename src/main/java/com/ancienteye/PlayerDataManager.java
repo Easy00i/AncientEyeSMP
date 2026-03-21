@@ -7,7 +7,9 @@ import org.bukkit.entity.Player;
 import java.io.File;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 public class PlayerDataManager {
@@ -52,7 +54,7 @@ public class PlayerDataManager {
     public void resetEye(Player p) {
         playerEyes.remove(p.getUniqueId());
         playerLevels.remove(p.getUniqueId());
-        // FIX 2: XP bhi reset hona chahiye — pehle sirf map se remove nahi ho raha tha
+        // FIX 2: XP bhi reset hona chahiye
         playerXP.remove(p.getUniqueId());
         saveData();
         p.sendMessage("§cYour Eye has been completely reset by Admin.");
@@ -70,30 +72,40 @@ public class PlayerDataManager {
         return playerLevels.getOrDefault(p.getUniqueId(), 1);
     }
 
-    public void addXp(Player p, int amount) {
-    UUID id = p.getUniqueId();
-    int currentLevel = getLevel(p);
-    if (currentLevel >= 3) return; // Max level check
-
-    int currentXP = getXP(p);
-    int totalXP = currentXP + amount;
-    int maxXP = 100; 
-
-    if (totalXP >= maxXP) {
-        playerLevels.put(id, currentLevel + 1);
-        playerXP.put(id, 0);
-        p.sendMessage("§e§lLEVEL UP! §fLevel §6" + (currentLevel + 1));
-        p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
-    } else {
-        playerXP.put(id, totalXP);
+    // FIX A: maxXP level ke hisaab se — L1=30, L2=35, L3=50
+    // GUI aur action bar dono yahi use karein
+    public int getMaxXPForLevel(int level) {
+        return switch (level) {
+            case 1  -> 30;
+            case 2  -> 35;
+            default -> 50;
+        };
     }
-    
-    // ⭐ Action Bar par live update dikhana
-    p.sendActionBar("§bAncient XP: §f" + getXP(p) + " §8/ §f100");
-    
-    saveData(); // Data save logic
-}
 
+    public void addXp(Player p, int amount) {
+        UUID id = p.getUniqueId();
+        int currentLevel = getLevel(p);
+        if (currentLevel >= 3) return; // Max level check
+
+        int currentXP = getXP(p);
+        int totalXP   = currentXP + amount;
+        // FIX B: maxXP = 100 galat tha — level ke hisaab se hona chahiye
+        int maxXP     = getMaxXPForLevel(currentLevel);
+
+        if (totalXP >= maxXP) {
+            playerLevels.put(id, currentLevel + 1);
+            playerXP.put(id, 0);
+            p.sendMessage("§e§lLEVEL UP! §fLevel §6" + (currentLevel + 1));
+            p.playSound(p.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
+        } else {
+            playerXP.put(id, totalXP);
+        }
+
+        // FIX C: action bar mein sahi maxXP dikhao — 100 nahi
+        p.sendActionBar("§bAncient XP: §f" + getXP(p) + " §8/ §f" + maxXP);
+
+        saveData();
+    }
 
     // ── DATA.YML ──────────────────────────────────────────────────────────────
 
@@ -110,11 +122,18 @@ public class PlayerDataManager {
     public void saveAllData() { saveData(); }
 
     private void saveData() {
-        for (UUID uuid : playerEyes.keySet()) {
-            String path = "players." + uuid;
-            dataConfig.set(path + ".eye",   playerEyes.get(uuid).name());
+        // FIX 3: Sab UUIDs save karo — sirf playerEyes se nahi
+        Set<UUID> allUUIDs = new HashSet<>();
+        allUUIDs.addAll(playerEyes.keySet());
+        allUUIDs.addAll(playerLevels.keySet());
+        allUUIDs.addAll(playerXP.keySet());
+
+        for (UUID uuid : allUUIDs) {
+            String path  = "players." + uuid;
+            EyeType eye  = playerEyes.get(uuid);
+            dataConfig.set(path + ".eye",   eye != null ? eye.name() : EyeType.NONE.name());
             dataConfig.set(path + ".level", playerLevels.getOrDefault(uuid, 1));
-            // FIX 3: XP bhi save hona chahiye — pehle save nahi ho raha tha
+            // FIX 3: XP bhi save hona chahiye
             dataConfig.set(path + ".xp",    playerXP.getOrDefault(uuid, 0));
         }
         try { dataConfig.save(dataFile); } catch (IOException e) { e.printStackTrace(); }
