@@ -1218,7 +1218,7 @@ case MIRAGE -> {
                 }
                 top.setItem(22, buildEyeItem(p));
             }
-        }.runTaskTimer(plugin, 20L, 20L);
+        }.runTaskTimer(plugin, 10L, 10L);
     }
 
     // Builds the center eye item with live XP/level data
@@ -1362,11 +1362,21 @@ case MIRAGE -> {
     }
 
     private String progressBar(int cur, int max) {
-        int bars = 12, done = (int)((double)cur / max * bars);
-        StringBuilder sb = new StringBuilder("§a");
-        for (int i = 0; i < bars; i++) { if (i == done) sb.append("§7"); sb.append("┃"); }
-        return sb.toString();
+    int bars = 12;
+    // XP 100 se zyada na ho GUI mein isliye Math.min use kiya
+    int done = (int)((double)Math.min(cur, max) / max * bars);
+    
+    StringBuilder sb = new StringBuilder();
+    for (int i = 0; i < bars; i++) {
+        if (i < done) {
+            sb.append("§a┃"); // Jo XP mil gaya wo Green
+        } else {
+            sb.append("§7┃"); // Jo baki hai wo Gray
+        }
     }
+    return sb.toString();
+}
+
 
     private void applySafeDamage(Player owner, Location loc, double radius, double damage) {
     // Aas-paas ke entities dhoondo
