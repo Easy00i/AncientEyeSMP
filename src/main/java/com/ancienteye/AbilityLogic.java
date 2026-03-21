@@ -146,7 +146,6 @@ case STORM -> {
     // Safe Damage (Target ko lagega, Owner ko nahi)
     applySafeDamage(p, tLoc, 4.0, dmg);
   }
-}
 
 
             // 4. FROST — Ice Slide
