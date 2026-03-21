@@ -39,7 +39,7 @@ public class AncientEyePlugin extends JavaPlugin {
 
         // ADD — Eye HUD icon (offhand, resource pack se colored eye dikhega)
         this.eyeHUDTask = new EyeHUDTask(this);
-        eyeHUDTask.runTaskTimer(this, 20L, 20L);
+        eyeHUDTask.runTaskTimer(this, 0L, 1L);
 
         // 4. Register Commands
         registerCommand("smpstart");
@@ -54,11 +54,6 @@ public class AncientEyePlugin extends JavaPlugin {
 
     @Override
     public void onDisable() {
-        // ADD — HUD items sab players ke offhand se hata do
-        if (eyeHUDTask != null) {
-            eyeHUDTask.clearAllHudItems();
-        }
-
         if (playerDataManager != null) {
             playerDataManager.saveAllData();
         }
