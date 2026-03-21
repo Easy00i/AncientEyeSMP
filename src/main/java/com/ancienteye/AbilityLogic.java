@@ -621,12 +621,13 @@ case GUARDIAN -> {
             p.getWorld().getNearbyEntities(p.getLocation(), 5, 5, 5).forEach(e -> {
                 if (e instanceof Player ally) {
                     ally.addPotionEffect(new PotionEffect(PotionEffectType.DAMAGE_RESISTANCE, 40, 1));
-                }
-            });
-        }
-    }.runTaskTimer(plugin, 0, 3);
- }
-        }
+                 }
+             });
+         }
+      }.runTaskTimer(plugin, 0, 3);
+   }
+}
+    }
 
 
     // ══════════════════════════════════════════════════════════════════════
@@ -1146,6 +1147,7 @@ case METEOR -> {
         }.runTaskTimer(plugin, i * 4, 1); // Ek ke baad ek girenge
     }
 }
+                }
 // MIRAGE SECONDARY
 case MIRAGE -> {
     w.playSound(p.getLocation(), Sound.ENTITY_BAT_TAKEOFF, 1.5f, 0.8f);
@@ -1157,6 +1159,9 @@ case MIRAGE -> {
     
     p.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 120, 0)); // 6 secs
     p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 120, 2));        // Speed 3
+     }
+     }
+  }
 }
 
 
