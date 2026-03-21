@@ -117,7 +117,7 @@ public class AbilityLogic implements Listener {
                     }
                 }.runTaskTimer(plugin, 0, 1);
             }
-
+                
 case STORM -> {
     double dmg = ecfg("STORM", "primary-damage", 12.0);
     LivingEntity target = aim(p, 30.0); // 30 block range tak aim
@@ -145,6 +145,7 @@ case STORM -> {
 
     // Safe Damage (Target ko lagega, Owner ko nahi)
     applySafeDamage(p, tLoc, 4.0, dmg);
+  }
 }
 
 
