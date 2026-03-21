@@ -676,6 +676,7 @@ case GUARDIAN -> {
                 });
                 p.sendTitle("§b§lPHANTOM REVEAL", "§7All invisible players exposed!", 5, 50, 10);
             }
+        }
 
             case STORM -> {
     double qDmg = ecfg("STORM", "secondary-damage", 10.0);
