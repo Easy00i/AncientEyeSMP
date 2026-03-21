@@ -11,7 +11,6 @@ public class AncientEyePlugin extends JavaPlugin {
     private AnimationTradeManager animationTradeManager;
     private CommandManager commandManager;
     private EventManager eventManager;
-    private EyeHUDTask eyeHUDTask;  // ADD
 
     @Override
     public void onEnable() {
@@ -37,9 +36,6 @@ public class AncientEyePlugin extends JavaPlugin {
         // 3. Start Background Tasks
         new ParticleTask(this).runTaskTimer(this, 0, 5L);
 
-        // ADD — Eye HUD icon (offhand, resource pack se colored eye dikhega)
-        this.eyeHUDTask = new EyeHUDTask(this);
-        eyeHUDTask.runTaskTimer(this, 0L, 1L);
 
         // 4. Register Commands
         registerCommand("smpstart");
@@ -81,5 +77,4 @@ public class AncientEyePlugin extends JavaPlugin {
     public AbilityLogic getAbilityLogic()              { return abilityLogic; }
     public AnimationTradeManager getTradeManager()     { return animationTradeManager; }
     public EventManager getEventManager()              { return eventManager; }
-    public EyeHUDTask getEyeHUDTask()                 { return eyeHUDTask; }  // ADD
 }
