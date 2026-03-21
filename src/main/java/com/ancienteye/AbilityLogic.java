@@ -313,38 +313,42 @@ case STORM -> {
                     w.playSound(loc, Sound.ENTITY_WITCH_DRINK,  0.8f, 0.6f);
                 } else p.sendMessage("§7No target in range.");
             }
+════════════════════════════════════════════════════════════════════
+case LIGHT -> {
+    // Origin flash + expanding rings
+    w.spawnParticle(Particle.FLASH,   loc, 3, 0, 0, 0, 0);
+    w.spawnParticle(Particle.END_ROD, loc, 80, 2.5, 2.5, 2.5, 0.12);
+    w.playSound(loc, Sound.BLOCK_BEACON_POWER_SELECT,    1f, 2.0f);
+    w.playSound(loc, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 0.8f, 2.0f);
 
-            // 12. LIGHT — Flash Burst
-            case LIGHT -> {
-                w.spawnParticle(Particle.FLASH,   loc, 3,   0,   0,   0,   0);
-                w.spawnParticle(Particle.END_ROD, loc, 120, 3,   3,   3, 0.14);
-                for (int ring = 1; ring <= 4; ring++) { final int fr = ring;
-                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                        double r = fr * 2.8;
-                        for (int i = 0; i < 24; i++) { double a = Math.toRadians(i*15);
-                            w.spawnParticle(Particle.END_ROD, loc.clone().add(Math.cos(a)*r,0.5,Math.sin(a)*r), 3, 0, 0.3, 0, 0.02);
-                        }
-                    }, ring * 3L);
-                }
-                w.playSound(loc, Sound.BLOCK_BEACON_POWER_SELECT,    1f, 2.0f);
-                w.playSound(loc, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 0.7f, 2.0f);
-                p.getNearbyEntities(10, 10, 10).forEach(e -> {
-                    if (e instanceof LivingEntity le && e != p) {
-                        le.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, ticks(80, dr), 1));
-                        le.damage(5.0 * dm, p);
-                        w.spawnParticle(Particle.FLASH, le.getLocation(), 1, 0, 0, 0, 0);
-                    }
-                });
+    for (int ring = 1; ring <= 4; ring++) {
+        final int fr = ring;
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            double r = fr * 2.8;
+            for (int i = 0; i < 24; i++) {
+                double a = Math.toRadians(i * 15);
+                w.spawnParticle(Particle.END_ROD,
+                    loc.clone().add(Math.cos(a)*r, 0.5, Math.sin(a)*r),
+                    2, 0, 0.2, 0, 0.01);
             }
+        }, ring * 3L);
+    }
 
-            // 13. EARTH — Earth Wall
-            case EARTH -> {
-                w.spawnParticle(Particle.DUST_PLUME, loc, 100, 1.5, 0.4, 1.5, 0.2, Material.DIRT.createBlockData());
-                w.spawnParticle(Particle.EXPLOSION,  loc,   2, 0.4, 0,   0.4, 0);
-                w.playSound(loc, Sound.BLOCK_GRAVEL_BREAK,       1f, 0.3f);
-                w.playSound(loc, Sound.ENTITY_IRON_GOLEM_ATTACK, 1f, 0.5f);
-                buildWall(p);
-            }
+    // Damage + white screen sab nearby entities
+    p.getNearbyEntities(10, 10, 10).forEach(e -> {
+        if (!(e instanceof LivingEntity le) || e == p) return;
+
+        le.damage(5.0 * dm, p);
+        w.spawnParticle(Particle.FLASH,   le.getLocation(), 1, 0, 0, 0, 0);
+        w.spawnParticle(Particle.END_ROD, le.getLocation(), 20, 0.4, 0.8, 0.4, 0.05);
+
+        // Sirf Player ka screen white hoga — mobs ke paas screen nahi
+        if (le instanceof Player ep) {
+            whiteLightScreen(ep, ticks(80, dr), plugin); // 4s
+        }
+    });
+}
+
 
             // 14. CRYSTAL — Crystal Shield
             case CRYSTAL -> {
@@ -880,28 +884,83 @@ case GUARDIAN -> {
                 });
             }
 
-            // 12. LIGHT — Light Beam
-            case LIGHT -> {
-                w.playSound(loc, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 0.7f, 2.0f);
-                Location beam = p.getEyeLocation().clone();
-                boolean hit = false;
-                for (int i = 0; i < 30 && !hit; i++) {
-                    beam.add(dir);
-                    w.spawnParticle(Particle.END_ROD, beam, 5, 0.1, 0.1, 0.1, 0.01);
-                    if (i % 4 == 0) w.spawnParticle(Particle.FLASH, beam, 1, 0, 0, 0, 0);
-                    if (beam.getBlock().getType().isSolid()) { w.spawnParticle(Particle.FLASH, beam, 2, 0.3, 0.3, 0.3, 0); break; }
-                    for (Entity e : w.getNearbyEntities(beam, 1.2, 1.2, 1.2)) {
-                        if (e instanceof LivingEntity le && e != p) {
-                            le.damage(11.0 * dm, p);
-                            le.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, ticks(60, dr), 1));
-                            w.spawnParticle(Particle.FLASH,   le.getLocation(), 2, 0, 0, 0, 0);
-                            w.spawnParticle(Particle.END_ROD, le.getLocation(), 40, 0.5, 1, 0.5, 0.07);
-                            w.playSound(beam, Sound.ENTITY_PLAYER_LEVELUP, 0.8f, 2.0f);
-                            hit = true; break;
-                        }
-                    }
-                }
+            ══════════════════════════════════════════════════════════════════
+case LIGHT -> {
+    w.playSound(loc, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 0.8f, 2.0f);
+    w.playSound(loc, Sound.BLOCK_BEACON_ACTIVATE,        1f,   2.0f);
+
+    // Beam start burst
+    w.spawnParticle(Particle.FLASH,   p.getEyeLocation(), 2, 0, 0, 0, 0);
+    w.spawnParticle(Particle.END_ROD, p.getEyeLocation(), 20, 0.1, 0.1, 0.1, 0.05);
+
+    // Aim direction — jis taraf player dekh raha hai bilkul usi taraf
+    final Vector beamDir = p.getEyeLocation().getDirection().normalize();
+
+    new BukkitRunnable() {
+        // Beam start = player ki aankhon se
+        final Location beamPos = p.getEyeLocation().clone();
+        int     traveled = 0;
+        boolean hit      = false;
+
+        @Override
+        public void run() {
+            // Max 30 blocks (60 steps * 0.5) ya hit ho gaya
+            if (hit || traveled >= 60) {
+                // Beam end burst
+                w.spawnParticle(Particle.FLASH,   beamPos, 2, 0.2, 0.2, 0.2, 0);
+                w.spawnParticle(Particle.END_ROD, beamPos, 15, 0.3, 0.3, 0.3, 0.08);
+                cancel();
+                return;
             }
+
+            // 0.5 block aage badho har tick — smooth movement
+            beamPos.add(beamDir.clone().multiply(0.5));
+            traveled++;
+
+            // ── White laser particles ─────────────────────────────
+            // Main beam — END_ROD (white)
+            w.spawnParticle(Particle.END_ROD,   beamPos, 3, 0.03, 0.03, 0.03, 0.0);
+            // Ash trail — soft glow around beam
+            w.spawnParticle(Particle.WHITE_ASH, beamPos, 2, 0.04, 0.04, 0.04, 0.01);
+            // FLASH glow har 3rd step
+            if (traveled % 3 == 0) {
+                w.spawnParticle(Particle.FLASH, beamPos, 1, 0, 0, 0, 0);
+            }
+
+            // ── Solid block se takra — stop ───────────────────────
+            if (beamPos.getBlock().getType().isSolid()) {
+                w.spawnParticle(Particle.FLASH,   beamPos, 3, 0.3, 0.3, 0.3, 0);
+                w.spawnParticle(Particle.END_ROD, beamPos, 25, 0.5, 0.5, 0.5, 0.1);
+                w.playSound(beamPos, Sound.BLOCK_GLASS_BREAK, 1f, 2.0f);
+                hit = true;
+                return;
+            }
+
+            // ── Entity check — 0.8 box around beam tip ───────────
+            for (org.bukkit.entity.Entity e : w.getNearbyEntities(beamPos, 0.8, 0.8, 0.8)) {
+                if (!(e instanceof LivingEntity le) || e == p) continue;
+
+                // Damage
+                le.damage(11.0 * dm, p);
+
+                // Hit particles
+                w.spawnParticle(Particle.FLASH,   le.getLocation(), 3, 0, 0, 0, 0);
+                w.spawnParticle(Particle.END_ROD, le.getLocation(),
+                    30, 0.5, 1.0, 0.5, 0.08);
+                w.playSound(beamPos, Sound.ENTITY_PLAYER_LEVELUP, 0.8f, 2.0f);
+
+                // Player ka screen white karo
+                if (le instanceof Player ep && ep.isOnline()) {
+                    whiteLightScreen(ep, ticks(40, dr), plugin); // 2s
+                }
+
+                hit = true;
+                return; // Pehli entity hit karo, beam rok do
+            }
+        }
+    }.runTaskTimer(plugin, 0, 1);
+}
+
 
             // 13. EARTH — Earth Slam  [knockback 1 tick after damage]
             case EARTH -> {
@@ -1359,6 +1418,32 @@ case METEOR -> {
         i.setItemMeta(m);
         return i;
     }
+
+    ════════════════════════════════════════════════════════════════════
+private void whiteLightScreen(Player ep, int durationTicks, AncientEyePlugin plugin) {
+    new BukkitRunnable() {
+        int t = 0;
+        @Override
+        public void run() {
+            if (!ep.isOnline() || t++ >= durationTicks) {
+                cancel();
+                return;
+            }
+            // Aankhon ke 0.1 block saamne — camera literally FLASH ke andar
+            Location eyeFront = ep.getEyeLocation().clone()
+                    .add(ep.getEyeLocation().getDirection().multiply(0.1));
+
+            // 9 points — center + 8 around — poora screen cover karta hai
+            ep.spawnParticle(Particle.FLASH, eyeFront, 1, 0, 0, 0, 0);
+            for (int i = 0; i < 8; i++) {
+                double a = Math.toRadians(i * 45);
+                ep.spawnParticle(Particle.FLASH,
+                    eyeFront.clone().add(Math.cos(a) * 0.12, Math.sin(a) * 0.12, 0),
+                    1, 0, 0, 0, 0);
+            }
+        }
+    }.runTaskTimer(plugin, 0, 1);
+}
 
     private String progressBar(int cur, int max) {
         int bars = 12;
