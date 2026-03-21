@@ -403,6 +403,62 @@ public class EventManager implements Listener {
         }
     }
 
+        /**
+     * CRAFT task handler — config-driven.
+     * Works exactly like Break/Kill.
+     * Example: "Craft 5 Golden_Apple" or "Craft 1 Diamond_Sword"
+     */
+    @EventHandler
+    public void onCraft(CraftItemEvent e) {
+        if (!active) return;
+        if (!(e.getWhoClicked() instanceof Player p)) return;
+        if (!playerTasks.containsKey(p.getUniqueId())) return;
+
+        String task = getCurrentTaskName(p);
+        if (task == null || task.isEmpty()) return;
+
+        String lower = task.toLowerCase().trim();
+        if (!lower.startsWith("craft")) return;
+
+        // Aapke purane helpers use ho rahe hain
+        int required = parseTaskCount(task);
+        String itemKeyword = parseTaskMaterial(task);
+
+        if (itemKeyword.isEmpty()) return;
+
+        // Check if the crafted item matches the keyword
+        String craftedItemName = e.getRecipe().getResult().getType().name().toLowerCase();
+        if (craftedItemName.contains(itemKeyword.toLowerCase())) {
+            
+            // Default amount crafted
+            int amount = e.getRecipe().getResult().getAmount();
+            
+            // Shift-click support: Check how many can actually be crafted
+            if (e.isShiftClick()) {
+                int maxCraftable = 64; 
+                for (ItemStack item : e.getInventory().getMatrix()) {
+                    if (item != null && item.getType() != Material.AIR) {
+                        maxCraftable = Math.min(maxCraftable, item.getAmount());
+                    }
+                }
+                amount *= maxCraftable;
+            }
+
+            int c = blockCount.getOrDefault(p.getUniqueId(), 0) + amount;
+            blockCount.put(p.getUniqueId(), c);
+
+            // Action bar: show live progress like onBreak
+            p.sendActionBar("§6🔨 Craft " + capitalise(itemKeyword) + ": §f" + c + " §7/ §f" + required);
+
+            if (c >= required) {
+                // Counter reset aur task complete
+                blockCount.put(p.getUniqueId(), 0);
+                handleTaskCompletion(p, task);
+            }
+        }
+    }
+    
+
     /**
      * BREAK / MINE task handler — fully config-driven.
      *
