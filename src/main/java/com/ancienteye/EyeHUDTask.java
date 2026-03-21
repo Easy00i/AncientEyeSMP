@@ -1,39 +1,44 @@
 package com.ancienteye;
 
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.Bukkit;
-import org.bukkit.Material;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
-import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.scheduler.BukkitRunnable;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
-
 /**
- * EyeHUDTask — Custom Model Data version for 1.21.1
+ * EyeHUDTask — Action Bar + Font trick
  *
- * Har eye type ke liye ek ENDER_EYE item banata hai
- * jisme custom_model_data set hota hai.
- * Resource pack us CMD se colored eye texture dikhata hai.
+ * Hunger bar ke UPAR eye icon dikhata hai.
+ * Offhand bilkul free rehta hai — shield, torch sab use kar sakte ho.
  *
- * Item player ke OFFHAND mein diya jata hai — woh
- * hotbar ke RIGHT side mein hamesha visible rehta hai
- * (exactly jaise TokenSMP karta hai).
+ * Kaise kaam karta hai:
+ *   1. Resource pack mein hud.json font define hai
+ *   2. \uF664 = +100px positive space → text center se right side shift hota hai
+ *   3. Eye char (U+E000+) = colored eye PNG, ascent=-8 → hunger bar level par aa jaata hai
+ *   4. Action bar mein yeh string send karte hain har tick
  *
- * Add to AncientEyePlugin.onEnable():
- *   new EyeHUDTask(this).runTaskTimer(this, 20L, 20L);
+ * Position:
+ *   ❤❤❤❤❤  🍗🍗🍗🍗🍗
+ *                        [👁]  ← yahan dikhega (hunger bar ke right upar)
  *
- * Add to AncientEyePlugin.onDisable():
- *   clearAllHudItems();
+ * Requires: AncientEye_Final_Pack.zip resource pack
  */
 public class EyeHUDTask extends BukkitRunnable {
 
     private final AncientEyePlugin plugin;
 
-    // Track which players have HUD item in offhand
-    private final Map<UUID, EyeType> activeHud = new HashMap<>();
+    // ── Space chars from hud.json font ────────────────────────────────────────
+    // \uF680 = +128px  \uF640 = +64px  \uF620 = +32px  \uF610 = +16px
+    // Hunger bar right side ke liye ~+100px chahiye GUI scale 2 par
+    // Tune karo agar position off ho:
+    //   Zyada right chahiye → \uF680\uF640  (+192px)
+    //   Thoda kam          → \uF640\uF620   (+96px)
+    //   Abhi default       → \uF664         (+100px approx via 64+32+4)
+    private static final String PUSH = "\uF640\uF620\uF610\uF608";  // ~100px right
+
+    // ── Tiny negative space after icon to reset cursor ────────────────────────
+    private static final String RESET = "\uF701";  // -1px
 
     public EyeHUDTask(AncientEyePlugin plugin) {
         this.plugin = plugin;
@@ -43,123 +48,47 @@ public class EyeHUDTask extends BukkitRunnable {
     public void run() {
         for (Player p : Bukkit.getOnlinePlayers()) {
             EyeType eye = plugin.getPlayerData().getEye(p);
+            if (eye == null || eye == EyeType.NONE) continue;
 
-            if (eye == null || eye == EyeType.NONE) {
-                clearHudItem(p);
-                continue;
-            }
+            // PUSH + eye icon char
+            // Font ascent=-8 automatically places it at hunger bar level
+            String hud = PUSH + getEyeChar(eye) + RESET;
 
-            // Only update if eye changed (avoid flickering)
-            EyeType current = activeHud.get(p.getUniqueId());
-            if (current == eye) continue;
-
-            // Set HUD item in offhand
-            setHudItem(p, eye);
-            activeHud.put(p.getUniqueId(), eye);
+            p.spigot().sendMessage(
+                ChatMessageType.ACTION_BAR,
+                new TextComponent(hud)
+            );
         }
-
-        // Clean offline players
-        activeHud.keySet().removeIf(uuid -> Bukkit.getPlayer(uuid) == null);
     }
 
-    // ── Set eye icon item in offhand ──────────────────────────────────────────
-    private void setHudItem(Player p, EyeType eye) {
-        ItemStack item = new ItemStack(Material.ENDER_EYE);
-        ItemMeta meta = item.getItemMeta();
-
-        // Set custom model data — resource pack uses this to show colored eye texture
-        meta.setCustomModelData(getCustomModelData(eye));
-
-        // Display name
-        meta.setDisplayName(getEyeColor(eye) + "§l" + eye.name().replace("_"," ") + " EYE");
-
-        // Mark as HUD item so other systems ignore it
-        meta.getPersistentDataContainer().set(
-            new org.bukkit.NamespacedKey(plugin, "hud_item"),
-            org.bukkit.persistence.PersistentDataType.BYTE,
-            (byte) 1
-        );
-
-        item.setItemMeta(meta);
-
-        // Place in offhand — offhand shows on RIGHT of hotbar
-        p.getInventory().setItemInOffHand(item);
-    }
-
-    // ── Remove HUD item from offhand ──────────────────────────────────────────
-    public void clearHudItem(Player p) {
-        ItemStack offhand = p.getInventory().getItemInOffHand();
-        if (offhand != null && offhand.getType() == Material.ENDER_EYE) {
-            ItemMeta meta = offhand.getItemMeta();
-            if (meta != null && meta.getPersistentDataContainer().has(
-                    new org.bukkit.NamespacedKey(plugin, "hud_item"),
-                    org.bukkit.persistence.PersistentDataType.BYTE)) {
-                p.getInventory().setItemInOffHand(null);
-            }
-        }
-        activeHud.remove(p.getUniqueId());
-    }
-
-    // ── Clear all HUD items (call from onDisable) ─────────────────────────────
-    public void clearAllHudItems() {
-        for (UUID uuid : activeHud.keySet()) {
-            Player p = Bukkit.getPlayer(uuid);
-            if (p != null) clearHudItem(p);
-        }
-        activeHud.clear();
-    }
-
-    // ══════════════════════════════════════════════════════════════════════════
-    //  CUSTOM MODEL DATA MAP  — matches resource pack ender_eye.json entries
-    // ══════════════════════════════════════════════════════════════════════════
-    private int getCustomModelData(EyeType eye) {
+    // ── Eye → Unicode char (matches hud.json font) ────────────────────────────
+    private String getEyeChar(EyeType eye) {
         return switch (eye) {
-            case VOID     -> 1001;
-            case PHANTOM  -> 1002;
-            case STORM    -> 1003;
-            case FROST    -> 1004;
-            case FLAME    -> 1005;
-            case SHADOW   -> 1006;
-            case TITAN    -> 1007;
-            case HUNTER   -> 1008;
-            case GRAVITY  -> 1009;
-            case WIND     -> 1010;
-            case POISON   -> 1011;
-            case LIGHT    -> 1012;
-            case EARTH    -> 1013;
-            case CRYSTAL  -> 1014;
-            case ECHO     -> 1015;
-            case RAGE     -> 1016;
-            case SPIRIT   -> 1017;
-            case TIME     -> 1018;
-            case WARRIOR  -> 1019;
-            case METEOR   -> 1020;
-            case MIRAGE   -> 1021;
-            case OCEAN    -> 1022;
-            case ECLIPSE  -> 1023;
-            case GUARDIAN -> 1024;
-            default       -> 0;
-        };
-    }
-
-    // ── Chat color per eye ────────────────────────────────────────────────────
-    private String getEyeColor(EyeType eye) {
-        return switch (eye) {
-            case VOID, ECLIPSE          -> "§5";
-            case PHANTOM, SHADOW        -> "§8";
-            case STORM, OCEAN           -> "§9";
-            case FROST, CRYSTAL         -> "§b";
-            case FLAME, METEOR          -> "§c";
-            case TITAN, WARRIOR         -> "§6";
-            case HUNTER                 -> "§2";
-            case GRAVITY, TIME          -> "§d";
-            case WIND                   -> "§f";
-            case POISON, SPIRIT,
-                 GUARDIAN               -> "§a";
-            case LIGHT, MIRAGE          -> "§e";
-            case EARTH, ECHO            -> "§3";
-            case RAGE                   -> "§4";
-            default                     -> "§f";
+            case VOID     -> "\uE000";
+            case PHANTOM  -> "\uE001";
+            case STORM    -> "\uE002";
+            case FROST    -> "\uE003";
+            case FLAME    -> "\uE004";
+            case SHADOW   -> "\uE005";
+            case TITAN    -> "\uE006";
+            case HUNTER   -> "\uE007";
+            case GRAVITY  -> "\uE008";
+            case WIND     -> "\uE009";
+            case POISON   -> "\uE00A";
+            case LIGHT    -> "\uE00B";
+            case EARTH    -> "\uE00C";
+            case CRYSTAL  -> "\uE00D";
+            case ECHO     -> "\uE00E";
+            case RAGE     -> "\uE00F";
+            case SPIRIT   -> "\uE010";
+            case TIME     -> "\uE011";
+            case WARRIOR  -> "\uE012";
+            case METEOR   -> "\uE013";
+            case MIRAGE   -> "\uE014";
+            case OCEAN    -> "\uE015";
+            case ECLIPSE  -> "\uE016";
+            case GUARDIAN -> "\uE017";
+            default       -> "";
         };
     }
 }
