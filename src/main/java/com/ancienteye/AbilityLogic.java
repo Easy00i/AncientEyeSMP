@@ -1203,7 +1203,7 @@ case METEOR -> {
         }
     }
 
-        // ══════════════════════════════════════════════════════════════════════
+            // ══════════════════════════════════════════════════════════════════════
     //  GUI  — XP auto-refreshes every second while the inventory is open
     // ══════════════════════════════════════════════════════════════════════
     public void openEyeGUI(Player p) {
@@ -1234,8 +1234,8 @@ case METEOR -> {
         EyeType type  = plugin.getPlayerData().getEye(p);
         int     level = plugin.getPlayerData().getLevel(p);
         int     xp    = plugin.getPlayerData().getXP(p);
-        // FIX: maxXP level ke hisaab se — L1=30, L2=35, L3=50
-        int     maxXP = getMaxXPForLevel(level);
+        // maxXP level ke hisaab se — PlayerDataManager se match
+        int     maxXP = plugin.getPlayerData().getMaxXPForLevel(level);
         String  bar   = progressBar(xp, maxXP);
         String  col   = level==3?"§e§l":level==2?"§b§l":"§7§l";
 
@@ -1260,15 +1260,6 @@ case METEOR -> {
         m.setLore(lore);
         eye.setItemMeta(m);
         return eye;
-    }
-
-    // FIX: Level ke hisaab se maxXP — PlayerDataManager se match karta hai
-    private int getMaxXPForLevel(int level) {
-        return switch (level) {
-            case 1  -> 30;
-            case 2  -> 35;
-            default -> 50;
-        };
     }
 
     // ══════════════════════════════════════════════════════════════════════
@@ -1369,7 +1360,6 @@ case METEOR -> {
         return i;
     }
 
-    // FIX: progressBar ab level-aware maxXP use karta hai
     private String progressBar(int cur, int max) {
         int bars = 12;
         int done = (int)((double)Math.min(cur, max) / max * bars);
@@ -1393,3 +1383,4 @@ case METEOR -> {
         });
     }
 }
+
