@@ -76,7 +76,7 @@ public class AbilityLogic implements Listener {
         }
     }
 
-    ════════════════════════════════════════════════════════════════════
+    //════════════════════════════════════════════════════════════════════
 @EventHandler
 public void onFootstep(org.bukkit.event.player.PlayerMoveEvent e) {
     Player mover = e.getPlayer();
@@ -367,7 +367,7 @@ case STORM -> {
                     w.playSound(loc, Sound.ENTITY_WITCH_DRINK,  0.8f, 0.6f);
                 } else p.sendMessage("§7No target in range.");
             }
-════════════════════════════════════════════════════════════════════
+//════════════════════════════════════════════════════════════════════
 case LIGHT -> {
     // Origin flash + expanding rings
     w.spawnParticle(Particle.FLASH,   loc, 3, 0, 0, 0, 0);
@@ -414,7 +414,7 @@ case LIGHT -> {
                 w.playSound(loc, Sound.BLOCK_AMETHYST_BLOCK_CHIME,   1f, 1.2f);
                 p.sendTitle("§b§l💎 CRYSTAL SHIELD", "§7Resistance V Active!", 5, 45, 10);
             }
-═══════════════════════════════════════════════════════════════════
+//═══════════════════════════════════════════════════════════════════
 case ECHO -> {
     // Sonic boom origin
     w.spawnParticle(Particle.SONIC_BOOM, loc, 1, 0, 0, 0, 0);
@@ -1003,7 +1003,7 @@ case GUARDIAN -> {
                 });
             }
 
-            ══════════════════════════════════════════════════════════════════
+            //══════════════════════════════════════════════════════════════════
 case LIGHT -> {
     w.playSound(loc, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 0.8f, 2.0f);
     w.playSound(loc, Sound.BLOCK_BEACON_ACTIVATE,        1f,   2.0f);
@@ -1127,7 +1127,7 @@ case LIGHT -> {
                     }
                 });
             }
-═══════════════════════════════════════════════════════════════════
+//═══════════════════════════════════════════════════════════════════
 case ECHO -> {
     // Check aim — agar koi target aim mein hai toh focused blast
     LivingEntity tgt = aim(p, 25);
@@ -1672,7 +1672,7 @@ case METEOR -> {
         return i;
     }
 
-    ════════════════════════════════════════════════════════════════════
+   // ════════════════════════════════════════════════════════════════════
 private void whiteLightScreen(Player ep, int durationTicks, AncientEyePlugin plugin) {
     new BukkitRunnable() {
         int t = 0;
