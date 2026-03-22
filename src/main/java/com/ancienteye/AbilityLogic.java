@@ -814,7 +814,7 @@ case ECLIPSE -> {
                         double dist  = 2 + (i % 5);
                         Location blk = blastLoc.clone().add(
                             Math.cos(angle)*dist, -0.5, Math.sin(angle)*dist);
-                        w.spawnParticle(Particle.BLOCK_CRUMBLE, blk, 5,
+                        w.spawnParticle(Particle.BLOCK_DUST, blk, 5,
                             0.3, 0.1, 0.3, 0.05,
                             org.bukkit.Material.OBSIDIAN.createBlockData());
                     }
@@ -1625,7 +1625,7 @@ case SPIRIT -> {
 
                 } else {
                     // ── END — block remove ────────────────────────────────
-                    w.spawnParticle(Particle.BLOCK_CRUMBLE,
+                    w.spawnParticle(Particle.BLOCK_DUST,
                         fb.getLocation(), 20, 0.5, 0.3, 0.5, 0.1,
                         blockMat.createBlockData());
                     w.spawnParticle(Particle.TOTEM_OF_UNDYING,
