@@ -75,6 +75,36 @@ public class AbilityLogic implements Listener {
             }
         }
     }
+    // ── XP EVENTS ────────────────────────────────────────────────────────
+// Player kill par XP
+@EventHandler
+public void onPlayerKillXP(org.bukkit.event.entity.PlayerDeathEvent e) {
+    if (e.getEntity().getKiller() == null) return;
+    Player killer = e.getEntity().getKiller();
+    if (plugin.getPlayerData().getEye(killer) == EyeType.NONE) return;
+    plugin.getPlayerData().addXp(killer,
+        plugin.getConfig().getInt("settings.xp-per-kill", 10));
+}
+
+// Mob kill par XP
+@EventHandler
+public void onMobKillXP(org.bukkit.event.entity.EntityDeathEvent e) {
+    if (e.getEntity().getKiller() == null) return;
+    if (e.getEntity() instanceof Player) return;
+    Player killer = e.getEntity().getKiller();
+    if (plugin.getPlayerData().getEye(killer) == EyeType.NONE) return;
+    plugin.getPlayerData().addXp(killer,
+        plugin.getConfig().getInt("settings.xp-per-mob-kill", 2));
+}
+
+// XP bottle / orb collect par XP
+@EventHandler
+public void onExpChangeXP(org.bukkit.event.player.PlayerExpChangeEvent e) {
+    Player p = e.getPlayer();
+    if (e.getAmount() <= 0) return;
+    if (plugin.getPlayerData().getEye(p) == EyeType.NONE) return;
+    plugin.getPlayerData().addXp(p, Math.max(1, e.getAmount() / 5));
+}
 
     //════════════════════════════════════════════════════════════════════
 @EventHandler
