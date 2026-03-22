@@ -1568,7 +1568,7 @@ case METEOR -> {
                 }
                 top.setItem(22, buildEyeItem(p));
             }
-        }.runTaskTimer(plugin, 10L, 10L);
+        }.runTaskTimer(plugin, 1L, 1L);
     }
 
     // Builds the center eye item with live XP/level data
