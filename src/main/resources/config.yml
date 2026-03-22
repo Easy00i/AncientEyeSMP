@@ -144,6 +144,9 @@ trade:
 animation:
   smp-spin-ticks: 160
 
+  settings:
+  particles-enabled: true
+
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  MESSAGES
 #  {time}   — cooldown seconds remaining
