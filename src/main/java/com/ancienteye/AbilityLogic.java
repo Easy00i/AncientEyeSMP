@@ -685,68 +685,159 @@ case OCEAN -> {
 }
 
 
-            // ECLIPSE PRIMARY (1.21.1 Version)
-            case ECLIPSE -> {
-                double dmg = ecfg("ECLIPSE", "primary-damage", 18.0);
-                // Aim logic for target
-                LivingEntity target = aim(p, 30.0);
+            // ECLIPSE PRIMARY
+case ECLIPSE -> {
+    double dmg = ecfg("ECLIPSE", "primary-damage", 18.0);
+    LivingEntity target = aim(p, 30.0);
 
-                if (target == null) {
-                    p.sendMessage("§c§l» §7Koi target nahi mila!");
-                    return;
+    if (target == null) {
+        p.sendMessage("§cNo target found!");
+        return;
+    }
+
+    w.playSound(p.getLocation(), Sound.ENTITY_WITHER_SHOOT, 1f, 0.5f);
+    w.playSound(target.getLocation(), Sound.ENTITY_ENDERMAN_STARE, 0.8f, 0.5f);
+
+    new BukkitRunnable() {
+        int    ticks     = 0;
+        double cubeAngle = 0;
+
+        public void run() {
+            // Safety — agar target mar gaya ya 3s ho gayi
+            if (!target.isValid() || target.isDead()) { cancel(); return; }
+
+            // ── 3 SECONDS (60 ticks) BLACK CUBE ANIMATION ────────────────
+            if (ticks < 60) {
+                cubeAngle += 0.08;
+                Location body = target.getLocation().clone().add(0, 1.0, 0);
+
+                // ── Rotating BLACK CUBE — 8 vertices, 12 edges ──────────
+                double r   = 0.75 + Math.sin(ticks * 0.15) * 0.08; // slight pulse
+                double cosA = Math.cos(cubeAngle), sinA = Math.sin(cubeAngle);
+                double cosT = Math.cos(0.4),       sinT = Math.sin(0.4);
+
+                double[][] verts = {
+                    {-r,-r,-r},{r,-r,-r},{r,r,-r},{-r,r,-r},
+                    {-r,-r, r},{r,-r, r},{r,r, r},{-r,r, r}
+                };
+                int[][] edges = {
+                    {0,1},{1,2},{2,3},{3,0},
+                    {4,5},{5,6},{6,7},{7,4},
+                    {0,4},{1,5},{2,6},{3,7}
+                };
+                // Rotate vertices
+                double[][] rv = new double[8][3];
+                for (int v = 0; v < 8; v++) {
+                    double x = verts[v][0], y = verts[v][1], z = verts[v][2];
+                    double nx  = x*cosA - z*sinA;
+                    double nz  = x*sinA + z*cosA;
+                    double ny2 = y*cosT - nz*sinT;
+                    double nz2 = y*sinT + nz*cosT;
+                    rv[v][0]=nx; rv[v][1]=ny2+r; rv[v][2]=nz2;
+                }
+                // Draw edges
+                Particle.DustOptions black = new Particle.DustOptions(
+                    org.bukkit.Color.fromRGB(10, 0, 20), 1.1f);
+                for (int[] edge : edges) {
+                    double[] va = rv[edge[0]], vb = rv[edge[1]];
+                    for (int k = 0; k <= 5; k++) {
+                        double t  = (double)k/5;
+                        Location pt = body.clone().add(
+                            va[0]+(vb[0]-va[0])*t,
+                            va[1]+(vb[1]-va[1])*t - r,
+                            va[2]+(vb[2]-va[2])*t);
+                        w.spawnParticle(Particle.DUST, pt, 1, 0, 0, 0, 0, black);
+                    }
                 }
 
-                w.playSound(p.getLocation(), Sound.ENTITY_WITHER_SHOOT, 1f, 0.5f);
-                p.sendMessage("§8§l» §7Eclipse energy target par lock ho gayi hai...");
+                // Center dark core
+                w.spawnParticle(Particle.SQUID_INK, body, 2, 0.1, 0.1, 0.1, 0.01);
+                w.spawnParticle(Particle.DRAGON_BREATH, body, 3, 0.15, 0.15, 0.15, 0.02);
 
-                new BukkitRunnable() {
-                    int ticks = 0;
-                    
-                    public void run() {
-                        // 1.21.1 Safety Check
-                        if (target == null || !target.isValid() || target.isDead() || ticks >= 100) {
-                            
-                            // --- 5 SECONDS BAAD BOOM (TNT BLAST) ---
-                            Location finalLoc = target.getLocation().add(0, 1, 0);
-                            
-                            // 1.21.1 Sounds
-                            w.playSound(finalLoc, Sound.ENTITY_GENERIC_EXPLODE, 2f, 0.5f);
-                            w.playSound(finalLoc, Sound.ENTITY_DRAGON_FIREBALL_EXPLODE, 1f, 0.2f);
-                            
-                            // 1.21.1 Particles (Updated Names)
-                            w.spawnParticle(Particle.EXPLOSION_EMITTER, finalLoc, 3); // Large Explosion
-                            w.spawnParticle(Particle.EXPLOSION, finalLoc, 15, 0.5, 0.5, 0.5, 0.1);
-                            w.spawnParticle(Particle.DRAGON_BREATH, finalLoc, 40, 0.4, 0.4, 0.4, 0.05);
-                            w.spawnParticle(Particle.FLASH, finalLoc, 2);
-                            
-                            // Damage
-                            applySafeDamage(p, finalLoc, 5.0, dmg);
-                            
-                            cancel();
-                            return;
+                // Warning sound intensifies
+                if (ticks % 20 == 0) {
+                    float pitch = 0.4f + (ticks / 60f) * 1.2f;
+                    w.playSound(target.getLocation(),
+                        Sound.ENTITY_ENDERMAN_AMBIENT, 0.6f, pitch);
+                }
+
+                ticks += 2;
+
+            } else {
+                // ── BLAST — cube disappear, TNT black explosion ──────────
+                cancel();
+
+                Location blastLoc = target.getLocation().clone().add(0, 1, 0);
+
+                // Cube disappear flash
+                w.spawnParticle(Particle.SQUID_INK,      blastLoc, 60, 0.5, 0.5, 0.5, 0.15);
+                w.spawnParticle(Particle.DRAGON_BREATH,  blastLoc, 80, 0.8, 0.8, 0.8, 0.08);
+                w.spawnParticle(Particle.EXPLOSION_EMITTER, blastLoc, 2, 0, 0, 0, 0);
+                w.spawnParticle(Particle.EXPLOSION,      blastLoc, 20, 1.0, 0.5, 1.0, 0.1);
+
+                // Blast sounds
+                w.playSound(blastLoc, Sound.ENTITY_GENERIC_EXPLODE,         2f, 0.4f);
+                w.playSound(blastLoc, Sound.ENTITY_WITHER_BREAK_BLOCK,       1f, 0.5f);
+                w.playSound(blastLoc, Sound.ENTITY_DRAGON_FIREBALL_EXPLODE,  1f, 0.3f);
+
+                // ── 10 block radius shockwave rings ─────────────────────
+                for (int ring = 1; ring <= 5; ring++) {
+                    final int fr = ring;
+                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                        double rad = fr * 2.0;
+                        int    pts = 36;
+                        for (int i = 0; i < pts; i++) {
+                            double a = Math.toRadians(i * (360.0 / pts));
+                            // Ground ring
+                            w.spawnParticle(Particle.SQUID_INK,
+                                blastLoc.clone().add(Math.cos(a)*rad, 0.1, Math.sin(a)*rad),
+                                1, 0, 0, 0, 0);
+                            // Mid ring
+                            w.spawnParticle(Particle.DRAGON_BREATH,
+                                blastLoc.clone().add(Math.cos(a)*rad, 1.0, Math.sin(a)*rad),
+                                1, 0, 0, 0, 0);
+                            // Top ring
+                            w.spawnParticle(Particle.SQUID_INK,
+                                blastLoc.clone().add(Math.cos(a)*rad, 2.0, Math.sin(a)*rad),
+                                1, 0, 0, 0, 0);
                         }
+                        // Ring sound
+                        w.playSound(blastLoc, Sound.ENTITY_WITHER_AMBIENT,
+                            0.5f, 0.3f + fr * 0.1f);
+                    }, ring * 2L);
+                }
 
-                        // --- BLACK BALL ANIMATION (1.21.1 Particles) ---
-                        Location midBody = target.getLocation().add(0, 1, 0);
-                        
-                        // Rotating Ring
-                        for (int i = 0; i < 4; i++) {
-                            double angle = (ticks * 0.4) + (i * (Math.PI * 2 / 4));
-                            double x = Math.cos(angle) * 0.7;
-                            double z = Math.sin(angle) * 0.7;
-                            // 1.21.1 mein SQUID_INK ki jagah sirf SQUID_INK ya GUST_EMITTER try kar sakte ho
-                            w.spawnParticle(Particle.SQUID_INK, midBody.clone().add(x, 0, z), 3, 0.05, 0.05, 0.05, 0.01);
-                        }
-                        
-                        // Center Core
-                        w.spawnParticle(Particle.WITCH, midBody, 5, 0.2, 0.2, 0.2, 0.02);
-                        w.spawnParticle(Particle.ENTITY_EFFECT, midBody, 10, 0.1, 0.1, 0.1, 0); // Black effect ke liye
-
-                        ticks += 2;
+                // ── Block shake — nearby blocks vibrate effect ───────────
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    for (int i = 0; i < 30; i++) {
+                        double angle = Math.toRadians(i * 12);
+                        double dist  = 2 + (i % 5);
+                        Location blk = blastLoc.clone().add(
+                            Math.cos(angle)*dist, -0.5, Math.sin(angle)*dist);
+                        w.spawnParticle(Particle.BLOCK_CRUMBLE, blk, 5,
+                            0.3, 0.1, 0.3, 0.05,
+                            org.bukkit.Material.OBSIDIAN.createBlockData());
                     }
-                }.runTaskTimer(plugin, 0, 2);
-            }
+                }, 3L);
 
+                // ── Damage — owner safe, 10 block radius ─────────────────
+                applySafeDamage(p, blastLoc, 10.0, dmg);
+
+                // Knockback — enemies ko blast se door phenk do
+                blastLoc.getWorld().getNearbyEntities(blastLoc, 10, 10, 10)
+                    .forEach(e -> {
+                        if (e instanceof LivingEntity le && e != p) {
+                            Vector vel = e.getLocation().toVector()
+                                .subtract(blastLoc.toVector())
+                                .normalize().multiply(3.5).setY(1.2);
+                            Bukkit.getScheduler().runTaskLater(plugin,
+                                () -> { if (e.isValid()) e.setVelocity(vel); }, 1L);
+                        }
+                    });
+            }
+        }
+    }.runTaskTimer(plugin, 0, 2);
+}
 
             /// GUARDIAN PRIMARY
 case GUARDIAN -> {
@@ -868,30 +959,149 @@ case GUARDIAN -> {
             }  // end case STORM
 
 
+// ════════════════════════════════════════════════════════════════════
+case FROST -> {
+    w.spawnParticle(Particle.SNOWFLAKE, loc, 100, 2.5, 0.5, 2.5, 0.1);
+    w.spawnParticle(Particle.WHITE_ASH, loc,  60, 2.0, 0.3, 2.0, 0.05);
+    w.playSound(loc, Sound.ENTITY_PLAYER_HURT_FREEZE, 1f, 0.3f);
+    w.playSound(loc, Sound.BLOCK_GLASS_BREAK,         1f, 0.4f);
 
-            // 4. FROST — Freeze Trap
-            case FROST -> {
-                w.spawnParticle(Particle.SNOWFLAKE, loc, 100, 2.5, 0.5, 2.5, 0.1);
-                w.spawnParticle(Particle.WHITE_ASH, loc,  60, 2.0, 0.3, 2.0, 0.05);
-                w.spawnParticle(Particle.EXPLOSION, loc,   2, 0.5, 0,   0.5, 0);
-                for (int ring = 1; ring <= 3; ring++) { final int fr = ring;
-                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                        double r = fr * 2.0;
-                        for (int i = 0; i < 20; i++) { double a = Math.toRadians(i*18);
-                            w.spawnParticle(Particle.SNOWFLAKE, loc.clone().add(Math.cos(a)*r,0.2,Math.sin(a)*r), 3, 0, 0, 0, 0.02);
+    List<Location> placedBlocks = new ArrayList<>();
+
+    // 4 sides: North, South, East, West
+    // direction = spike points outward this way
+    // perp = spread along this side
+    double[][] dirs  = {{ 1, 0},{ -1, 0},{ 0, 1},{ 0,-1}};
+    double[][] perps = {{ 0, 1},{  0,-1},{ 1, 0},{-1, 0}};
+
+    double angleRad = Math.toRadians(40); // 40 degrees from ground
+    double cosA = Math.cos(angleRad);     // horizontal component
+    double sinA = Math.sin(angleRad);     // vertical component
+
+    // Spawn spikes with slight delay per side for cinematic effect
+    for (int d = 0; d < 4; d++) {
+        final int fd = d;
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            double dx = dirs[fd][0],  dz = dirs[fd][1];
+            double px = perps[fd][0], pz = perps[fd][1];
+
+            // 5 spikes per side, spread 3 blocks apart (-6,-3,0,3,6)
+            for (int s = 0; s < 5; s++) {
+                double spread = (s - 2) * 3.0;
+
+                // Base of spike — 10 blocks from center
+                double baseX = loc.getX() + dx * 10 + px * spread;
+                double baseY = loc.getY();
+                double baseZ = loc.getZ() + dz * 10 + pz * spread;
+
+                // Spike height: 25 blocks along axis, tapering
+                int spikeLen = 18 + (s == 2 ? 7 : (s == 1 || s == 3 ? 4 : 0)); // center tallest
+                for (int h = 0; h < spikeLen; h++) {
+                    // Position along 40° spike
+                    double outward = h * cosA; // outward offset along ground plane
+                    double upward  = h * sinA; // upward offset
+
+                    // Width tapers: base=2, mid=1, tip=0
+                    int halfW = h < spikeLen/3 ? 1 : 0;
+
+                    for (int ww = -halfW; ww <= halfW; ww++) {
+                        int bx = (int) Math.round(baseX + dx*outward + px*ww);
+                        int by = (int) Math.round(baseY + upward);
+                        int bz = (int) Math.round(baseZ + dz*outward + pz*ww);
+
+                        Location bl = new Location(w, bx, by, bz);
+                        org.bukkit.block.Block blk = bl.getBlock();
+                        Material mat = blk.getType();
+
+                        // Only place in air/non-solid — no griefing
+                        if (mat == Material.AIR
+                                || mat == Material.CAVE_AIR
+                                || mat == Material.VOID_AIR) {
+                            // Alternate BLUE_ICE and PACKED_ICE for crystal look
+                            blk.setType(h % 3 == 0 ? Material.BLUE_ICE : Material.PACKED_ICE);
+                            synchronized (placedBlocks) { placedBlocks.add(bl); }
                         }
-                    }, ring * 3L);
-                }
-                w.playSound(loc, Sound.ENTITY_PLAYER_HURT_FREEZE, 1f, 0.5f);
-                w.playSound(loc, Sound.BLOCK_GLASS_BREAK,         1f, 0.4f);
-                p.getNearbyEntities(6, 6, 6).forEach(e -> {
-                    if (e instanceof LivingEntity le && e != p) {
-                        le.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, ticks(40, dr), 10));
-                        le.damage(4.0 * dm, p);
-                        w.spawnParticle(Particle.SNOWFLAKE, le.getLocation(), 20, 0.4, 0.8, 0.4, 0.03);
                     }
-                });
+                }
+
+                // Ice spawn particles at base
+                Location base = new Location(w, baseX, baseY, baseZ);
+                w.spawnParticle(Particle.SNOWFLAKE, base, 20, 0.3, 0.2, 0.3, 0.04);
+                w.spawnParticle(Particle.WHITE_ASH, base, 10, 0.2, 0.3, 0.2, 0.02);
             }
+
+            // Sound per side
+            w.playSound(new Location(w,
+                loc.getX() + dx*10,
+                loc.getY(),
+                loc.getZ() + dz*10),
+                Sound.BLOCK_GLASS_BREAK, 1f, 0.5f);
+            w.playSound(new Location(w,
+                loc.getX() + dx*10,
+                loc.getY(),
+                loc.getZ() + dz*10),
+                Sound.ENTITY_PLAYER_HURT_FREEZE, 1f, 0.6f);
+
+        }, fd * 3L); // each side 3 ticks apart — wave effect
+    }
+
+    // Center circle effect
+    for (int ring = 1; ring <= 4; ring++) { final int fr = ring;
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            double r = fr * 2.5;
+            for (int i = 0; i < 24; i++) {
+                double a = Math.toRadians(i * 15);
+                w.spawnParticle(Particle.SNOWFLAKE,
+                    loc.clone().add(Math.cos(a)*r, 0.1, Math.sin(a)*r),
+                    2, 0, 0, 0, 0.02);
+            }
+        }, ring * 3L);
+    }
+
+    // ── DAMAGE TASK — 6 seconds, enemies inside freeze ───────────────
+    new BukkitRunnable() {
+        int elapsed = 0;
+        public void run() {
+            if (elapsed >= 6) { cancel(); return; }
+            elapsed++;
+
+            // All enemies within 12 block radius (covers all spikes)
+            p.getNearbyEntities(12, 12, 12).forEach(e -> {
+                if (!(e instanceof LivingEntity le) || e == p) return;
+                le.addPotionEffect(new PotionEffect(
+                    PotionEffectType.SLOWNESS, 25, 5, false, false));
+                le.damage(1.5 * dm, p);
+                // Ice particle on enemy
+                w.spawnParticle(Particle.SNOWFLAKE, le.getLocation(),
+                    8, 0.3, 0.6, 0.3, 0.02);
+            });
+        }
+    }.runTaskTimer(plugin, 20L, 20L); // every second for 6s
+
+    // ── REMOVE BLOCKS after 6 seconds ────────────────────────────────
+    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+        // Break all placed blocks
+        for (Location bl : placedBlocks) {
+            if (bl.getBlock().getType() == Material.BLUE_ICE
+                    || bl.getBlock().getType() == Material.PACKED_ICE) {
+                bl.getBlock().setType(Material.AIR);
+                // Particle at each block removal
+                w.spawnParticle(Particle.SNOWFLAKE, bl, 3, 0.2, 0.2, 0.2, 0.02);
+            }
+        }
+        placedBlocks.clear();
+
+        // Break sounds — 4 sides
+        double[][] dirsF = {{1,0},{-1,0},{0,1},{0,-1}};
+        for (double[] df : dirsF) {
+            Location sLoc = loc.clone().add(df[0]*10, 0, df[1]*10);
+            w.playSound(sLoc, Sound.BLOCK_GLASS_BREAK,           1.5f, 0.6f);
+            w.playSound(sLoc, Sound.ENTITY_PLAYER_HURT_FREEZE,   1f,   1.5f);
+            w.spawnParticle(Particle.SNOWFLAKE, sLoc, 40, 1, 1, 1, 0.06);
+            w.spawnParticle(Particle.WHITE_ASH, sLoc, 30, 1, 1, 1, 0.04);
+        }
+    }, 120L); // 120 ticks = 6 seconds
+}
 
             // 5. FLAME — Flame Burst  [NO createExplosion — prevents owner self-damage]
             case FLAME -> {
@@ -916,18 +1126,61 @@ case GUARDIAN -> {
 
             // 6. SHADOW — Shadow Cloak
             case SHADOW -> {
-                p.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, ticks(240, dr), 0));
-                p.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, ticks(300, dr), 0));
-                p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED,        ticks(160, dr), 1));
-                w.spawnParticle(Particle.SMOKE, loc, 80, 0.5, 1.2, 0.5, 0.09);
-                w.spawnParticle(Particle.DUST,  loc, 60, 0.4, 0.9, 0.4, 0, new Particle.DustOptions(Color.BLACK, 2f));
-                w.spawnParticle(Particle.PORTAL,loc, 40, 0.3, 0.7, 0.3, 0.07);
-                for (int i = 0; i < 20; i++) { double a = Math.toRadians(i*18);
-                    w.spawnParticle(Particle.SMOKE, loc.clone().add(Math.cos(a)*0.8,i*0.1,Math.sin(a)*0.8), 3, 0, 0, 0, 0.02);
-                }
-                w.playSound(loc, Sound.ENTITY_ENDERMAN_STARE, 0.6f, 1.3f);
-                p.sendTitle("§8§l👁 SHADOW CLOAK", "§7You vanish into darkness...", 5, 50, 10);
-            }
+    p.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, ticks(200, dr), 0));
+    p.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION,  ticks(300, dr), 0));
+    p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED,         ticks(160, dr), 1));
+
+    w.spawnParticle(Particle.SMOKE, loc, 80, 0.5, 1.2, 0.5, 0.09);
+    w.spawnParticle(Particle.DUST,  loc, 60, 0.4, 0.9, 0.4, 0,
+        new Particle.DustOptions(Color.BLACK, 2f));
+    w.spawnParticle(Particle.PORTAL, loc, 40, 0.3, 0.7, 0.3, 0.07);
+    for (int i = 0; i < 20; i++) {
+        double a = Math.toRadians(i * 18);
+        w.spawnParticle(Particle.SMOKE,
+            loc.clone().add(Math.cos(a)*0.8, i*0.1, Math.sin(a)*0.8),
+            3, 0, 0, 0, 0.02);
+    }
+    w.playSound(loc, Sound.ENTITY_ENDERMAN_STARE, 0.6f, 1.3f);
+    p.sendTitle("\u00a78\u00a7lSHADOW CLOAK", "\u00a77You vanish into darkness...", 5, 50, 10);
+
+    org.bukkit.inventory.PlayerInventory inv = p.getInventory();
+
+    // ── Step 1: Store armor + offhand with their EXACT slots ─────────
+    final ItemStack h = inv.getHelmet()     != null ? inv.getHelmet().clone()     : null;
+    final ItemStack c = inv.getChestplate() != null ? inv.getChestplate().clone() : null;
+    final ItemStack l = inv.getLeggings()   != null ? inv.getLeggings().clone()   : null;
+    final ItemStack b = inv.getBoots()      != null ? inv.getBoots().clone()      : null;
+    final ItemStack oh = inv.getItemInOffHand().getType() != Material.AIR
+                       ? inv.getItemInOffHand().clone() : null;
+
+    // ── Step 2: Remove armor + offhand ───────────────────────────────
+    inv.setHelmet(null);
+    inv.setChestplate(null);
+    inv.setLeggings(null);
+    inv.setBoots(null);
+    inv.setItemInOffHand(null);
+
+    // ── Step 3: 10s baad wapas do — slot-aware ───────────────────────
+    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+        if (!p.isOnline()) return;
+
+        org.bukkit.inventory.PlayerInventory i2 = p.getInventory();
+
+        // Armor slots return karo — agar kuch aur aa gaya toh drop karo
+        restoreOrDrop(p, h,  () -> i2.setHelmet(h),     i2.getHelmet());
+        restoreOrDrop(p, c,  () -> i2.setChestplate(c), i2.getChestplate());
+        restoreOrDrop(p, l,  () -> i2.setLeggings(l),   i2.getLeggings());
+        restoreOrDrop(p, b,  () -> i2.setBoots(b),      i2.getBoots());
+        restoreOrDrop(p, oh, () -> i2.setItemInOffHand(oh), i2.getItemInOffHand());
+
+        // Un-cloak effect
+        w.spawnParticle(Particle.SMOKE,  p.getLocation(), 60, 0.5, 1, 0.5, 0.08);
+        w.spawnParticle(Particle.PORTAL, p.getLocation(), 30, 0.3, 0.7, 0.3, 0.06);
+        w.playSound(p.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 0.8f, 0.8f);
+        p.sendTitle("\u00a77Shadow Cloak", "\u00a78Faded...", 5, 30, 10);
+
+    }, ticks(200, dr));
+}
 
             // 7. TITAN — Titan Strength
             case TITAN -> {
@@ -1034,77 +1287,92 @@ case GUARDIAN -> {
             }
 
             //══════════════════════════════════════════════════════════════════
+// LIGHT — SHIFT + Q (Light Beam) FIXED
 case LIGHT -> {
     w.playSound(loc, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 0.8f, 2.0f);
     w.playSound(loc, Sound.BLOCK_BEACON_ACTIVATE,        1f,   2.0f);
 
-    // Beam start burst
-    w.spawnParticle(Particle.FLASH,   p.getEyeLocation(), 2, 0, 0, 0, 0);
+    final Vector   beamDir   = p.getEyeLocation().getDirection().normalize();
+    // FIX: beam 1.5 block aage se shuru ho — player body miss karega
+    final Location beamStart = p.getEyeLocation().clone()
+                                .add(beamDir.clone().multiply(1.5));
+
+    // Origin burst
+    w.spawnParticle(Particle.FLASH,   p.getEyeLocation(), 1, 0, 0, 0, 0);
     w.spawnParticle(Particle.END_ROD, p.getEyeLocation(), 20, 0.1, 0.1, 0.1, 0.05);
 
-    // Aim direction — jis taraf player dekh raha hai bilkul usi taraf
-    final Vector beamDir = p.getEyeLocation().getDirection().normalize();
-
     new BukkitRunnable() {
-        // Beam start = player ki aankhon se
-        final Location beamPos = p.getEyeLocation().clone();
+        final Location beamPos = beamStart.clone();
         int     traveled = 0;
         boolean hit      = false;
 
         @Override
         public void run() {
-            // Max 30 blocks (60 steps * 0.5) ya hit ho gaya
-            if (hit || traveled >= 60) {
+            if (hit || traveled >= 80) { // 80 * 0.5 = 40 blocks max
                 // Beam end burst
-                w.spawnParticle(Particle.FLASH,   beamPos, 2, 0.2, 0.2, 0.2, 0);
-                w.spawnParticle(Particle.END_ROD, beamPos, 15, 0.3, 0.3, 0.3, 0.08);
+                w.spawnParticle(Particle.FLASH,   beamPos, 1, 0, 0, 0, 0);
+                w.spawnParticle(Particle.END_ROD, beamPos, 15, 0.4, 0.4, 0.4, 0.08);
                 cancel();
                 return;
             }
 
-            // 0.5 block aage badho har tick — smooth movement
+            // 0.5 block per tick — smooth
             beamPos.add(beamDir.clone().multiply(0.5));
             traveled++;
 
-            // ── White laser particles ─────────────────────────────
-            // Main beam — END_ROD (white)
-            w.spawnParticle(Particle.END_ROD,   beamPos, 3, 0.03, 0.03, 0.03, 0.0);
-            // Ash trail — soft glow around beam
+            // ── Beam particles — white laser ──────────────────────
+            w.spawnParticle(Particle.END_ROD,   beamPos, 4, 0.02, 0.02, 0.02, 0.0);
             w.spawnParticle(Particle.WHITE_ASH, beamPos, 2, 0.04, 0.04, 0.04, 0.01);
-            // FLASH glow har 3rd step
-            if (traveled % 3 == 0) {
+
+            // FLASH pulse har 4th step — laser flash feel
+            if (traveled % 4 == 0) {
                 w.spawnParticle(Particle.FLASH, beamPos, 1, 0, 0, 0, 0);
             }
 
-            // ── Solid block se takra — stop ───────────────────────
+            // Outer glow — beam ke around glow effect
+            for (int i = 0; i < 3; i++) {
+                double a = Math.toRadians(i * 120 + traveled * 15);
+                Location glowPt = beamPos.clone().add(
+                    Math.cos(a) * 0.12, Math.sin(a) * 0.12, 0);
+                w.spawnParticle(Particle.END_ROD, glowPt, 1, 0, 0, 0, 0.0);
+            }
+
+            // ── Block hit ─────────────────────────────────────────
             if (beamPos.getBlock().getType().isSolid()) {
-                w.spawnParticle(Particle.FLASH,   beamPos, 3, 0.3, 0.3, 0.3, 0);
+                w.spawnParticle(Particle.FLASH,   beamPos, 1, 0, 0, 0, 0);
                 w.spawnParticle(Particle.END_ROD, beamPos, 25, 0.5, 0.5, 0.5, 0.1);
-                w.playSound(beamPos, Sound.BLOCK_GLASS_BREAK, 1f, 2.0f);
+                w.spawnParticle(Particle.WHITE_ASH, beamPos, 20, 0.4, 0.4, 0.4, 0.06);
+                w.playSound(beamPos, Sound.BLOCK_GLASS_BREAK,
+                    1f, 2.0f);
                 hit = true;
                 return;
             }
 
-            // ── Entity check — 0.8 box around beam tip ───────────
-            for (org.bukkit.entity.Entity e : w.getNearbyEntities(beamPos, 0.8, 0.8, 0.8)) {
+            // ── Entity hit ────────────────────────────────────────
+            for (org.bukkit.entity.Entity e :
+                    w.getNearbyEntities(beamPos, 0.7, 0.7, 0.7)) {
                 if (!(e instanceof LivingEntity le) || e == p) continue;
 
-                // Damage
-                le.damage(11.0 * dm, p);
+                // 4 hearts = 8 damage
+                le.damage(8.0 * dm, p);
 
-                // Hit particles
-                w.spawnParticle(Particle.FLASH,   le.getLocation(), 3, 0, 0, 0, 0);
-                w.spawnParticle(Particle.END_ROD, le.getLocation(),
-                    30, 0.5, 1.0, 0.5, 0.08);
+                // Big hit burst
+                w.spawnParticle(Particle.FLASH,
+                    le.getLocation().add(0,1,0), 1, 0, 0, 0, 0);
+                w.spawnParticle(Particle.END_ROD,
+                    le.getLocation().add(0,1,0), 40, 0.6, 1.0, 0.6, 0.09);
+                w.spawnParticle(Particle.WHITE_ASH,
+                    le.getLocation().add(0,1,0), 30, 0.5, 0.8, 0.5, 0.07);
                 w.playSound(beamPos, Sound.ENTITY_PLAYER_LEVELUP, 0.8f, 2.0f);
+                w.playSound(beamPos, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 0.6f, 2.0f);
 
-                // Player ka screen white karo
+                // White screen — sirf players pe
                 if (le instanceof Player ep && ep.isOnline()) {
-                    whiteLightScreen(ep, ticks(40, dr), plugin); // 2s
+                    whiteLightScreen(ep, ticks(40, dr), plugin);
                 }
 
                 hit = true;
-                return; // Pehli entity hit karo, beam rok do
+                return;
             }
         }
     }.runTaskTimer(plugin, 0, 1);
@@ -1267,60 +1535,143 @@ case ECHO -> {
                 });
             }
 
-            // 17. SPIRIT — Spirit Form
-            case SPIRIT -> {
-                p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE,  ticks(100, dr), 255));
-                p.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, ticks(100, dr), 0));
-                p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED,        ticks(80,  dr), 1));
-                w.spawnParticle(Particle.TOTEM_OF_UNDYING, loc, 100, 0.6, 1.2, 0.6, 0.12);
-                w.spawnParticle(Particle.END_ROD,          loc,  50, 0.4, 0.9, 0.4, 0.05);
-                w.spawnParticle(Particle.HEART,            loc,  12, 0.5, 0.5, 0.5, 0.05);
-                for (int i = 0; i < 20; i++) { double a = Math.toRadians(i*18);
-                    w.spawnParticle(Particle.TOTEM_OF_UNDYING, loc.clone().add(Math.cos(a)*0.8,i*0.12,Math.sin(a)*0.8), 2, 0, 0, 0, 0.03);
+            // Total 5s: 3s rise + 2s shoot
+case SPIRIT -> {
+    p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, ticks(100, dr), 2));
+    p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED,       ticks(80,  dr), 1));
+
+    w.playSound(loc, Sound.ENTITY_ENDERMAN_TELEPORT,     0.9f, 1.4f);
+    w.playSound(loc, Sound.ENTITY_ILLUSIONER_CAST_SPELL, 0.8f, 1.2f);
+    p.sendTitle("\u00a77\u00a7lSPIRIT FORM", "\u00a78Blocks rising...", 5, 60, 10);
+
+    // 4 sides — exactly 2 blocks from player
+    int[][] offsets = {{0,0,2},{0,0,-2},{2,0,0},{-2,0,0}};
+
+    for (int[] off : offsets) {
+        Location sideLoc = loc.clone().add(off[0], 0, off[2]);
+
+        // Surface block dhundo
+        org.bukkit.block.Block surface = sideLoc.getBlock();
+        for (int gy = 0; gy > -10; gy--) {
+            org.bukkit.block.Block check = sideLoc.clone().add(0, gy, 0).getBlock();
+            if (check.getType().isSolid()) { surface = check; break; }
+        }
+
+        final org.bukkit.block.Block groundBlock = surface;
+        final Material blockMat = groundBlock.getType().isSolid()
+            ? groundBlock.getType() : Material.GRASS_BLOCK;
+        final Location spawnLoc = groundBlock.getLocation().clone().add(0.5, 0.0, 0.5);
+
+        // Remove ground block
+        groundBlock.setType(Material.AIR);
+
+        // FallingBlock spawn
+        FallingBlock fb = w.spawnFallingBlock(spawnLoc, blockMat.createBlockData());
+        fb.setDropItem(false);
+        fb.setHurtEntities(false);
+        fb.setGravity(false);
+
+        w.spawnParticle(Particle.TOTEM_OF_UNDYING, spawnLoc, 20, 0.3, 0.3, 0.3, 0.06);
+        w.spawnParticle(Particle.END_ROD,          spawnLoc, 10, 0.2, 0.2, 0.2, 0.03);
+
+        new BukkitRunnable() {
+            int ticks = 0;
+
+            @Override
+            public void run() {
+                if (!fb.isValid()) { cancel(); return; }
+                ticks++;
+
+                if (ticks <= 60) {
+                    // ── RISE 3s (60 ticks) ────────────────────────────────
+                    fb.setVelocity(new Vector(0, 0.08, 0));
+                    w.spawnParticle(Particle.TOTEM_OF_UNDYING,
+                        fb.getLocation(), 3, 0.15, 0.1, 0.15, 0.03);
+                    w.spawnParticle(Particle.WITCH,
+                        fb.getLocation(), 1, 0.1,  0.1, 0.1,  0.02);
+                    if (ticks == 1)
+                        w.playSound(fb.getLocation(), Sound.BLOCK_STONE_BREAK, 0.8f, 0.5f);
+
+                } else if (ticks == 61) {
+                    // ── SHOOT START ───────────────────────────────────────
+                    w.playSound(fb.getLocation(), Sound.ENTITY_WITHER_SHOOT, 1f, 1.2f);
+                    w.playSound(fb.getLocation(), Sound.ENTITY_BLAZE_SHOOT,  1f, 0.8f);
+                    w.spawnParticle(Particle.TOTEM_OF_UNDYING,
+                        fb.getLocation(), 30, 0.4, 0.2, 0.4, 0.08);
+                    fb.setGravity(true);
+                    fb.setVelocity(new Vector(0, 3.2, 0));
+
+                } else if (ticks <= 100) {
+                    // ── SHOOT 2s (61-100 ticks) ───────────────────────────
+                    w.spawnParticle(Particle.TOTEM_OF_UNDYING,
+                        fb.getLocation(), 5, 0.2, 0.1, 0.2, 0.05);
+                    w.spawnParticle(Particle.END_ROD,
+                        fb.getLocation(), 2, 0.1, 0.1, 0.1, 0.02);
+
+                    // Damage — jo bhi block se touch kare
+                    for (org.bukkit.entity.Entity e :
+                            w.getNearbyEntities(fb.getLocation(), 1.5, 1.5, 1.5)) {
+                        if (e instanceof LivingEntity le && e != p) {
+                            le.damage(10.0 * dm, p); // 5 hearts
+                            w.spawnParticle(Particle.TOTEM_OF_UNDYING,
+                                le.getLocation(), 20, 0.4, 0.8, 0.4, 0.06);
+                            Vector knock = le.getLocation().toVector()
+                                .subtract(fb.getLocation().toVector())
+                                .normalize().multiply(1.5).setY(0.8);
+                            Bukkit.getScheduler().runTaskLater(plugin,
+                                () -> { if (e.isValid()) e.setVelocity(knock); }, 1L);
+                        }
+                    }
+
+                } else {
+                    // ── END — block remove ────────────────────────────────
+                    w.spawnParticle(Particle.BLOCK_CRUMBLE,
+                        fb.getLocation(), 20, 0.5, 0.3, 0.5, 0.1,
+                        blockMat.createBlockData());
+                    w.spawnParticle(Particle.TOTEM_OF_UNDYING,
+                        fb.getLocation(), 15, 0.3, 0.3, 0.3, 0.05);
+                    w.playSound(fb.getLocation(), Sound.BLOCK_STONE_BREAK, 1f, 0.8f);
+                    fb.remove();
+                    cancel();
                 }
-                w.playSound(loc, Sound.ENTITY_ENDERMAN_TELEPORT,     0.9f, 1.4f);
-                w.playSound(loc, Sound.ENTITY_ILLUSIONER_CAST_SPELL, 0.8f, 1.2f);
-                p.sendTitle("§7§l👁 PHANTOM ESCAPE", "§8Speed IV — Invisible!", 5, 60, 10);
             }
+        }.runTaskTimer(plugin, 0, 1);
+    }
+}
 
-    case TIME -> {
-    // Aim direction — jis taraf dekh raha hai bilkul usi taraf
-    Vector dashDir = p.getEyeLocation().getDirection().normalize();
-
-    // Start location save karo
-    Location startLoc = p.getLocation().clone();
+    // TIME — SHIFT + Q (Time Dash) FIXED
+case TIME -> {
+    final Vector dashDir = p.getEyeLocation().getDirection().normalize();
 
     // Origin burst
     w.spawnParticle(Particle.ELECTRIC_SPARK, loc, 60, 0.3, 0.5, 0.3, 0.15);
-    w.spawnParticle(Particle.FLASH,          loc, 2,  0,   0,   0,   0);
+    w.spawnParticle(Particle.FLASH,          loc, 1,  0,   0,   0,   0);
     w.spawnParticle(Particle.REVERSE_PORTAL, loc, 30, 0.4, 0.6, 0.4, 0.1);
     w.playSound(loc, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.6f, 2.0f);
     w.playSound(loc, Sound.ENTITY_ELDER_GUARDIAN_CURSE,   0.4f, 2.0f);
 
-    // High speed dash velocity — aim direction mein 10 block
-    // setVelocity se instant force — light speed feel
-    p.setVelocity(dashDir.clone().multiply(3.5).setY(
-        dashDir.getY() > 0.1 ? dashDir.getY() * 3.5 : 0.15
-    ));
+    // FIX: velocity 1 tick baad set karo — ground detection se cancel nahi hoga
+    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+        if (!p.isOnline()) return;
+        // Y: agar player upar dekh raha hai toh upar bhi jaaye, warna flat dash
+        double yVel = dashDir.getY() > 0.2 ? dashDir.getY() * 3.0 : 0.2;
+        p.setVelocity(dashDir.clone().multiply(3.8).setY(yVel));
+        p.setFallDistance(0f);
+    }, 1L);
 
-    // Fall damage nahi hoga
-    p.setFallDistance(0f);
-
-    // Trail animation — dash ke peeche electric + flash particles
+    // Trail animation
     new BukkitRunnable() {
-        int    t         = 0;
+        int    t          = 0;
         double trailAngle = 0;
 
         @Override
         public void run() {
             if (t++ >= 12) {
-                // Dash end burst
                 Location endLoc = p.getLocation();
                 w.spawnParticle(Particle.ELECTRIC_SPARK, endLoc, 50, 0.4, 0.6, 0.4, 0.12);
-                w.spawnParticle(Particle.FLASH,          endLoc,  2, 0,   0,   0,   0);
+                w.spawnParticle(Particle.FLASH,          endLoc,  1, 0,   0,   0,   0);
                 w.spawnParticle(Particle.END_ROD,        endLoc, 20, 0.3, 0.5, 0.3, 0.08);
                 w.playSound(endLoc, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 0.7f, 1.8f);
-                // Fall damage reset
                 p.setFallDistance(0f);
                 cancel();
                 return;
@@ -1329,48 +1680,35 @@ case ECHO -> {
             trailAngle += 0.6;
             Location cur = p.getLocation();
 
-            // ── Main trail — electric spark peeche se nikal ta hai ──
-            w.spawnParticle(Particle.ELECTRIC_SPARK, cur,
-                8, 0.2, 0.3, 0.2, 0.08);
+            w.spawnParticle(Particle.ELECTRIC_SPARK, cur, 8, 0.2, 0.3, 0.2, 0.08);
 
-            // ── Flash strobe — speed of light feel ─────────────────
-            if (t % 2 == 0) {
+            if (t % 2 == 0)
                 w.spawnParticle(Particle.FLASH, cur, 1, 0, 0, 0, 0);
-            }
 
-            // ── Reverse portal — time distortion effect ─────────────
-            w.spawnParticle(Particle.REVERSE_PORTAL, cur,
-                5, 0.2, 0.4, 0.2, 0.06);
+            w.spawnParticle(Particle.REVERSE_PORTAL, cur, 5, 0.2, 0.4, 0.2, 0.06);
 
-            // ── Rotating electric ring — orbit karta hua trail ──────
             for (int i = 0; i < 6; i++) {
                 double a = trailAngle + Math.toRadians(i * 60);
-                double r = 0.4;
                 w.spawnParticle(Particle.ELECTRIC_SPARK,
-                    cur.clone().add(Math.cos(a)*r, 0.5 + Math.sin(a)*0.3, Math.sin(a)*r),
+                    cur.clone().add(Math.cos(a)*0.4, 0.5 + Math.sin(a)*0.3, Math.sin(a)*0.4),
                     1, 0, 0, 0, 0.04);
             }
 
-            // ── END_ROD ghost trail ──────────────────────────────────
-            w.spawnParticle(Particle.END_ROD, cur,
-                3, 0.1, 0.2, 0.1, 0.02);
+            w.spawnParticle(Particle.END_ROD, cur, 3, 0.1, 0.2, 0.1, 0.02);
 
-            // Fall damage reset har tick
             p.setFallDistance(0f);
 
-            // Velocity maintain karo agar player ruk jaaye
+            // Velocity boost maintain — agar player slow ho jaaye
             if (t < 8) {
-                Vector cur_vel = p.getVelocity();
-                if (cur_vel.lengthSquared() < 1.5) {
-                    p.setVelocity(dashDir.clone().multiply(2.0).setY(
-                        cur_vel.getY()
-                    ));
+                Vector vel = p.getVelocity();
+                if (vel.lengthSquared() < 1.2) {
+                    double yMaintain = vel.getY();
+                    p.setVelocity(dashDir.clone().multiply(2.5).setY(yMaintain));
                 }
             }
         }
-    }.runTaskTimer(plugin, 0, 1);
+    }.runTaskTimer(plugin, 2L, 1L); // 2 tick delay — velocity set hone ke baad trail start
 }
-
             // 19. WARRIOR — Warrior Charge
             case WARRIOR -> {
                 p.setVelocity(dir.clone().multiply(3.0).setY(0.3));
@@ -1741,6 +2079,32 @@ private void whiteLightScreen(Player ep, int durationTicks, AncientEyePlugin plu
         }
         return sb.toString();
     }
+
+    // ── Shadow Cloak helper — armor slot restore with conflict handling ───────────
+// stored   = jo item pehle tha
+// setter   = us slot mein wapas rakhne ka function
+// current  = abhi us slot mein kya hai
+//
+// Logic:
+//   Agar slot khaali hai       → seedha wapas rakho
+//   Agar slot mein kuch aaya   → stored item drop karo (player ki marzi)
+private void restoreOrDrop(Player p, ItemStack stored,
+                           Runnable setter, ItemStack current) {
+    if (stored == null) return; // pehle kuch tha hi nahi
+
+    boolean slotEmpty = (current == null || current.getType() == Material.AIR);
+
+    if (slotEmpty) {
+        // Slot khaali hai — wapas rakho
+        setter.run();
+    } else {
+        // Slot mein kuch aur aa gaya — stored item floor par drop karo
+        // Player ko item nahi khoyega
+        p.getWorld().dropItemNaturally(p.getLocation(), stored);
+        p.sendMessage("\u00a77Your hidden item was dropped: \u00a7f"
+            + stored.getType().name().toLowerCase().replace("_", " "));
+    }
+}
 
     private void applySafeDamage(Player owner, Location loc, double radius, double damage) {
         loc.getWorld().getNearbyEntities(loc, radius, radius, radius).forEach(entity -> {
