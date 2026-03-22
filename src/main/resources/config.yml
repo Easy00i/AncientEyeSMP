@@ -7,6 +7,7 @@
 #  GENERAL SETTINGS
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 settings:
+  particles-enabled: true
   prefix: "[AncientEye]"
   xp-per-kill: 10
   xp-per-mob-kill: 2
@@ -143,9 +144,6 @@ trade:
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 animation:
   smp-spin-ticks: 160
-
-  settings:
-  particles-enabled: true
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 #  MESSAGES
