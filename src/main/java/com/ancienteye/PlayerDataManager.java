@@ -35,7 +35,8 @@ public class PlayerDataManager {
         }
 
         playerEyes.put(p.getUniqueId(), newEye);
-        playerLevels.putIfAbsent(p.getUniqueId(), 1);
+        // FIX: putIfAbsent -> put — new eye milne par level hamesha 1 reset hoga
+        playerLevels.put(p.getUniqueId(), 1);
         // FIX 1: XP reset to 0 when a new eye is assigned
         playerXP.put(p.getUniqueId(), 0);
         saveData();
@@ -72,13 +73,12 @@ public class PlayerDataManager {
         return playerLevels.getOrDefault(p.getUniqueId(), 1);
     }
 
-    // FIX A: maxXP level ke hisaab se — L1=30, L2=35, L3=50
-    // GUI aur action bar dono yahi use karein
+    // FIX A: config se kill thresholds
     public int getMaxXPForLevel(int level) {
         return switch (level) {
-            case 1  -> 30;
-            case 2  -> 35;
-            default -> 50;
+            case 1  -> plugin.getConfig().getInt("settings.kills-for-level-2", 5);
+            case 2  -> plugin.getConfig().getInt("settings.kills-for-level-3", 10);
+            default -> plugin.getConfig().getInt("settings.kills-for-level-3", 10);
         };
     }
 
@@ -89,7 +89,7 @@ public class PlayerDataManager {
 
         int currentXP = getXP(p);
         int totalXP   = currentXP + amount;
-        // FIX B: maxXP = 100 galat tha — level ke hisaab se hona chahiye
+        // FIX B: maxXP config se
         int maxXP     = getMaxXPForLevel(currentLevel);
 
         if (totalXP >= maxXP) {
@@ -101,8 +101,9 @@ public class PlayerDataManager {
             playerXP.put(id, totalXP);
         }
 
-        // FIX C: action bar mein sahi maxXP dikhao — 100 nahi
-        p.sendActionBar("§bAncient XP: §f" + getXP(p) + " §8/ §f" + maxXP);
+        // FIX C: action bar — kills dikhao
+        p.sendActionBar("§c⚔ Kills: §f" + getXP(p) + " §8/ §f" + maxXP
+            + "  §7-> §eLv." + getLevel(p));
 
         saveData();
     }
