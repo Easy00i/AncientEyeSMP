@@ -74,6 +74,7 @@ public class AbilityLogic implements Listener {
                 if (t > 13000 && t < 23000) e.setDamage(e.getDamage() * 1.30);
             }
         }
+    }
 
     // ── HUNTER MARK — extra damage handler ───────────────────────────────────────
 // onEntityDamage mein add karo — existing code ke baad
