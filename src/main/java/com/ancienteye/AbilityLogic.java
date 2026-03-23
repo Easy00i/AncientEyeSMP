@@ -926,6 +926,178 @@ case ECHO -> {
                 p.sendTitle("§6§l⚔ WAR CRY!", "§7+Strength II  +Resistance", 5, 50, 10);
             }
 
+                // 13. EARTH — Earthquake Wall
+// Aim based — ground se wall uthti hai, 15 high 10 wide
+// 10s baad crack sound ke saath neeche jaati hai
+case EARTH -> {
+    // ── Aim: ground pe raycast ────────────────────────────────────────────
+    Location wallBase = null;
+    Location eyeLoc   = p.getEyeLocation();
+    Vector   eyeDir   = eyeLoc.getDirection().normalize();
+
+    // Raycast — ground dhundo
+    for (int i = 2; i <= 40; i++) {
+        Location check = eyeLoc.clone().add(eyeDir.clone().multiply(i));
+        if (check.getBlock().getType().isSolid()) {
+            wallBase = check.clone().add(0, 1, 0);
+            break;
+        }
+        // Agar neeche dekh raha hai aur block nahi mila
+        Location below = check.clone().subtract(0, 1, 0);
+        if (below.getBlock().getType().isSolid()) {
+            wallBase = below.clone().add(0, 1, 0);
+            break;
+        }
+    }
+    if (wallBase == null) {
+        wallBase = p.getLocation().clone().add(eyeDir.clone().multiply(8));
+        wallBase.setY(p.getLocation().getBlockY());
+    }
+
+    final Location base    = wallBase.clone();
+    // Wall direction = player ke saamne, perpendicular to aim
+    final Vector   wallDir = new Vector(-eyeDir.getZ(), 0, eyeDir.getX()).normalize();
+    final int      WIDTH   = 10; // blocks wide
+    final int      HEIGHT  = 15; // blocks tall
+
+    // Wall blocks track
+    final java.util.List<Location> wallBlocks = new java.util.ArrayList<>();
+
+    // ── Rise animation ────────────────────────────────────────────────────
+    w.playSound(base, Sound.ENTITY_IRON_GOLEM_ATTACK, 1f, 0.3f);
+    w.playSound(base, Sound.BLOCK_STONE_BREAK,        1f, 0.2f);
+    w.playSound(base, Sound.ENTITY_GENERIC_EXPLODE,   0.8f, 0.4f);
+
+    // Ground crack particles at base
+    for (int i = 0; i < WIDTH; i++) {
+        double offset = (i - WIDTH / 2.0) + 0.5;
+        Location crackLoc = base.clone().add(
+            wallDir.getX() * offset, 0, wallDir.getZ() * offset);
+        w.spawnParticle(Particle.FALLING_DUST, crackLoc, 10,
+            0.2, 0.1, 0.2, 0.05,
+            org.bukkit.Material.DIRT.createBlockData());
+        w.spawnParticle(Particle.EXPLOSION,   crackLoc, 1, 0.1, 0, 0.1, 0);
+    }
+
+    // Rise block by block — layer by layer upward
+    new BukkitRunnable() {
+        int layer = 0;
+
+        @Override
+        public void run() {
+            if (layer >= HEIGHT) {
+                cancel();
+                // All blocks placed — damage nearby
+                base.getWorld().getNearbyEntities(base, 8, HEIGHT, 8)
+                    .forEach(e -> {
+                        if (!(e instanceof LivingEntity le) || e == p) return;
+                        le.damage(6.0 * dm, p);
+                        Vector vel = e.getLocation().toVector()
+                            .subtract(base.toVector())
+                            .normalize().multiply(2.8).setY(0.9);
+                        Bukkit.getScheduler().runTaskLater(plugin,
+                            () -> { if (e.isValid()) e.setVelocity(vel); }, 1L);
+                    });
+                return;
+            }
+
+            // Place one layer
+            for (int i = 0; i < WIDTH; i++) {
+                double offset = (i - WIDTH / 2.0) + 0.5;
+                Location blockLoc = base.clone().add(
+                    wallDir.getX() * offset,
+                    layer,
+                    wallDir.getZ() * offset);
+
+                org.bukkit.block.Block blk = blockLoc.getBlock();
+                if (blk.getType() == org.bukkit.Material.AIR
+                        || blk.getType() == org.bukkit.Material.CAVE_AIR) {
+
+                    // Alternate stone/cobblestone for crack look
+                    blk.setType(layer % 3 == 0
+                        ? org.bukkit.Material.COBBLESTONE
+                        : layer % 3 == 1
+                            ? org.bukkit.Material.STONE
+                            : org.bukkit.Material.GRAVEL);
+
+                    wallBlocks.add(blockLoc.clone());
+                }
+
+                // Rise particles
+                w.spawnParticle(Particle.FALLING_DUST, blockLoc, 5,
+                    0.3, 0.1, 0.3, 0.04,
+                    org.bukkit.Material.STONE.createBlockData());
+            }
+
+            // Rise sound every 3 layers
+            if (layer % 3 == 0) {
+                w.playSound(base, Sound.BLOCK_STONE_PLACE, 0.8f,
+                    0.5f + layer * 0.03f);
+            }
+
+            layer++;
+        }
+    }.runTaskTimer(plugin, 0, 2); // 2 tick per layer = smooth rise
+
+    // ── 10 seconds baad sink ─────────────────────────────────────────────
+    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+
+        // Crack sound
+        w.playSound(base, Sound.BLOCK_STONE_BREAK,        1.5f, 0.4f);
+        w.playSound(base, Sound.ENTITY_IRON_GOLEM_ATTACK, 1f,   0.5f);
+        w.playSound(base, Sound.ENTITY_GENERIC_EXPLODE,   0.8f, 0.6f);
+
+        // Crack particles at top
+        for (Location bl : wallBlocks) {
+            if (bl.getY() >= base.getY() + HEIGHT - 3) {
+                w.spawnParticle(Particle.FALLING_DUST, bl, 8,
+                    0.3, 0.1, 0.3, 0.05,
+                    org.bukkit.Material.GRAVEL.createBlockData());
+                w.spawnParticle(Particle.EXPLOSION, bl, 1, 0.2, 0, 0.2, 0);
+            }
+        }
+
+        // Sink animation — top to bottom
+        new BukkitRunnable() {
+            int layer = HEIGHT - 1;
+
+            @Override
+            public void run() {
+                if (layer < 0) {
+                    cancel();
+                    wallBlocks.clear();
+                    return;
+                }
+
+                // Remove this layer
+                final int fl = layer;
+                for (Location bl : wallBlocks) {
+                    if ((int)(bl.getY() - base.getY()) == fl) {
+                        org.bukkit.block.Block blk = bl.getBlock();
+                        if (blk.getType() == org.bukkit.Material.COBBLESTONE
+                                || blk.getType() == org.bukkit.Material.STONE
+                                || blk.getType() == org.bukkit.Material.GRAVEL) {
+                            blk.setType(org.bukkit.Material.AIR);
+                            w.spawnParticle(Particle.FALLING_DUST, bl, 6,
+                                0.2, 0.1, 0.2, 0.04,
+                                org.bukkit.Material.GRAVEL.createBlockData());
+                        }
+                    }
+                }
+
+                if (layer % 3 == 0) {
+                    w.playSound(base, Sound.BLOCK_GRAVEL_BREAK, 0.7f,
+                        1.0f - layer * 0.02f);
+                }
+
+                layer--;
+            }
+        }.runTaskTimer(plugin, 0, 2);
+
+    }, 200L); // 200 ticks = 10 seconds
+}
+                
+
             // ═══ EVENT EYES ══════════════════════════════════════════════════
 // METEOR PRIMARY
 case METEOR -> {
