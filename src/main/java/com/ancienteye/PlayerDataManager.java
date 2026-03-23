@@ -121,24 +121,33 @@ public class PlayerDataManager {
 
     // Public method — called by onDisable() to force-save before shutdown
     public void saveAllData() { saveData(); }
-
     private void saveData() {
-        // FIX 3: Sab UUIDs save karo — sirf playerEyes se nahi
+        // 1. Pehle purana players section poora saaf karo taaki junk data na rahe
+        dataConfig.set("players", null); 
+
         Set<UUID> allUUIDs = new HashSet<>();
         allUUIDs.addAll(playerEyes.keySet());
         allUUIDs.addAll(playerLevels.keySet());
         allUUIDs.addAll(playerXP.keySet());
 
         for (UUID uuid : allUUIDs) {
-            String path  = "players." + uuid;
-            EyeType eye  = playerEyes.get(uuid);
-            dataConfig.set(path + ".eye",   eye != null ? eye.name() : EyeType.NONE.name());
-            dataConfig.set(path + ".level", playerLevels.getOrDefault(uuid, 1));
-            // FIX 3: XP bhi save hona chahiye
-            dataConfig.set(path + ".xp",    playerXP.getOrDefault(uuid, 0));
+            String path = "players." + uuid;
+            EyeType eye = playerEyes.get(uuid);
+            
+            // 2. Sirf unhi ko save karo jinke paas Eye hai
+            if (eye != null && eye != EyeType.NONE) {
+                dataConfig.set(path + ".eye", eye.name());
+                dataConfig.set(path + ".level", playerLevels.getOrDefault(uuid, 1));
+                dataConfig.set(path + ".xp", playerXP.getOrDefault(uuid, 0));
+            }
         }
-        try { dataConfig.save(dataFile); } catch (IOException e) { e.printStackTrace(); }
+        try { 
+            dataConfig.save(dataFile); 
+        } catch (IOException e) { 
+            e.printStackTrace(); 
+        }
     }
+
 
     private void loadData() {
         if (dataConfig.getConfigurationSection("players") == null) return;
