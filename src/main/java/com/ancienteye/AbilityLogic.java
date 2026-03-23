@@ -75,7 +75,7 @@ public class AbilityLogic implements Listener {
             }
         }
     }
-    / ── HUNTER MARK — extra damage handler ───────────────────────────────────────
+    // ── HUNTER MARK — extra damage handler ───────────────────────────────────────
 // onEntityDamage mein add karo — existing code ke baad
 
 // Agar entity marked hai toh extra damage do
