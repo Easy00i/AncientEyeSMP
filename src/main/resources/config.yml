@@ -113,15 +113,15 @@ event-eyes:
     secondary-radius: 20
 
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-#  EVENT SETTINGS
+#  EVENT SETTINGS UNLIMITED
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 event-settings:
   tasks:
     - "Kill 1 Player"
-    - "Break 10 Diamonds"
+    - "Break 10 Diamond"
     - "Survive 2 Minutes"
-    - "Kill 20 Zombies"
-    - "Fish 5 Items"
+    - "Kill 20 Zombie"
+    - "Break 64 wood"
     - "Break 64 Iron"
     - "Craft 1 Golden Apple"
 
