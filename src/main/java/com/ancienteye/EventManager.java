@@ -487,6 +487,40 @@ public class EventManager implements Listener {
             }
         }
     }
+
+    // ══════════════════════════════════════════════════════════════════════════
+    //  MOB KILL TASK (Fix for 'Kill 20 Zombie')
+    // ══════════════════════════════════════════════════════════════════════════
+    @EventHandler
+    public void onMobKill(org.bukkit.event.entity.EntityDeathEvent e) {
+        if (!active || e.getEntity().getKiller() == null) return;
+        
+        Player killer = e.getEntity().getKiller();
+        String task = getCurrentTaskName(killer);
+        
+        // Check if task is "Kill 20 Zombie"
+        if (task != null && task.toLowerCase().contains("kill")) {
+            String[] parts = task.split(" ");
+            if (parts.length < 3) return;
+
+            int req = Integer.parseInt(parts[1]); // "20"
+            String target = parts[2]; // "Zombie"
+
+            if (e.getEntityType().name().equalsIgnoreCase(target)) {
+                int c = blockCount.getOrDefault(killer.getUniqueId(), 0) + 1;
+                blockCount.put(killer.getUniqueId(), c);
+                
+                killer.spigot().sendMessage(ChatMessageType.ACTION_BAR, 
+                    new TextComponent("§c⚔ " + target.toUpperCase() + ": §f" + c + " §7/ §f" + req));
+                
+                if (c >= req) {
+                    blockCount.put(killer.getUniqueId(), 0);
+                    handleTaskCompletion(killer, task);
+                }
+            }
+        }
+    }
+    
     
 
     /**
