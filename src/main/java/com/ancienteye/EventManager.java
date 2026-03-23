@@ -822,10 +822,10 @@ public class EventManager implements Listener {
                 winner.getWorld().playSound(winner.getLocation(),
                         Sound.ENTITY_ENDER_EYE_LAUNCH, 0.8f, 0.5f);
             }
-
-            if (tick[0] >= 200) {
-                ref[0].cancel();
-                bar.removeAll();
+            
+           if (tick[0] >= 200) {
+                if (ref[0] != null) ref[0].cancel(); // Task pehle band karo
+                bar.removeAll(); 
 
                 winner.removePotionEffect(PotionEffectType.LEVITATION);
 
@@ -849,6 +849,7 @@ public class EventManager implements Listener {
                 }
 
                 finishWinReward(winner);
+                return;
             }
 
         }, 1L, 1L);
@@ -858,6 +859,10 @@ public class EventManager implements Listener {
     //  FINISH WIN
     // ══════════════════════════════════════════════════════════════════════════
     private void finishWinReward(Player winner) {
+
+        this.winAnimating = false;
+        this.active = false;
+        
         try {
             // FIX: Eye do
             plugin.getPlayerData().setEye(winner, reward, false);
@@ -897,9 +902,7 @@ public class EventManager implements Listener {
             plugin.getLogger().severe("[AncientEye] finishWinReward error: " + ex.getMessage());
             ex.printStackTrace();
         } finally {
-            // FIX: ALWAYS reset state — exception ho ya na ho
-            winAnimating = false;
-            active       = false;
+            
         }
     }
 
