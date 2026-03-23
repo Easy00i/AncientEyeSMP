@@ -1801,98 +1801,89 @@ case HUNTER -> {
                     }
                 });
             }
-
-            //══════════════════════════════════════════════════════════════════
 // LIGHT — SHIFT + Q (Light Beam) FIXED
 case LIGHT -> {
     w.playSound(loc, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 0.8f, 2.0f);
     w.playSound(loc, Sound.BLOCK_BEACON_ACTIVATE,        1f,   2.0f);
 
-    final Vector   beamDir   = p.getEyeLocation().getDirection().normalize();
-    // FIX: beam 1.5 block aage se shuru ho — player body miss karega
-    final Location beamStart = p.getEyeLocation().clone()
-                                .add(beamDir.clone().multiply(1.5));
+    final Vector beamDir = p.getEyeLocation().getDirection().normalize();
+    final double startX  = p.getEyeLocation().getX() + beamDir.getX() * 1.5;
+    final double startY  = p.getEyeLocation().getY() + beamDir.getY() * 1.5;
+    final double startZ  = p.getEyeLocation().getZ() + beamDir.getZ() * 1.5;
 
-    // Origin burst
     w.spawnParticle(Particle.FLASH,   p.getEyeLocation(), 1, 0, 0, 0, 0);
     w.spawnParticle(Particle.END_ROD, p.getEyeLocation(), 20, 0.1, 0.1, 0.1, 0.05);
 
     new BukkitRunnable() {
-        final Location beamPos = beamStart.clone();
-        int     traveled = 0;
-        boolean hit      = false;
+        int     step = 0;
+        boolean hit  = false;
 
         @Override
         public void run() {
-            if (hit || traveled >= 80) { // 80 * 0.5 = 40 blocks max
-                // Beam end burst
-                w.spawnParticle(Particle.FLASH,   beamPos, 1, 0, 0, 0, 0);
-                w.spawnParticle(Particle.END_ROD, beamPos, 15, 0.4, 0.4, 0.4, 0.08);
+            if (hit || step >= 80) {
+                Location endPt = pos();
+                w.spawnParticle(Particle.FLASH,   endPt, 1, 0, 0, 0, 0);
+                w.spawnParticle(Particle.END_ROD, endPt, 15, 0.4, 0.4, 0.4, 0.08);
                 cancel();
                 return;
             }
 
-            // 0.5 block per tick — smooth
-            beamPos.add(beamDir.clone().multiply(0.5));
-            traveled++;
+            step++;
+            Location beam = pos();
 
-            // ── Beam particles — white laser ──────────────────────
-            w.spawnParticle(Particle.END_ROD,   beamPos, 4, 0.02, 0.02, 0.02, 0.0);
-            w.spawnParticle(Particle.WHITE_ASH, beamPos, 2, 0.04, 0.04, 0.04, 0.01);
+            w.spawnParticle(Particle.END_ROD,   beam, 4, 0.02, 0.02, 0.02, 0.0);
+            w.spawnParticle(Particle.WHITE_ASH, beam, 2, 0.04, 0.04, 0.04, 0.01);
+            if (step % 4 == 0)
+                w.spawnParticle(Particle.FLASH, beam, 1, 0, 0, 0, 0);
 
-            // FLASH pulse har 4th step — laser flash feel
-            if (traveled % 4 == 0) {
-                w.spawnParticle(Particle.FLASH, beamPos, 1, 0, 0, 0, 0);
-            }
-
-            // Outer glow — beam ke around glow effect
             for (int i = 0; i < 3; i++) {
-                double a = Math.toRadians(i * 120 + traveled * 15);
-                Location glowPt = beamPos.clone().add(
-                    Math.cos(a) * 0.12, Math.sin(a) * 0.12, 0);
-                w.spawnParticle(Particle.END_ROD, glowPt, 1, 0, 0, 0, 0.0);
+                double a = Math.toRadians(i * 120 + step * 15);
+                w.spawnParticle(Particle.END_ROD,
+                    beam.clone().add(Math.cos(a)*0.12, Math.sin(a)*0.12, 0),
+                    1, 0, 0, 0, 0);
             }
 
-            // ── Block hit ─────────────────────────────────────────
-            if (beamPos.getBlock().getType().isSolid()) {
-                w.spawnParticle(Particle.FLASH,   beamPos, 1, 0, 0, 0, 0);
-                w.spawnParticle(Particle.END_ROD, beamPos, 25, 0.5, 0.5, 0.5, 0.1);
-                w.spawnParticle(Particle.WHITE_ASH, beamPos, 20, 0.4, 0.4, 0.4, 0.06);
-                w.playSound(beamPos, Sound.BLOCK_GLASS_BREAK,
-                    1f, 2.0f);
+            if (beam.getBlock().getType().isSolid()) {
+                w.spawnParticle(Particle.FLASH,     beam, 1,  0,   0,   0,   0);
+                w.spawnParticle(Particle.END_ROD,   beam, 25, 0.5, 0.5, 0.5, 0.1);
+                w.spawnParticle(Particle.WHITE_ASH, beam, 20, 0.4, 0.4, 0.4, 0.06);
+                w.playSound(beam, Sound.BLOCK_GLASS_BREAK, 1f, 2.0f);
                 hit = true;
                 return;
             }
 
-            // ── Entity hit ────────────────────────────────────────
             for (org.bukkit.entity.Entity e :
-                    w.getNearbyEntities(beamPos, 0.7, 0.7, 0.7)) {
+                    w.getNearbyEntities(beam, 0.7, 0.7, 0.7)) {
                 if (!(e instanceof LivingEntity le) || e == p) continue;
 
-                // 4 hearts = 8 damage
-                le.damage(8.0 * dm, p);
+                le.damage(10.0 * dm, p); // 5 hearts
 
-                // Big hit burst
-                w.spawnParticle(Particle.FLASH,
-                    le.getLocation().add(0,1,0), 1, 0, 0, 0, 0);
-                w.spawnParticle(Particle.END_ROD,
-                    le.getLocation().add(0,1,0), 40, 0.6, 1.0, 0.6, 0.09);
-                w.spawnParticle(Particle.WHITE_ASH,
-                    le.getLocation().add(0,1,0), 30, 0.5, 0.8, 0.5, 0.07);
-                w.playSound(beamPos, Sound.ENTITY_PLAYER_LEVELUP, 0.8f, 2.0f);
-                w.playSound(beamPos, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 0.6f, 2.0f);
+                Location eLoc = le.getLocation().add(0, 1, 0);
+                w.spawnParticle(Particle.FLASH,     eLoc,  1, 0,   0,   0,   0);
+                w.spawnParticle(Particle.END_ROD,   eLoc, 40, 0.6, 1.0, 0.6, 0.09);
+                w.spawnParticle(Particle.WHITE_ASH, eLoc, 30, 0.5, 0.8, 0.5, 0.07);
+                w.playSound(beam, Sound.ENTITY_PLAYER_LEVELUP,        0.8f, 2.0f);
+                w.playSound(beam, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 0.6f, 2.0f);
 
-                // White screen — sirf players pe
-                if (le instanceof Player ep && ep.isOnline()) {
+                if (le instanceof Player ep && ep.isOnline())
                     whiteLightScreen(ep, ticks(40, dr), plugin);
-                }
 
                 hit = true;
                 return;
             }
         }
+
+        // FIX: fresh location har tick — beamPos.add() bug fix
+        private Location pos() {
+            double t = step * 0.5;
+            return new Location(w,
+                startX + beamDir.getX() * t,
+                startY + beamDir.getY() * t,
+                startZ + beamDir.getZ() * t);
+        }
     }.runTaskTimer(plugin, 0, 1);
 }
+
 
 
             // 13. EARTH — Earth Slam  [knockback 1 tick after damage]
@@ -2273,7 +2264,7 @@ case OCEAN -> {
 }
 
 
-            E4. ECLIPSE — Orbital Strike
+            //E4. ECLIPSE — Orbital Strike
 // TNT rings layer by layer from sky, all land then SIMULTANEOUS blast
 case ECLIPSE -> {
     p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE,   ticks(200, dr), 3));
