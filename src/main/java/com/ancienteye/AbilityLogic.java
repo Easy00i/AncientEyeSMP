@@ -74,7 +74,6 @@ public class AbilityLogic implements Listener {
                 if (t > 13000 && t < 23000) e.setDamage(e.getDamage() * 1.30);
             }
         }
-    }
 
     // ── HUNTER MARK — extra damage handler ───────────────────────────────────────
 // onEntityDamage mein add karo — existing code ke baad
@@ -88,6 +87,7 @@ if (e.getEntity() instanceof LivingEntity victim) {
         e.setDamage(e.getDamage() * 1.5); // 50% extra damage
     }
 }
+    }
     
 @EventHandler
 public void onPlayerKillXP(org.bukkit.event.entity.PlayerDeathEvent e) {
@@ -97,7 +97,6 @@ public void onPlayerKillXP(org.bukkit.event.entity.PlayerDeathEvent e) {
     plugin.getPlayerData().addXp(killer,
         plugin.getConfig().getInt("settings.xp-per-kill", 1));
 }
-    }
     //════════════════════════════════════════════════════════════════════
 @EventHandler
 public void onFootstep(org.bukkit.event.player.PlayerMoveEvent e) {
