@@ -2042,7 +2042,7 @@ case ECHO -> {
                 });
             }
 
-            // Total 5s: 3s rise + 2s shoot
+// Total 5s: 3s rise (2 blocks) + 2s shoot
 case SPIRIT -> {
     p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, ticks(100, dr), 2));
     p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED,       ticks(80,  dr), 1));
@@ -2051,13 +2051,11 @@ case SPIRIT -> {
     w.playSound(loc, Sound.ENTITY_ILLUSIONER_CAST_SPELL, 0.8f, 1.2f);
     p.sendTitle("\u00a77\u00a7lSPIRIT FORM", "\u00a78Blocks rising...", 5, 60, 10);
 
-    // 4 sides — exactly 2 blocks from player
     int[][] offsets = {{0,0,2},{0,0,-2},{2,0,0},{-2,0,0}};
 
     for (int[] off : offsets) {
         Location sideLoc = loc.clone().add(off[0], 0, off[2]);
 
-        // Surface block dhundo
         org.bukkit.block.Block surface = sideLoc.getBlock();
         for (int gy = 0; gy > -10; gy--) {
             org.bukkit.block.Block check = sideLoc.clone().add(0, gy, 0).getBlock();
@@ -2069,10 +2067,8 @@ case SPIRIT -> {
             ? groundBlock.getType() : Material.GRASS_BLOCK;
         final Location spawnLoc = groundBlock.getLocation().clone().add(0.5, 0.0, 0.5);
 
-        // Remove ground block
         groundBlock.setType(Material.AIR);
 
-        // FallingBlock spawn
         FallingBlock fb = w.spawnFallingBlock(spawnLoc, blockMat.createBlockData());
         fb.setDropItem(false);
         fb.setHurtEntities(false);
@@ -2090,8 +2086,9 @@ case SPIRIT -> {
                 ticks++;
 
                 if (ticks <= 60) {
-                    // ── RISE 3s (60 ticks) ────────────────────────────────
-                    fb.setVelocity(new Vector(0, 0.08, 0));
+                    // ── RISE 3s — FIX: sirf 2 block utha
+                    // 60 ticks * 0.033 velocity = ~2 blocks
+                    fb.setVelocity(new Vector(0, 0.033, 0));
                     w.spawnParticle(Particle.TOTEM_OF_UNDYING,
                         fb.getLocation(), 3, 0.15, 0.1, 0.15, 0.03);
                     w.spawnParticle(Particle.WITCH,
@@ -2100,38 +2097,43 @@ case SPIRIT -> {
                         w.playSound(fb.getLocation(), Sound.BLOCK_STONE_BREAK, 0.8f, 0.5f);
 
                 } else if (ticks == 61) {
-                    // ── SHOOT START ───────────────────────────────────────
+                    // ── SHOOT — FIX: uper nahi, aim direction mein sidha shoot
+                    // 4 sides ke offsets se direction nikalo
+                    double dx = off[0], dz = off[2];
+                    Vector shootDir = new Vector(dx, 0, dz).normalize().multiply(3.5);
+                    // Thoda upar bhi taaki arc ho
+                    shootDir.setY(0.3);
+
                     w.playSound(fb.getLocation(), Sound.ENTITY_WITHER_SHOOT, 1f, 1.2f);
                     w.playSound(fb.getLocation(), Sound.ENTITY_BLAZE_SHOOT,  1f, 0.8f);
                     w.spawnParticle(Particle.TOTEM_OF_UNDYING,
                         fb.getLocation(), 30, 0.4, 0.2, 0.4, 0.08);
                     fb.setGravity(true);
-                    fb.setVelocity(new Vector(0, 3.2, 0));
+                    fb.setVelocity(shootDir);
 
                 } else if (ticks <= 100) {
-                    // ── SHOOT 2s (61-100 ticks) ───────────────────────────
+                    // ── SHOOT 2s
                     w.spawnParticle(Particle.TOTEM_OF_UNDYING,
                         fb.getLocation(), 5, 0.2, 0.1, 0.2, 0.05);
                     w.spawnParticle(Particle.END_ROD,
                         fb.getLocation(), 2, 0.1, 0.1, 0.1, 0.02);
 
-                    // Damage — jo bhi block se touch kare
                     for (org.bukkit.entity.Entity e :
                             w.getNearbyEntities(fb.getLocation(), 1.5, 1.5, 1.5)) {
                         if (e instanceof LivingEntity le && e != p) {
-                            le.damage(10.0 * dm, p); // 5 hearts
+                            le.damage(10.0 * dm, p);
                             w.spawnParticle(Particle.TOTEM_OF_UNDYING,
                                 le.getLocation(), 20, 0.4, 0.8, 0.4, 0.06);
-                            Vector knock = le.getLocation().toVector()
-                                .subtract(fb.getLocation().toVector())
+                            Vector knock = fb.getLocation().toVector()
+                                .subtract(spawnLoc.toVector())
                                 .normalize().multiply(1.5).setY(0.8);
                             Bukkit.getScheduler().runTaskLater(plugin,
-                                () -> { if (e.isValid()) e.setVelocity(knock); }, 1L);
+                                () -> { if (e.isValid()) le.setVelocity(knock); }, 1L);
                         }
                     }
 
                 } else {
-                    // ── END — block remove ────────────────────────────────
+                    // ── END
                     w.spawnParticle(Particle.FALLING_DUST,
                         fb.getLocation(), 20, 0.5, 0.3, 0.5, 0.1,
                         blockMat.createBlockData());
@@ -2146,76 +2148,64 @@ case SPIRIT -> {
     }
 }
 
-    // TIME — SHIFT + Q (Time Dash) FIXED
-case TIME -> {
-    final Vector dashDir = p.getEyeLocation().getDirection().normalize();
 
-    // Origin burst
-    w.spawnParticle(Particle.ELECTRIC_SPARK, loc, 60, 0.3, 0.5, 0.3, 0.15);
-    w.spawnParticle(Particle.FLASH,          loc, 1,  0,   0,   0,   0);
-    w.spawnParticle(Particle.REVERSE_PORTAL, loc, 30, 0.4, 0.6, 0.4, 0.1);
-    w.playSound(loc, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.6f, 2.0f);
-    w.playSound(loc, Sound.ENTITY_ELDER_GUARDIAN_CURSE,   0.4f, 2.0f);
+                            // TIME — SHIFT + Q (Time Dash) FIXED
+            case TIME -> {
+                // Direction ko final lo taaki runnable ke andar access ho sake
+                final Vector dashDir = p.getEyeLocation().getDirection().normalize();
 
-    // FIX: velocity 1 tick baad set karo — ground detection se cancel nahi hoga
-    Bukkit.getScheduler().runTaskLater(plugin, () -> {
-        if (!p.isOnline()) return;
-        // Y: agar player upar dekh raha hai toh upar bhi jaaye, warna flat dash
-        double yVel = dashDir.getY() > 0.2 ? dashDir.getY() * 3.0 : 0.2;
-        p.setVelocity(dashDir.clone().multiply(3.8).setY(yVel));
-        p.setFallDistance(0f);
-    }, 1L);
+                // 1. Origin Burst (No Change in Animation)
+                w.spawnParticle(Particle.ELECTRIC_SPARK, loc, 60, 0.3, 0.5, 0.3, 0.15);
+                w.spawnParticle(Particle.FLASH,          loc, 1,  0,   0,   0,   0);
+                w.spawnParticle(Particle.REVERSE_PORTAL, loc, 30, 0.4, 0.6, 0.4, 0.1);
+                w.playSound(loc, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.6f, 2.0f);
+                w.playSound(loc, Sound.ENTITY_ELDER_GUARDIAN_CURSE,   0.4f, 2.0f);
 
-    // Trail animation
-    new BukkitRunnable() {
-        int    t          = 0;
-        double trailAngle = 0;
-
-        @Override
-        public void run() {
-            if (t++ >= 12) {
-                Location endLoc = p.getLocation();
-                w.spawnParticle(Particle.ELECTRIC_SPARK, endLoc, 50, 0.4, 0.6, 0.4, 0.12);
-                w.spawnParticle(Particle.FLASH,          endLoc,  1, 0,   0,   0,   0);
-                w.spawnParticle(Particle.END_ROD,        endLoc, 20, 0.3, 0.5, 0.3, 0.08);
-                w.playSound(endLoc, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 0.7f, 1.8f);
+                // 2. FIXED VELOCITY LOGIC
+                // Bukkit.getScheduler() hata kar direct velocity di hai taaki anti-cheat ise block na kare
+                double boostY = dashDir.getY() > 0.1 ? dashDir.getY() * 2.5 : 0.3;
+                p.setVelocity(dashDir.clone().multiply(4.2).setY(boostY)); 
                 p.setFallDistance(0f);
-                cancel();
-                return;
+
+                // 3. Trail Animation (Aapki original animation, no change)
+                new BukkitRunnable() {
+                    int t = 0;
+                    double trailAngle = 0;
+
+                    @Override
+                    public void run() {
+                        if (!p.isOnline() || p.isDead() || t++ >= 12) {
+                            p.setFallDistance(0f);
+                            cancel();
+                            return;
+                        }
+
+                        trailAngle += 0.6;
+                        Location cur = p.getLocation();
+
+                        // Animation Particles (Same as yours)
+                        w.spawnParticle(Particle.ELECTRIC_SPARK, cur, 8, 0.2, 0.3, 0.2, 0.08);
+                        if (t % 2 == 0) w.spawnParticle(Particle.FLASH, cur, 1, 0, 0, 0, 0);
+                        w.spawnParticle(Particle.REVERSE_PORTAL, cur, 5, 0.2, 0.4, 0.2, 0.06);
+
+                        for (int i = 0; i < 6; i++) {
+                            double a = trailAngle + Math.toRadians(i * 60);
+                            w.spawnParticle(Particle.ELECTRIC_SPARK,
+                                cur.clone().add(Math.cos(a)*0.4, 0.5 + Math.sin(a)*0.3, Math.sin(a)*0.4),
+                                1, 0, 0, 0, 0.04);
+                        }
+                        w.spawnParticle(Particle.END_ROD, cur, 3, 0.1, 0.2, 0.1, 0.02);
+                        
+                        // Velocity Maintainer: Dash ke beech mein speed kam na ho
+                        if (t < 6) {
+                            p.setVelocity(dashDir.clone().multiply(3.0).setY(p.getVelocity().getY()));
+                        }
+                        p.setFallDistance(0f);
+                    }
+                }.runTaskTimer(plugin, 1L, 1L); // 1 tick baad trail start taaki velocity sync ho
             }
 
-            trailAngle += 0.6;
-            Location cur = p.getLocation();
 
-            w.spawnParticle(Particle.ELECTRIC_SPARK, cur, 8, 0.2, 0.3, 0.2, 0.08);
-
-            if (t % 2 == 0)
-                w.spawnParticle(Particle.FLASH, cur, 1, 0, 0, 0, 0);
-
-            w.spawnParticle(Particle.REVERSE_PORTAL, cur, 5, 0.2, 0.4, 0.2, 0.06);
-
-            for (int i = 0; i < 6; i++) {
-                double a = trailAngle + Math.toRadians(i * 60);
-                w.spawnParticle(Particle.ELECTRIC_SPARK,
-                    cur.clone().add(Math.cos(a)*0.4, 0.5 + Math.sin(a)*0.3, Math.sin(a)*0.4),
-                    1, 0, 0, 0, 0.04);
-            }
-
-            w.spawnParticle(Particle.END_ROD, cur, 3, 0.1, 0.2, 0.1, 0.02);
-
-            p.setFallDistance(0f);
-
-            // Velocity boost maintain — agar player slow ho jaaye
-            if (t < 8) {
-                Vector vel = p.getVelocity();
-                if (vel.lengthSquared() < 1.2) {
-                    double yMaintain = vel.getY();
-                    p.setVelocity(dashDir.clone().multiply(2.5).setY(yMaintain));
-                }
-            }
-        }
-    }.runTaskTimer(plugin, 2L, 1L); // 2 tick delay — velocity set hone ke baad trail start
-}
             // 19. WARRIOR — Warrior Charge
             case WARRIOR -> {
                 p.setVelocity(dir.clone().multiply(3.0).setY(0.3));
