@@ -1861,7 +1861,8 @@ case METEOR -> {
         }
     }
 
-            // ══════════════════════════════════════════════════════════════════════
+            
+        // ══════════════════════════════════════════════════════════════════════
     //  GUI  — XP auto-refreshes every second while the inventory is open
     // ══════════════════════════════════════════════════════════════════════
     public void openEyeGUI(Player p) {
@@ -1874,7 +1875,6 @@ case METEOR -> {
         p.openInventory(gui);
         p.playSound(p.getLocation(), Sound.BLOCK_ENCHANTMENT_TABLE_USE, 1f, 1.2f);
 
-        // Refresh slot 22 every second — live XP update
         new BukkitRunnable() {
             public void run() {
                 if (!p.isOnline()) { cancel(); return; }
@@ -1887,15 +1887,15 @@ case METEOR -> {
         }.runTaskTimer(plugin, 1L, 1L);
     }
 
-    // Builds the center eye item with live XP/level data
+    // Builds the center eye item with live kill/level data
     private ItemStack buildEyeItem(Player p) {
         EyeType type  = plugin.getPlayerData().getEye(p);
         int     level = plugin.getPlayerData().getLevel(p);
-        int     xp    = plugin.getPlayerData().getXP(p);
-        // maxXP level ke hisaab se — PlayerDataManager se match
-        int     maxXP = plugin.getPlayerData().getMaxXPForLevel(level);
-        String  bar   = progressBar(xp, maxXP);
-        String  col   = level==3?"§e§l":level==2?"§b§l":"§7§l";
+        int     kills = plugin.getPlayerData().getXP(p);
+        // FIX: config se kill thresholds
+        int     maxKills = plugin.getPlayerData().getMaxXPForLevel(level);
+        String  bar      = progressBar(kills, maxKills);
+        String  col      = level==3?"§e§l":level==2?"§b§l":"§7§l";
 
         ItemStack eye = new ItemStack(Material.ENDER_EYE);
         ItemMeta  m   = eye.getItemMeta();
@@ -1903,16 +1903,17 @@ case METEOR -> {
         List<String> lore = new ArrayList<>();
         lore.add("§8━━━━━━━━━━━━━━━━━━");
         lore.add("§7Level    §f"+level+" §8/ §f3");
-        lore.add("§7XP: "+bar+" §8("+xp+"/"+maxXP+")");
+        // FIX: XP ki jagah Kills dikhao
+        lore.add("§7Kills: "+bar+" §8(§c"+kills+"§8/§f"+maxKills+"§8)");
         lore.add("§8━━━━━━━━━━━━━━━━━━");
         lore.add("§6§lStats:");
-        lore.add("§e• §7Damage Bonus:  §c+"+(int)((getDmg(p)-1)*100)+"%");
-        lore.add("§e• §7Duration Mul:  §b"+(int)(getDur(p)*100)+"% of base");
-        lore.add("§e• §7Cooldown Red:  §a-"+((level-1)*2)+"s per ability");
+        lore.add("§e- §7Damage Bonus:  §c+"+(int)((getDmg(p)-1)*100)+"%");
+        lore.add("§e- §7Duration Mul:  §b"+(int)(getDur(p)*100)+"% of base");
+        lore.add("§e- §7Cooldown Red:  §a-"+((level-1)*2)+"s per ability");
         lore.add("§8━━━━━━━━━━━━━━━━━━");
         lore.add("§b§lAbilities:");
-        lore.add("§f  SHIFT+F  §7→  §bPrimary");
-        lore.add("§f  SHIFT+Q  §7→  §bSecondary");
+        lore.add("§f  SHIFT+F  §7->  §bPrimary");
+        lore.add("§f  SHIFT+Q  §7->  §bSecondary");
         lore.add("§8━━━━━━━━━━━━━━━━━━");
         lore.add("§5§oThe power is bound to your soul.");
         m.setLore(lore);
@@ -1924,13 +1925,11 @@ case METEOR -> {
     //  HELPERS
     // ══════════════════════════════════════════════════════════════════════
 
-    /** Damage multiplier: L1=1.0  L2=1.2  L3=1.5 */
     private double getDmg(Player p) {
         int l = plugin.getPlayerData().getLevel(p);
         return l == 3 ? 1.5 : l == 2 ? 1.2 : 1.0;
     }
 
-    /** Duration multiplier: L1=1.0  L2=1.5  L3=2.0 */
     private double getDur(Player p) {
         int l = plugin.getPlayerData().getLevel(p);
         return l == 3 ? 2.0 : l == 2 ? 1.5 : 1.0;
@@ -2018,71 +2017,47 @@ case METEOR -> {
         return i;
     }
 
-   // ════════════════════════════════════════════════════════════════════
-private void whiteLightScreen(Player ep, int durationTicks, AncientEyePlugin plugin) {
-    new BukkitRunnable() {
-        int t = 0;
-        @Override
-        public void run() {
-            if (!ep.isOnline() || t++ >= durationTicks) {
-                cancel();
-                return;
+    private void whiteLightScreen(Player ep, int durationTicks, AncientEyePlugin plugin) {
+        new BukkitRunnable() {
+            int t = 0;
+            @Override
+            public void run() {
+                if (!ep.isOnline() || t++ >= durationTicks) { cancel(); return; }
+                Location eyeFront = ep.getEyeLocation().clone()
+                        .add(ep.getEyeLocation().getDirection().multiply(0.1));
+                ep.spawnParticle(Particle.FLASH, eyeFront, 1, 0, 0, 0, 0);
+                for (int i = 0; i < 8; i++) {
+                    double a = Math.toRadians(i * 45);
+                    ep.spawnParticle(Particle.FLASH,
+                        eyeFront.clone().add(Math.cos(a)*0.12, Math.sin(a)*0.12, 0),
+                        1, 0, 0, 0, 0);
+                }
             }
-            // Aankhon ke 0.1 block saamne — camera literally FLASH ke andar
-            Location eyeFront = ep.getEyeLocation().clone()
-                    .add(ep.getEyeLocation().getDirection().multiply(0.1));
-
-            // 9 points — center + 8 around — poora screen cover karta hai
-            ep.spawnParticle(Particle.FLASH, eyeFront, 1, 0, 0, 0, 0);
-            for (int i = 0; i < 8; i++) {
-                double a = Math.toRadians(i * 45);
-                ep.spawnParticle(Particle.FLASH,
-                    eyeFront.clone().add(Math.cos(a) * 0.12, Math.sin(a) * 0.12, 0),
-                    1, 0, 0, 0, 0);
-            }
-        }
-    }.runTaskTimer(plugin, 0, 1);
-}
+        }.runTaskTimer(plugin, 0, 1);
+    }
 
     private String progressBar(int cur, int max) {
         int bars = 12;
         int done = (int)((double)Math.min(cur, max) / max * bars);
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < bars; i++) {
-            if (i < done) {
-                sb.append("§a┃");
-            } else {
-                sb.append("§7┃");
-            }
+            sb.append(i < done ? "§a|" : "§7|");
         }
         return sb.toString();
     }
 
-    // ── Shadow Cloak helper — armor slot restore with conflict handling ───────────
-// stored   = jo item pehle tha
-// setter   = us slot mein wapas rakhne ka function
-// current  = abhi us slot mein kya hai
-//
-// Logic:
-//   Agar slot khaali hai       → seedha wapas rakho
-//   Agar slot mein kuch aaya   → stored item drop karo (player ki marzi)
-private void restoreOrDrop(Player p, ItemStack stored,
-                           Runnable setter, ItemStack current) {
-    if (stored == null) return; // pehle kuch tha hi nahi
-
-    boolean slotEmpty = (current == null || current.getType() == Material.AIR);
-
-    if (slotEmpty) {
-        // Slot khaali hai — wapas rakho
-        setter.run();
-    } else {
-        // Slot mein kuch aur aa gaya — stored item floor par drop karo
-        // Player ko item nahi khoyega
-        p.getWorld().dropItemNaturally(p.getLocation(), stored);
-        p.sendMessage("\u00a77Your hidden item was dropped: \u00a7f"
-            + stored.getType().name().toLowerCase().replace("_", " "));
+    private void restoreOrDrop(Player p, ItemStack stored,
+                               Runnable setter, ItemStack current) {
+        if (stored == null) return;
+        boolean slotEmpty = (current == null || current.getType() == Material.AIR);
+        if (slotEmpty) {
+            setter.run();
+        } else {
+            p.getWorld().dropItemNaturally(p.getLocation(), stored);
+            p.sendMessage("\u00a77Your hidden item was dropped: \u00a7f"
+                + stored.getType().name().toLowerCase().replace("_", " "));
+        }
     }
-}
 
     private void applySafeDamage(Player owner, Location loc, double radius, double damage) {
         loc.getWorld().getNearbyEntities(loc, radius, radius, radius).forEach(entity -> {
@@ -2093,4 +2068,3 @@ private void restoreOrDrop(Player p, ItemStack stored,
         });
     }
 }
-
