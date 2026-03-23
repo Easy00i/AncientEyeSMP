@@ -96,6 +96,7 @@ public void onPlayerKillXP(org.bukkit.event.entity.PlayerDeathEvent e) {
     plugin.getPlayerData().addXp(killer,
         plugin.getConfig().getInt("settings.xp-per-kill", 1));
 }
+    }
     //════════════════════════════════════════════════════════════════════
 @EventHandler
 public void onFootstep(org.bukkit.event.player.PlayerMoveEvent e) {
