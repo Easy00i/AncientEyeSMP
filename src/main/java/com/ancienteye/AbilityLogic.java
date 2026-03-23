@@ -75,6 +75,18 @@ public class AbilityLogic implements Listener {
             }
         }
     }
+    / ── HUNTER MARK — extra damage handler ───────────────────────────────────────
+// onEntityDamage mein add karo — existing code ke baad
+
+// Agar entity marked hai toh extra damage do
+if (e.getEntity() instanceof LivingEntity victim) {
+    if (victim.hasMetadata("hunterMarked")) {
+        // Mark lagane wala hunter check karo
+        String markerUUID = victim.getMetadata("hunterMarked").get(0).asString();
+        // Attacker hunter hai ya koi bhi attack kare — extra damage
+        e.setDamage(e.getDamage() * 1.5); // 50% extra damage
+    }
+}
     
 @EventHandler
 public void onPlayerKillXP(org.bukkit.event.entity.PlayerDeathEvent e) {
@@ -291,25 +303,81 @@ case STORM -> {
                     }
                 });
             }
+// ── HUNTER PRIMARY — Hunter Dash ─────────────────────────────────────────────
+// Aim based — target ki taraf fast dash
+// Owner ko koi damage nahi, enemy ko damage hoga
+case HUNTER -> {
+    LivingEntity tgt = aim(p, 30);
+    if (tgt != null) {
+        Location tgtLoc = tgt.getLocation();
 
-            // 8. HUNTER — Hunter Dash
-            case HUNTER -> {
-                LivingEntity tgt = aim(p, 30);
-                if (tgt != null) {
-                    w.spawnParticle(Particle.CRIT, loc, 30, 0.3, 0.5, 0.3, 0.12);
-                    p.setVelocity(tgt.getLocation().toVector().subtract(loc.toVector()).normalize().multiply(3.0).setY(0.3));
-                    w.playSound(loc, Sound.ENTITY_ARROW_SHOOT, 1f, 1.8f);
+        // Direction — player se target ki taraf
+        Vector dashDir = tgtLoc.toVector()
+            .subtract(p.getLocation().toVector())
+            .normalize();
+
+        // Origin particles
+        w.spawnParticle(Particle.CRIT,     loc, 30, 0.3, 0.5, 0.3, 0.12);
+        w.spawnParticle(Particle.END_ROD,  loc, 15, 0.2, 0.4, 0.2, 0.06);
+        w.spawnParticle(Particle.SOUL,     loc, 10, 0.3, 0.5, 0.3, 0.05);
+        w.playSound(loc, Sound.ENTITY_ARROW_SHOOT,  1f, 1.8f);
+        w.playSound(loc, Sound.ENTITY_PHANTOM_FLAP, 0.8f, 1.5f);
+
+        // No fall damage
+        p.setFallDistance(0f);
+
+        // Dash — 1 tick baad set karo
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (!p.isOnline()) return;
+            p.setVelocity(dashDir.clone().multiply(1.8).setY(0.35));
+            p.setFallDistance(0f);
+        }, 1L);
+
+        // Trail + damage on hit
+        new BukkitRunnable() {
+            int t = 0;
+            public void run() {
+                if (t++ >= 10) {
+                    p.setFallDistance(0f);
+                    cancel(); return;
+                }
+
+                Location cur = p.getLocation();
+
+                // Trail particles
+                w.spawnParticle(Particle.CRIT,    cur, 5, 0.2, 0.3, 0.2, 0.08);
+                w.spawnParticle(Particle.END_ROD, cur, 2, 0.1, 0.2, 0.1, 0.02);
+                w.spawnParticle(Particle.SOUL,    cur, 3, 0.2, 0.3, 0.2, 0.04);
+
+                p.setFallDistance(0f);
+
+                // Hit check — target ke 2.5 block mein
+                if (p.getLocation().distanceSquared(tgtLoc) < 2.5 * 2.5) {
+                    tgt.damage(7.0 * dm, p);
+
+                    // Hit burst
+                    w.spawnParticle(Particle.CRIT,    tgtLoc, 40, 0.5, 0.8, 0.5, 0.12);
+                    w.spawnParticle(Particle.END_ROD, tgtLoc,  20, 0.4, 0.7, 0.4, 0.08);
+                    w.spawnParticle(Particle.SOUL,    tgtLoc,  15, 0.3, 0.6, 0.3, 0.05);
+                    w.playSound(tgtLoc, Sound.ENTITY_ARROW_HIT_PLAYER, 1f, 1.2f);
+                    w.playSound(tgtLoc, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1f, 1f);
+
+                    // Knockback
+                    Vector knock = dashDir.clone().multiply(1.5).setY(0.4);
                     Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                        if (!tgt.isValid()) return;
-                        if (tgt.getLocation().distanceSquared(p.getLocation()) < 20) {
-                            tgt.damage(7.0 * dm, p);
-                            w.spawnParticle(Particle.CRIT,     tgt.getLocation(), 40, 0.5, 0.8, 0.5, 0.12);
-                            w.spawnParticle(Particle.EXPLOSION,tgt.getLocation(),  2, 0.3, 0,   0.3, 0);
-                            w.playSound(tgt.getLocation(), Sound.ENTITY_ARROW_HIT_PLAYER, 1f, 1.2f);
-                        }
-                    }, 10L);
-                } else p.sendMessage("§7No target in range.");
+                        if (tgt.isValid()) tgt.setVelocity(knock);
+                    }, 1L);
+
+                    p.setFallDistance(0f);
+                    cancel();
+                }
             }
+        }.runTaskTimer(plugin, 2L, 1L);
+
+    } else {
+        p.sendMessage("§7No target in range.");
+    }
+}
 
             // 9. GRAVITY — Gravity Pull  [knockback 1 tick after damage]
             case GRAVITY -> {
@@ -1180,28 +1248,78 @@ case FROST -> {
                 p.sendTitle("§6§l💪 TITAN STRENGTH!", "§7+Strength III active!", 5, 45, 10);
             }
 
-            // 8. HUNTER — Mark Target
-            case HUNTER -> {
-                LivingEntity tgt = aim(p, 30);
-                if (tgt != null) {
-                    tgt.setGlowing(true);
-                    tgt.addPotionEffect(new PotionEffect(PotionEffectType.GLOWING,  ticks(240, dr), 0));
-                    tgt.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, ticks(80,  dr), 1));
-                    tgt.setMetadata("hunterMarked", new org.bukkit.metadata.FixedMetadataValue(plugin, true));
-                    for (int i = 0; i < 12; i++) { double a = Math.toRadians(i*30);
-                        w.spawnParticle(Particle.CRIT, tgt.getLocation().add(Math.cos(a)*1.5,1,Math.sin(a)*1.5), 4, 0.1, 0.2, 0.1, 0.06);
-                        w.spawnParticle(Particle.DUST, tgt.getLocation().add(Math.cos(a)*1.5,1,Math.sin(a)*1.5), 2, 0, 0, 0, 0,
-                            new Particle.DustOptions(Color.RED, 1.8f));
-                    }
-                    w.spawnParticle(Particle.CRIT, tgt.getLocation(), 50, 0.5, 1, 0.5, 0.12);
-                    w.playSound(loc, Sound.ENTITY_ARROW_HIT_PLAYER, 1f, 0.8f);
-                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                        tgt.removeMetadata("hunterMarked", plugin);
-                        if (tgt.isValid()) tgt.setGlowing(false);
-                    }, ticks(240, dr));
-                    p.sendTitle("§c§l🎯 MARKED!", "§7Target takes extra damage!", 5, 50, 10);
-                } else p.sendMessage("§7No target in range.");
+            
+// ── HUNTER SECONDARY — Mark Target ───────────────────────────────────────────
+// Target mark hoga — 10s tak extra damage milega
+// Mob aur player dono par kaam karega
+case HUNTER -> {
+    LivingEntity tgt = aim(p, 30);
+    if (tgt != null) {
+
+        // Mark particles + sound
+        w.spawnParticle(Particle.CRIT,     tgt.getLocation(), 50, 0.5, 1.0, 0.5, 0.12);
+        w.spawnParticle(Particle.END_ROD,  tgt.getLocation(), 25, 0.4, 0.8, 0.4, 0.06);
+        w.spawnParticle(Particle.SOUL,     tgt.getLocation(), 20, 0.3, 0.7, 0.3, 0.05);
+
+        // Red ring animation
+        for (int ring = 1; ring <= 3; ring++) { final int fr = ring;
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                double r = fr * 0.6;
+                for (int i = 0; i < 12; i++) {
+                    double a = Math.toRadians(i * 30);
+                    Particle.DustOptions red = new Particle.DustOptions(
+                        org.bukkit.Color.fromRGB(220, 20, 20), 1.5f);
+                    w.spawnParticle(Particle.DUST,
+                        tgt.getLocation().clone().add(Math.cos(a)*r, 1.0, Math.sin(a)*r),
+                        1, 0, 0, 0, 0, red);
+                }
+            }, ring * 3L);
+        }
+
+        w.playSound(loc, Sound.ENTITY_ARROW_HIT_PLAYER,   1f, 0.8f);
+        w.playSound(loc, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1f, 1.2f);
+
+        // Mark metadata
+        tgt.setMetadata("hunterMarked",
+            new org.bukkit.metadata.FixedMetadataValue(plugin, p.getUniqueId().toString()));
+        tgt.setGlowing(true);
+
+        p.sendTitle("§c§lMARKED!", "§7Target takes extra damage!", 5, 50, 10);
+
+        // Mark aura — 10 seconds tak
+        new BukkitRunnable() {
+            int ticks = 0;
+            double angle = 0;
+            public void run() {
+                if (ticks++ >= ticks(200, dr) || !tgt.isValid() || tgt.isDead()) {
+                    // Remove mark
+                    tgt.removeMetadata("hunterMarked", plugin);
+                    if (tgt.isValid()) tgt.setGlowing(false);
+                    cancel(); return;
+                }
+
+                angle += 0.15;
+
+                // Rotating red ring around target
+                for (int i = 0; i < 8; i++) {
+                    double a = angle + Math.toRadians(i * 45);
+                    Particle.DustOptions red = new Particle.DustOptions(
+                        org.bukkit.Color.fromRGB(220, 20, 20), 1.2f);
+                    w.spawnParticle(Particle.DUST,
+                        tgt.getLocation().clone().add(Math.cos(a)*0.7, 1.0, Math.sin(a)*0.7),
+                        1, 0, 0, 0, 0, red);
+                }
+                // Top indicator
+                w.spawnParticle(Particle.CRIT,
+                    tgt.getLocation().clone().add(0, tgt.getHeight() + 0.3, 0),
+                    1, 0.1, 0, 0.1, 0.02);
             }
+        }.runTaskTimer(plugin, 0, 1);
+
+    } else {
+        p.sendMessage("§7No target in range.");
+    }
+}
 
             // 9. GRAVITY — Gravity Jump
             // [FIX] Y velocity = 8.0 (was 3.5), slow fall after 40 ticks, lasts 80 ticks
