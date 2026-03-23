@@ -1032,7 +1032,7 @@ case OCEAN -> {
 }
 
 
-            // ECLIPSE PRIMARY
+// ECLIPSE PRIMARY — FIXED
 case ECLIPSE -> {
     double dmg = ecfg("ECLIPSE", "primary-damage", 18.0);
     LivingEntity target = aim(p, 30.0);
@@ -1042,24 +1042,36 @@ case ECLIPSE -> {
         return;
     }
 
-    w.playSound(p.getLocation(), Sound.ENTITY_WITHER_SHOOT, 1f, 0.5f);
+    w.playSound(p.getLocation(),      Sound.ENTITY_WITHER_SHOOT,   1f, 0.5f);
     w.playSound(target.getLocation(), Sound.ENTITY_ENDERMAN_STARE, 0.8f, 0.5f);
 
+    // FIX: boolean flag — blast sirf ek baar hoga
+    final boolean[] blasted = {false};
+
     new BukkitRunnable() {
+        // FIX: ticks++ instead of ticks += 2
+        // runTaskTimer 2L interval — 30 ticks * 2 = 60 ticks = 3 seconds
         int    ticks     = 0;
         double cubeAngle = 0;
 
         public void run() {
-            // Safety — agar target mar gaya ya 3s ho gayi
-            if (!target.isValid() || target.isDead()) { cancel(); return; }
 
-            // ── 3 SECONDS (60 ticks) BLACK CUBE ANIMATION ────────────────
-            if (ticks < 60) {
-                cubeAngle += 0.08;
+            // FIX: target dead/invalid — blast karo phir cancel
+            if (!target.isValid() || target.isDead()) {
+                if (!blasted[0]) doEclipseBlast(p, w, target.getLocation().clone().add(0,1,0), dmg, plugin);
+                blasted[0] = true;
+                cancel();
+                return;
+            }
+
+            ticks++;
+
+            // ── Phase 1: BLACK CUBE (0-29 ticks * 2L = 3s) ───────────────
+            if (ticks <= 30) {
+                cubeAngle += 0.12;
                 Location body = target.getLocation().clone().add(0, 1.0, 0);
 
-                // ── Rotating BLACK CUBE — 8 vertices, 12 edges ──────────
-                double r   = 0.75 + Math.sin(ticks * 0.15) * 0.08; // slight pulse
+                double r    = 0.75 + Math.sin(ticks * 0.3) * 0.08;
                 double cosA = Math.cos(cubeAngle), sinA = Math.sin(cubeAngle);
                 double cosT = Math.cos(0.4),       sinT = Math.sin(0.4);
 
@@ -1072,7 +1084,7 @@ case ECLIPSE -> {
                     {4,5},{5,6},{6,7},{7,4},
                     {0,4},{1,5},{2,6},{3,7}
                 };
-                // Rotate vertices
+
                 double[][] rv = new double[8][3];
                 for (int v = 0; v < 8; v++) {
                     double x = verts[v][0], y = verts[v][1], z = verts[v][2];
@@ -1082,13 +1094,13 @@ case ECLIPSE -> {
                     double nz2 = y*sinT + nz*cosT;
                     rv[v][0]=nx; rv[v][1]=ny2+r; rv[v][2]=nz2;
                 }
-                // Draw edges
+
                 Particle.DustOptions black = new Particle.DustOptions(
                     org.bukkit.Color.fromRGB(10, 0, 20), 1.1f);
                 for (int[] edge : edges) {
                     double[] va = rv[edge[0]], vb = rv[edge[1]];
                     for (int k = 0; k <= 5; k++) {
-                        double t  = (double)k/5;
+                        double t = (double)k/5;
                         Location pt = body.clone().add(
                             va[0]+(vb[0]-va[0])*t,
                             va[1]+(vb[1]-va[1])*t - r,
@@ -1097,94 +1109,29 @@ case ECLIPSE -> {
                     }
                 }
 
-                // Center dark core
-                w.spawnParticle(Particle.SQUID_INK, body, 2, 0.1, 0.1, 0.1, 0.01);
+                w.spawnParticle(Particle.SQUID_INK,    body, 2, 0.1, 0.1, 0.1, 0.01);
                 w.spawnParticle(Particle.DRAGON_BREATH, body, 3, 0.15, 0.15, 0.15, 0.02);
 
-                // Warning sound intensifies
-                if (ticks % 20 == 0) {
-                    float pitch = 0.4f + (ticks / 60f) * 1.2f;
+                // Warning sound — intensifies
+                if (ticks % 10 == 0) {
+                    float pitch = 0.4f + (ticks / 30f) * 1.2f;
                     w.playSound(target.getLocation(),
                         Sound.ENTITY_ENDERMAN_AMBIENT, 0.6f, pitch);
                 }
 
-                ticks += 2;
-
             } else {
-                // ── BLAST — cube disappear, TNT black explosion ──────────
+                // ── Phase 2: BLAST ────────────────────────────────────────
+                // FIX: cancel PEHLE, phir blast — no double fire
                 cancel();
-
-                Location blastLoc = target.getLocation().clone().add(0, 1, 0);
-
-                // Cube disappear flash
-                w.spawnParticle(Particle.SQUID_INK,      blastLoc, 60, 0.5, 0.5, 0.5, 0.15);
-                w.spawnParticle(Particle.DRAGON_BREATH,  blastLoc, 80, 0.8, 0.8, 0.8, 0.08);
-                w.spawnParticle(Particle.EXPLOSION_EMITTER, blastLoc, 2, 0, 0, 0, 0);
-                w.spawnParticle(Particle.EXPLOSION,      blastLoc, 20, 1.0, 0.5, 1.0, 0.1);
-
-                // Blast sounds
-                w.playSound(blastLoc, Sound.ENTITY_GENERIC_EXPLODE,         2f, 0.4f);
-                w.playSound(blastLoc, Sound.ENTITY_WITHER_BREAK_BLOCK,       1f, 0.5f);
-                w.playSound(blastLoc, Sound.ENTITY_DRAGON_FIREBALL_EXPLODE,  1f, 0.3f);
-
-                // ── 10 block radius shockwave rings ─────────────────────
-                for (int ring = 1; ring <= 5; ring++) {
-                    final int fr = ring;
-                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                        double rad = fr * 2.0;
-                        int    pts = 36;
-                        for (int i = 0; i < pts; i++) {
-                            double a = Math.toRadians(i * (360.0 / pts));
-                            // Ground ring
-                            w.spawnParticle(Particle.SQUID_INK,
-                                blastLoc.clone().add(Math.cos(a)*rad, 0.1, Math.sin(a)*rad),
-                                1, 0, 0, 0, 0);
-                            // Mid ring
-                            w.spawnParticle(Particle.DRAGON_BREATH,
-                                blastLoc.clone().add(Math.cos(a)*rad, 1.0, Math.sin(a)*rad),
-                                1, 0, 0, 0, 0);
-                            // Top ring
-                            w.spawnParticle(Particle.SQUID_INK,
-                                blastLoc.clone().add(Math.cos(a)*rad, 2.0, Math.sin(a)*rad),
-                                1, 0, 0, 0, 0);
-                        }
-                        // Ring sound
-                        w.playSound(blastLoc, Sound.ENTITY_WITHER_AMBIENT,
-                            0.5f, 0.3f + fr * 0.1f);
-                    }, ring * 2L);
+                if (!blasted[0]) {
+                    blasted[0] = true;
+                    doEclipseBlast(p, w, target.getLocation().clone().add(0,1,0), dmg, plugin);
                 }
-
-                // ── Block shake — nearby blocks vibrate effect ───────────
-                Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                    for (int i = 0; i < 30; i++) {
-                        double angle = Math.toRadians(i * 12);
-                        double dist  = 2 + (i % 5);
-                        Location blk = blastLoc.clone().add(
-                            Math.cos(angle)*dist, -0.5, Math.sin(angle)*dist);
-                        w.spawnParticle(Particle.FALLING_DUST, blk, 5,
-                            0.3, 0.1, 0.3, 0.05,
-                            org.bukkit.Material.OBSIDIAN.createBlockData());
-                    }
-                }, 3L);
-
-                // ── Damage — owner safe, 10 block radius ─────────────────
-                applySafeDamage(p, blastLoc, 10.0, dmg);
-
-                // Knockback — enemies ko blast se door phenk do
-                blastLoc.getWorld().getNearbyEntities(blastLoc, 10, 10, 10)
-                    .forEach(e -> {
-                        if (e instanceof LivingEntity le && e != p) {
-                            Vector vel = e.getLocation().toVector()
-                                .subtract(blastLoc.toVector())
-                                .normalize().multiply(3.5).setY(1.2);
-                            Bukkit.getScheduler().runTaskLater(plugin,
-                                () -> { if (e.isValid()) e.setVelocity(vel); }, 1L);
-                        }
-                    });
             }
         }
-    }.runTaskTimer(plugin, 0, 2);
+    }.runTaskTimer(plugin, 0, 2); // 2 tick interval
 }
+
 
             /// GUARDIAN PRIMARY
 case GUARDIAN -> {
@@ -2477,6 +2424,81 @@ case METEOR -> {
                 + stored.getType().name().toLowerCase().replace("_", " "));
         }
     }
+
+// ── Eclipse blast helper — HELPERS section mein add karo ─────────────────────
+private void doEclipseBlast(Player p, World w, Location blastLoc,
+                             double dmg, AncientEyePlugin plugin) {
+    double dm = getDmg(p);
+
+    // Cube shatter
+    w.spawnParticle(Particle.SQUID_INK,         blastLoc, 60, 0.5, 0.5, 0.5, 0.15);
+    w.spawnParticle(Particle.DRAGON_BREATH,     blastLoc, 80, 0.8, 0.8, 0.8, 0.08);
+    w.spawnParticle(Particle.EXPLOSION_EMITTER, blastLoc,  2, 0, 0, 0, 0);
+    w.spawnParticle(Particle.EXPLOSION,         blastLoc, 20, 1.0, 0.5, 1.0, 0.1);
+
+    // 2nd explosion — slight delay
+    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+        w.spawnParticle(Particle.EXPLOSION_EMITTER, blastLoc, 3, 0.3, 0, 0.3, 0);
+        w.spawnParticle(Particle.SQUID_INK,         blastLoc, 40, 0.6, 0.6, 0.6, 0.12);
+        w.spawnParticle(Particle.DRAGON_BREATH,     blastLoc, 60, 0.7, 0.7, 0.7, 0.07);
+        w.playSound(blastLoc, Sound.ENTITY_GENERIC_EXPLODE,        2f, 0.4f);
+        w.playSound(blastLoc, Sound.ENTITY_WITHER_BREAK_BLOCK,     1f, 0.5f);
+    }, 5L);
+
+    // Blast sounds
+    w.playSound(blastLoc, Sound.ENTITY_GENERIC_EXPLODE,        2f, 0.3f);
+    w.playSound(blastLoc, Sound.ENTITY_DRAGON_FIREBALL_EXPLODE, 1f, 0.3f);
+    w.playSound(blastLoc, Sound.ENTITY_WITHER_BREAK_BLOCK,      1f, 0.5f);
+
+    // 5 expanding shockwave rings
+    for (int ring = 1; ring <= 5; ring++) {
+        final int fr = ring;
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            double rad = fr * 2.0;
+            int    pts = 36;
+            for (int i = 0; i < pts; i++) {
+                double a = Math.toRadians(i * (360.0 / pts));
+                w.spawnParticle(Particle.SQUID_INK,
+                    blastLoc.clone().add(Math.cos(a)*rad, 0.1, Math.sin(a)*rad),
+                    1, 0, 0, 0, 0);
+                w.spawnParticle(Particle.DRAGON_BREATH,
+                    blastLoc.clone().add(Math.cos(a)*rad, 1.0, Math.sin(a)*rad),
+                    1, 0, 0, 0, 0);
+                w.spawnParticle(Particle.SQUID_INK,
+                    blastLoc.clone().add(Math.cos(a)*rad, 2.0, Math.sin(a)*rad),
+                    1, 0, 0, 0, 0);
+            }
+            w.playSound(blastLoc, Sound.ENTITY_WITHER_AMBIENT,
+                0.5f, 0.3f + fr * 0.1f);
+        }, ring * 2L);
+    }
+
+    // Block shake
+    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+        for (int i = 0; i < 30; i++) {
+            double angle = Math.toRadians(i * 12);
+            double dist  = 2 + (i % 5);
+            Location blk = blastLoc.clone().add(
+                Math.cos(angle)*dist, -0.5, Math.sin(angle)*dist);
+            w.spawnParticle(Particle.FALLING_DUST, blk, 5,
+                0.3, 0.1, 0.3, 0.05,
+                org.bukkit.Material.OBSIDIAN.createBlockData());
+        }
+    }, 3L);
+
+    // Damage + knockback — owner safe
+    applySafeDamage(p, blastLoc, 10.0, dmg);
+    blastLoc.getWorld().getNearbyEntities(blastLoc, 10, 10, 10).forEach(e -> {
+        if (e instanceof LivingEntity le && e != p) {
+            Vector vel = e.getLocation().toVector()
+                .subtract(blastLoc.toVector())
+                .normalize().multiply(3.5).setY(1.2);
+            Bukkit.getScheduler().runTaskLater(plugin,
+                () -> { if (e.isValid()) e.setVelocity(vel); }, 1L);
+        }
+    });
+}
+
 
     private void applySafeDamage(Player owner, Location loc, double radius, double damage) {
         loc.getWorld().getNearbyEntities(loc, radius, radius, radius).forEach(entity -> {
