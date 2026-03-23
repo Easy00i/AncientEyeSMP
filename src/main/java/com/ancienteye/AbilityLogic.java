@@ -177,20 +177,188 @@ private String getDirectionLabel(Player from, Player to) {
                 p.teleport(dest);
             }
 
-            // 2. PHANTOM — Ghost Dash
-            case PHANTOM -> {
-                p.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, ticks(40, dr), 0));
-                p.setVelocity(dir.clone().multiply(2.8).setY(0.35));
-                w.playSound(loc, Sound.ENTITY_PHANTOM_FLAP, 1f, 1.8f);
-                new BukkitRunnable() { int t = 0;
-                    public void run() {
-                        if (t++ >= 8) { cancel(); return; }
-                        w.spawnParticle(Particle.CLOUD,          p.getLocation(), 10, 0.3, 0.6, 0.3, 0.02);
-                        w.spawnParticle(Particle.SMOKE,          p.getLocation(),  6, 0.2, 0.5, 0.2, 0.01);
-                        w.spawnParticle(Particle.REVERSE_PORTAL, p.getLocation(),  4, 0.2, 0.4, 0.2, 0.03);
-                    }
-                }.runTaskTimer(plugin, 0, 1);
+            // ── PHANTOM PRIMARY — Arcane Circle Trap ─────────────────────────────────────
+// Ground par aim based arcane circle spawns
+// 15 block radius, 6 seconds
+// Inside enemies: freeze + 1 heart/second damage
+// Owner safe, flat ground particle structure, spinning
+case PHANTOM -> {
+    // Aim — ground par raycast
+    Location groundLoc = null;
+    Location eyeLoc = p.getEyeLocation();
+    Vector   eyeDir = eyeLoc.getDirection().normalize();
+
+    // Ground dhundo — 50 blocks tak raycast
+    for (int i = 1; i <= 50; i++) {
+        Location check = eyeLoc.clone().add(eyeDir.clone().multiply(i));
+        if (check.getBlock().getType().isSolid()) {
+            groundLoc = check.clone().add(0, 1, 0); // block ke upar
+            break;
+        }
+    }
+    // Agar ground nahi mila — player ke neeche
+    if (groundLoc == null) {
+        groundLoc = p.getLocation().clone();
+        groundLoc.setY(p.getLocation().getBlockY());
+    }
+
+    final Location center = groundLoc.clone();
+    final double   RADIUS = 7.5; // 15 block diameter
+
+    // ── SPAWN SOUNDS ─────────────────────────────────────────────────────
+    w.playSound(center, Sound.ENTITY_ENDERMAN_STARE,      1f, 0.5f);
+    w.playSound(center, Sound.BLOCK_BEACON_AMBIENT,       1f, 0.3f);
+    w.playSound(center, Sound.ENTITY_ILLUSIONER_CAST_SPELL, 0.8f, 0.6f);
+
+    // ── ARCANE CIRCLE ANIMATION — 6 seconds ──────────────────────────────
+    new BukkitRunnable() {
+        int    ticks = 0;
+        double spin  = 0; // rotation angle
+
+        public void run() {
+            if (ticks++ >= 120 || !p.isOnline()) { // 6s = 120 ticks
+                // Fade out
+                for (int i = 0; i < 36; i++) {
+                    double a = Math.toRadians(i * 10);
+                    w.spawnParticle(Particle.CLOUD,
+                        center.clone().add(Math.cos(a)*RADIUS, 0.1, Math.sin(a)*RADIUS),
+                        2, 0.2, 0.1, 0.2, 0.03);
+                }
+                w.playSound(center, Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 0.7f);
+                cancel();
+                return;
             }
+
+            spin += 0.04; // slow spin
+
+            // ── LAYER 1: Outer ring ───────────────────────────────────────
+            int outerPts = 60;
+            for (int i = 0; i < outerPts; i++) {
+                double a = spin + Math.toRadians(i * (360.0 / outerPts));
+                Location pt = center.clone().add(
+                    Math.cos(a) * RADIUS, 0.05, Math.sin(a) * RADIUS);
+                Particle.DustOptions gold = new Particle.DustOptions(
+                    org.bukkit.Color.fromRGB(200, 160, 20), 1.0f);
+                w.spawnParticle(Particle.DUST, pt, 1, 0, 0, 0, 0, gold);
+            }
+
+            // ── LAYER 2: Inner ring (counter-spin) ────────────────────────
+            int innerPts = 40;
+            double innerR = RADIUS * 0.65;
+            for (int i = 0; i < innerPts; i++) {
+                double a = -spin * 1.3 + Math.toRadians(i * (360.0 / innerPts));
+                Location pt = center.clone().add(
+                    Math.cos(a) * innerR, 0.05, Math.sin(a) * innerR);
+                Particle.DustOptions gold2 = new Particle.DustOptions(
+                    org.bukkit.Color.fromRGB(220, 180, 40), 0.9f);
+                w.spawnParticle(Particle.DUST, pt, 1, 0, 0, 0, 0, gold2);
+            }
+
+            // ── LAYER 3: Innermost ring ───────────────────────────────────
+            double coreR = RADIUS * 0.30;
+            int corePts = 24;
+            for (int i = 0; i < corePts; i++) {
+                double a = spin * 2.0 + Math.toRadians(i * (360.0 / corePts));
+                Location pt = center.clone().add(
+                    Math.cos(a) * coreR, 0.05, Math.sin(a) * coreR);
+                Particle.DustOptions white = new Particle.DustOptions(
+                    org.bukkit.Color.fromRGB(255, 240, 180), 1.1f);
+                w.spawnParticle(Particle.DUST, pt, 1, 0, 0, 0, 0, white);
+            }
+
+            // ── LAYER 4: 8 spokes from center to outer ring ───────────────
+            for (int spoke = 0; spoke < 8; spoke++) {
+                double spokeAngle = spin + Math.toRadians(spoke * 45);
+                int spokePts = 14;
+                for (int k = 1; k <= spokePts; k++) {
+                    double r = (k / (double) spokePts) * RADIUS;
+                    Location pt = center.clone().add(
+                        Math.cos(spokeAngle) * r, 0.05, Math.sin(spokeAngle) * r);
+                    Particle.DustOptions spokeDust = new Particle.DustOptions(
+                        org.bukkit.Color.fromRGB(200, 160, 20), 0.8f);
+                    w.spawnParticle(Particle.DUST, pt, 1, 0, 0, 0, 0, spokeDust);
+                }
+            }
+
+            // ── LAYER 5: 8 outer circles (like image) ─────────────────────
+            for (int orb = 0; orb < 8; orb++) {
+                double orbAngle = -spin * 0.5 + Math.toRadians(orb * 45);
+                double orbX = Math.cos(orbAngle) * (RADIUS * 0.82);
+                double orbZ = Math.sin(orbAngle) * (RADIUS * 0.82);
+                // Small circle at each orb position
+                for (int oi = 0; oi < 10; oi++) {
+                    double oa = spin * 2 + Math.toRadians(oi * 36);
+                    Location orbPt = center.clone().add(
+                        orbX + Math.cos(oa) * 0.5, 0.05,
+                        orbZ + Math.sin(oa) * 0.5);
+                    Particle.DustOptions orbDust = new Particle.DustOptions(
+                        org.bukkit.Color.fromRGB(230, 190, 50), 1.2f);
+                    w.spawnParticle(Particle.DUST, orbPt, 1, 0, 0, 0, 0, orbDust);
+                }
+            }
+
+            // ── LAYER 6: Cross/triangle inner pattern ─────────────────────
+            for (int tri = 0; tri < 3; tri++) {
+                double triAngle = spin * 0.7 + Math.toRadians(tri * 120);
+                double triX = Math.cos(triAngle) * (RADIUS * 0.45);
+                double triZ = Math.sin(triAngle) * (RADIUS * 0.45);
+                // Line from center to triangle point
+                for (int k = 1; k <= 8; k++) {
+                    double t = k / 8.0;
+                    Location triPt = center.clone().add(
+                        triX * t, 0.05, triZ * t);
+                    Particle.DustOptions triDust = new Particle.DustOptions(
+                        org.bukkit.Color.fromRGB(210, 170, 30), 0.85f);
+                    w.spawnParticle(Particle.DUST, triPt, 1, 0, 0, 0, 0, triDust);
+                }
+            }
+
+            // ── CENTER glow ───────────────────────────────────────────────
+            if (ticks % 3 == 0) {
+                w.spawnParticle(Particle.END_ROD,
+                    center.clone().add(0, 0.1, 0), 2, 0.1, 0.05, 0.1, 0.01);
+                Particle.DustOptions centerDust = new Particle.DustOptions(
+                    org.bukkit.Color.fromRGB(255, 220, 100), 1.3f);
+                w.spawnParticle(Particle.DUST,
+                    center.clone().add(0, 0.1, 0), 1, 0, 0, 0, 0, centerDust);
+            }
+
+            // ── DAMAGE + FREEZE — enemies inside circle ───────────────────
+            if (ticks % 20 == 0) { // every second
+                center.getWorld().getNearbyEntities(center, RADIUS, 2, RADIUS)
+                    .forEach(e -> {
+                        if (!(e instanceof LivingEntity le) || e == p) return;
+                        // Distance check — circle mein hai?
+                        double dist = Math.sqrt(
+                            Math.pow(e.getLocation().getX()-center.getX(), 2) +
+                            Math.pow(e.getLocation().getZ()-center.getZ(), 2));
+                        if (dist > RADIUS) return;
+
+                        // 1 heart = 2 damage per second
+                        le.damage(2.0 * dm, p);
+                        le.addPotionEffect(new PotionEffect(
+                            PotionEffectType.SLOWNESS, 25, 10, false, false));
+
+                        // Freeze particles on enemy
+                        w.spawnParticle(Particle.SNOWFLAKE,
+                            le.getLocation().add(0,1,0), 8, 0.3, 0.5, 0.3, 0.02);
+                        w.spawnParticle(Particle.END_ROD,
+                            le.getLocation().add(0,1,0), 3, 0.2, 0.4, 0.2, 0.02);
+                    });
+            }
+
+            // ── Ambient portal particles rising ───────────────────────────
+            if (ticks % 5 == 0) {
+                double rndA = Math.random() * Math.PI * 2;
+                double rndR = Math.random() * RADIUS;
+                w.spawnParticle(Particle.REVERSE_PORTAL,
+                    center.clone().add(Math.cos(rndA)*rndR, 0.1, Math.sin(rndA)*rndR),
+                    1, 0, 0.1, 0, 0.01);
+            }
+        }
+    }.runTaskTimer(plugin, 0, 1);
+}
+
                 
 case STORM -> {
     double dmg = ecfg("STORM", "primary-damage", 12.0);
@@ -222,21 +390,154 @@ case STORM -> {
   }
 
 
-            // 4. FROST — Ice Slide
-            case FROST -> {
-                w.spawnParticle(Particle.SNOWFLAKE, loc, 60, 0.6, 0.4, 0.6, 0.08);
-                w.spawnParticle(Particle.WHITE_ASH, loc, 30, 0.4, 0.2, 0.4, 0.05);
-                p.setVelocity(dir.clone().setY(0).normalize().multiply(2.8));
-                w.playSound(loc, Sound.ENTITY_PLAYER_HURT_FREEZE, 1f, 1.5f);
-                w.playSound(loc, Sound.BLOCK_GLASS_BREAK, 0.8f, 1.8f);
-                new BukkitRunnable() { int t = 0;
-                    public void run() {
-                        if (t++ >= 10) { cancel(); return; }
-                        w.spawnParticle(Particle.SNOWFLAKE, p.getLocation(), 8, 0.4, 0.1, 0.4, 0.02);
-                        w.spawnParticle(Particle.WHITE_ASH, p.getLocation(), 5, 0.3, 0.1, 0.3, 0.01);
-                    }
-                }.runTaskTimer(plugin, 0, 1);
+            /// ── FROST PRIMARY — Ice Shield Orbit ─────────────────────────────────────────
+// 4 ice shields player ke center mein orbit karenge
+// 5 seconds tak koi bhi attack (mob, arrow, player) owner ko hit nahi karega
+case FROST -> {
+    w.spawnParticle(Particle.SNOWFLAKE, loc, 60, 0.6, 0.4, 0.6, 0.08);
+    w.spawnParticle(Particle.WHITE_ASH, loc, 30, 0.4, 0.2, 0.4, 0.05);
+    w.playSound(loc, Sound.ENTITY_PLAYER_HURT_FREEZE, 1f, 1.5f);
+    w.playSound(loc, Sound.BLOCK_GLASS_BREAK,         0.8f, 1.8f);
+    w.playSound(loc, Sound.ENTITY_ELDER_GUARDIAN_CURSE, 0.5f, 1.8f);
+
+    p.sendTitle("\u00a7b\u00a7lICE SHIELD", "\u00a77Protected for 5 seconds!", 5, 60, 10);
+
+    // Shield active marker
+    final boolean[] shieldActive = {true};
+
+    // ── PROTECTION: EntityDamageByEntityEvent cancel ─────────────────────
+    // Temporary Listener — 5s tak owner ko damage cancel
+    final org.bukkit.event.Listener shieldListener = new org.bukkit.event.Listener() {
+
+        @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST)
+        public void onDamage(org.bukkit.event.entity.EntityDamageEvent ev) {
+            if (!shieldActive[0]) return;
+            if (!ev.getEntity().getUniqueId().equals(p.getUniqueId())) return;
+            // Cancel all damage while shield is active
+            ev.setCancelled(true);
+            // Shield break effect on hit
+            Location pLoc = p.getLocation();
+            w.spawnParticle(Particle.SNOWFLAKE, pLoc, 20, 0.5, 0.8, 0.5, 0.05);
+            w.spawnParticle(Particle.WHITE_ASH, pLoc, 10, 0.4, 0.6, 0.4, 0.03);
+            w.playSound(pLoc, Sound.BLOCK_GLASS_BREAK, 0.8f, 1.5f);
+        }
+    };
+    plugin.getServer().getPluginManager().registerEvents(shieldListener, plugin);
+
+    // ── SHIELD ORBIT ANIMATION — 4 ice panels rotating around player ─────
+    new BukkitRunnable() {
+        int    ticks       = 0;
+        double orbitAngle  = 0;
+        final int duration = ticks(100, dr); // 5 seconds
+
+        public void run() {
+            if (ticks++ >= duration || !p.isOnline()) {
+                // Shield expired
+                shieldActive[0] = false;
+                org.bukkit.event.HandlerList.unregisterAll(shieldListener);
+
+                // Break animation
+                Location pLoc = p.getLocation().clone().add(0, 1, 0);
+                w.spawnParticle(Particle.SNOWFLAKE, pLoc, 80, 1.0, 1.2, 1.0, 0.08);
+                w.spawnParticle(Particle.WHITE_ASH, pLoc, 50, 0.8, 1.0, 0.8, 0.05);
+                for (int i = 0; i < 16; i++) {
+                    double a = Math.toRadians(i * 22.5);
+                    w.spawnParticle(Particle.SNOWFLAKE,
+                        pLoc.clone().add(Math.cos(a)*1.0, 0, Math.sin(a)*1.0),
+                        3, 0.1, 0.2, 0.1, 0.03);
+                }
+                w.playSound(p.getLocation(), Sound.ENTITY_PLAYER_HURT_FREEZE, 1f, 2.0f);
+                w.playSound(p.getLocation(), Sound.BLOCK_GLASS_BREAK,         1f, 0.8f);
+                cancel();
+                return;
             }
+
+            orbitAngle += 0.08; // orbit speed
+
+            Location center = p.getLocation().clone().add(0, 1.0, 0);
+
+            // 4 ice shield panels — 90 degrees apart
+            for (int panel = 0; panel < 4; panel++) {
+                double panelAngle = orbitAngle + (panel * Math.PI / 2); // 90° apart
+
+                // Shield center position — 1.0 block from player center
+                double sx = Math.cos(panelAngle) * 1.0;
+                double sz = Math.sin(panelAngle) * 1.0;
+                Location shieldCenter = center.clone().add(sx, 0, sz);
+
+                // ── Ice panel — rectangular grid of particles ─────────────
+                // Panel is perpendicular to orbit direction (tangent)
+                double tangX = -Math.sin(panelAngle); // perpendicular
+                double tangZ =  Math.cos(panelAngle);
+
+                // Panel size: 0.8 wide x 1.2 tall, 5x7 grid
+                for (int col = -2; col <= 2; col++) {
+                    for (int row = -2; row <= 2; row++) {
+                        double px = shieldCenter.getX() + tangX * col * 0.2;
+                        double py = shieldCenter.getY() + row * 0.25;
+                        double pz = shieldCenter.getZ() + tangZ * col * 0.2;
+
+                        Location pt = new Location(w, px, py, pz);
+
+                        // Ice blue color — brighter at edges
+                        boolean isEdge = (Math.abs(col) == 2 || Math.abs(row) == 2);
+                        Particle.DustOptions iceDust = isEdge
+                            ? new Particle.DustOptions(
+                                org.bukkit.Color.fromRGB(180, 240, 255), 1.3f)
+                            : new Particle.DustOptions(
+                                org.bukkit.Color.fromRGB(220, 248, 255), 0.9f);
+
+                        w.spawnParticle(Particle.DUST, pt, 1, 0, 0, 0, 0, iceDust);
+                    }
+                }
+
+                // Panel glow — SNOWFLAKE on edges
+                if (ticks % 3 == 0) {
+                    for (int col = -2; col <= 2; col++) {
+                        double px = shieldCenter.getX() + tangX * col * 0.2;
+                        double pz = shieldCenter.getZ() + tangZ * col * 0.2;
+                        w.spawnParticle(Particle.SNOWFLAKE,
+                            new Location(w, px, shieldCenter.getY() + 0.5, pz),
+                            1, 0, 0, 0, 0.01);
+                        w.spawnParticle(Particle.SNOWFLAKE,
+                            new Location(w, px, shieldCenter.getY() - 0.5, pz),
+                            1, 0, 0, 0, 0.01);
+                    }
+                }
+
+                // Ice crystal at panel center — sparkle effect
+                if (ticks % 5 == 0) {
+                    w.spawnParticle(Particle.END_ROD, shieldCenter, 1, 0, 0.1, 0, 0.01);
+                }
+            }
+
+            // Inner glow ring around player
+            if (ticks % 2 == 0) {
+                for (int i = 0; i < 12; i++) {
+                    double a = orbitAngle * 2 + Math.toRadians(i * 30);
+                    Particle.DustOptions glow = new Particle.DustOptions(
+                        org.bukkit.Color.fromRGB(150, 220, 255), 0.8f);
+                    w.spawnParticle(Particle.DUST,
+                        center.clone().add(Math.cos(a)*0.4, 0, Math.sin(a)*0.4),
+                        1, 0, 0, 0, 0, glow);
+                }
+            }
+
+            // Ambient ice particles
+            if (ticks % 4 == 0) {
+                w.spawnParticle(Particle.WHITE_ASH,
+                    center, 3, 0.5, 0.5, 0.5, 0.02);
+            }
+
+            // Pulse sound every second
+            if (ticks % 20 == 0) {
+                w.playSound(p.getLocation(),
+                    Sound.ENTITY_PLAYER_HURT_FREEZE, 0.3f, 1.8f);
+            }
+        }
+    }.runTaskTimer(plugin, 0, 1);
+}
+
 
             // 5. FLAME — Fire Dash
             case FLAME -> {
