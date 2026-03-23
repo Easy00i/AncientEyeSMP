@@ -2101,23 +2101,161 @@ case OCEAN -> {
 }
 
 
-            // E4. ECLIPSE — Shadow Phase
-            case ECLIPSE -> {
-                p.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, ticks(200, dr), 0));
-                p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE,   ticks(200, dr), 3));
-                p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED,        ticks(200, dr), 2));
-                p.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, ticks(220, dr), 0));
-                w.spawnParticle(Particle.PORTAL,        loc, 120, 0.9, 1.8, 0.9, 0.17);
-                w.spawnParticle(Particle.DRAGON_BREATH, loc,  90, 0.7, 1.4, 0.7, 0.09);
-                w.spawnParticle(Particle.DUST,          loc,  70, 0.6, 1.2, 0.6, 0, new Particle.DustOptions(Color.BLACK, 3.5f));
-                for (int i = 0; i < 8; i++) { double a = Math.toRadians(i*45);
-                    for (int h = 0; h <= 6; h++)
-                        w.spawnParticle(Particle.PORTAL, loc.clone().add(Math.cos(a)*1.5,h*0.4,Math.sin(a)*1.5), 3, 0.1, 0, 0.1, 0.04);
-                }
-                w.playSound(loc, Sound.ENTITY_ENDERMAN_STARE, 0.8f, 0.6f);
-                w.playSound(loc, Sound.ENTITY_WITHER_AMBIENT,  0.7f, 0.8f);
-                p.sendTitle("§5§l🌑 SHADOW PHASE", "§8Untouchable in the dark...", 5, 70, 15);
+            E4. ECLIPSE — Orbital Strike
+// TNT rings layer by layer from sky, all land then SIMULTANEOUS blast
+case ECLIPSE -> {
+    p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE,   ticks(200, dr), 3));
+    p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED,        ticks(200, dr), 2));
+    p.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, ticks(220, dr), 0));
+
+    w.playSound(loc, Sound.ENTITY_WITHER_AMBIENT,       1f, 0.3f);
+    w.playSound(loc, Sound.ENTITY_ENDER_DRAGON_GROWL,   1f, 0.5f);
+    p.sendTitle("\u00a75\u00a7lORBITAL STRIKE", "\u00a78Incoming...", 5, 60, 10);
+
+    // Fall damage cancel for owner
+    p.setFallDistance(0f);
+
+    // ── TNT Ring config ───────────────────────────────────────────────────
+    // 3 rings: radii 4, 7, 10 blocks
+    // Each ring: TNT spaced evenly
+    // Drop height: 30 blocks above target
+    int   DROP_HEIGHT = 30;
+    int[] ringRadii   = {4, 7, 10};
+    int[] ringCounts  = {8, 12, 16}; // TNT per ring
+
+    final java.util.List<org.bukkit.entity.TNTPrimed> allTNT = new java.util.ArrayList<>();
+    final Location center = loc.clone();
+
+    // ── Spawn TNT rings ───────────────────────────────────────────────────
+    for (int ring = 0; ring < 3; ring++) {
+        final int   fr      = ring;
+        final int   count   = ringCounts[ring];
+        final double radius = ringRadii[ring];
+
+        // Each ring drops slightly after previous — wave effect
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            for (int i = 0; i < count; i++) {
+                double angle = Math.toRadians(i * (360.0 / count));
+                double tx = center.getX() + Math.cos(angle) * radius;
+                double tz = center.getZ() + Math.sin(angle) * radius;
+                Location spawnLoc = new Location(w, tx, center.getY() + DROP_HEIGHT, tz);
+
+                // Spawn TNTPrimed
+                org.bukkit.entity.TNTPrimed tnt =
+                    w.spawn(spawnLoc, org.bukkit.entity.TNTPrimed.class);
+                tnt.setFuseTicks(999999); // never self-explode — we control it
+                tnt.setVelocity(new Vector(0, -1.2, 0)); // fall down fast
+                tnt.setYield(0f); // no block damage on its own
+                synchronized (allTNT) { allTNT.add(tnt); }
+
+                // Trail while falling
+                new BukkitRunnable() {
+                    int t = 0;
+                    public void run() {
+                        if (!tnt.isValid() || t++ > 30) { cancel(); return; }
+                        w.spawnParticle(Particle.FLAME,
+                            tnt.getLocation(), 2, 0.1, 0.1, 0.1, 0.02);
+                        w.spawnParticle(Particle.SMOKE,
+                            tnt.getLocation(), 1, 0.05, 0.05, 0.05, 0.01);
+                        // Fall damage cancel for owner during strike
+                        p.setFallDistance(0f);
+                    }
+                }.runTaskTimer(plugin, 0, 1);
             }
+
+            // Sound per ring spawn
+            w.playSound(center, Sound.ENTITY_WITHER_SHOOT, 0.8f, 1.5f + fr * 0.2f);
+
+        }, ring * 3L); // rings drop 3 ticks apart — wave
+    }
+
+    // ── Wait for TNT to land (approx 1.5s fall) then BLAST ALL ───────────
+    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+        // Pre-blast warning
+        w.playSound(center, Sound.ENTITY_ENDER_DRAGON_GROWL, 1f, 0.3f);
+        for (int i = 0; i < 36; i++) {
+            double a = Math.toRadians(i * 10);
+            double r = 10;
+            w.spawnParticle(Particle.FLAME,
+                center.clone().add(Math.cos(a)*r, 0.5, Math.sin(a)*r),
+                2, 0, 0, 0, 0.05);
+        }
+    }, 20L); // 1s warning before blast
+
+    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+
+        // ── SIMULTANEOUS BLAST ─────────────────────────────────────────
+        synchronized (allTNT) {
+            for (org.bukkit.entity.TNTPrimed tnt : allTNT) {
+                if (!tnt.isValid()) continue;
+
+                Location blastLoc = tnt.getLocation().clone();
+
+                // Remove TNT entity
+                tnt.remove();
+
+                // Manual explosion at ground level — no block damage
+                // Particles simulate blast
+                w.spawnParticle(Particle.EXPLOSION_EMITTER,
+                    blastLoc, 1, 0, 0, 0, 0);
+                w.spawnParticle(Particle.EXPLOSION,
+                    blastLoc, 5, 0.3, 0.3, 0.3, 0.05);
+                w.spawnParticle(Particle.FLAME,
+                    blastLoc, 10, 0.4, 0.3, 0.4, 0.1);
+                w.spawnParticle(Particle.SMOKE,
+                    blastLoc, 8, 0.3, 0.2, 0.3, 0.05);
+
+                // Blast sound
+                w.playSound(blastLoc, Sound.ENTITY_GENERIC_EXPLODE, 1.5f, 0.8f);
+
+                // Damage enemies near each TNT — owner safe
+                blastLoc.getWorld().getNearbyEntities(blastLoc, 4, 4, 4)
+                    .forEach(e -> {
+                        if (!(e instanceof LivingEntity le)) return;
+                        if (e.getUniqueId().equals(p.getUniqueId())) return;
+                        le.damage(ecfg("ECLIPSE","secondary-damage",8.0) * getDmg(p), p);
+                        // Knockback away from blast
+                        Vector vel = e.getLocation().toVector()
+                            .subtract(blastLoc.toVector())
+                            .normalize().multiply(2.5).setY(0.8);
+                        Bukkit.getScheduler().runTaskLater(plugin,
+                            () -> { if (e.isValid()) e.setVelocity(vel); }, 1L);
+                    });
+            }
+            allTNT.clear();
+        }
+
+        // ── Big shockwave after all blasts ────────────────────────────
+        for (int ring = 1; ring <= 4; ring++) {
+            final int fr = ring;
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                double rad = fr * 3.0;
+                for (int i = 0; i < 36; i++) {
+                    double a = Math.toRadians(i * 10);
+                    w.spawnParticle(Particle.EXPLOSION,
+                        center.clone().add(Math.cos(a)*rad, 0.3, Math.sin(a)*rad),
+                        1, 0, 0, 0, 0);
+                    w.spawnParticle(Particle.FLAME,
+                        center.clone().add(Math.cos(a)*rad, 0.5, Math.sin(a)*rad),
+                        1, 0, 0, 0, 0.03);
+                }
+                w.playSound(center, Sound.ENTITY_GENERIC_EXPLODE,
+                    1f, 0.5f + fr * 0.1f);
+            }, ring * 3L);
+        }
+
+        // Final big sound
+        w.playSound(center, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 1f, 0.4f);
+        w.playSound(center, Sound.ENTITY_WITHER_BREAK_BLOCK,     1f, 0.3f);
+
+        // Fall damage cancel after blast
+        p.setFallDistance(0f);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (p.isOnline()) p.setFallDistance(0f);
+        }, 20L);
+
+    }, 35L); // 35 ticks after spawn = all TNT landed
+}
 
             // E5. GUARDIAN — Titan Shockwave  [knockback 1 tick after damage]
             case GUARDIAN -> {
