@@ -2862,8 +2862,9 @@ case METEOR -> {
             ticks += 10;
         }
     }.runTaskTimer(plugin, 0, 10);
+  }
 }
-
+}
 
 
 
