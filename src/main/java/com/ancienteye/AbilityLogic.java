@@ -2,6 +2,13 @@ package com.ancienteye;
 
 import org.bukkit.*;
 import org.bukkit.block.Block;
+import org.bukkit.GameMode;
+import org.bukkit.Color;
+import org.bukkit.Particle;
+import org.bukkit.Sound;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
@@ -74,6 +81,7 @@ public class AbilityLogic implements Listener {
                 if (t > 13000 && t < 23000) e.setDamage(e.getDamage() * 1.30);
             }
         }
+    }
 
         @EventHandler
 public void onTitanDamage(EntityDamageEvent event) {
@@ -551,9 +559,7 @@ case FROST -> {
 
 
             // 5. FLAME — Fire Tornado (6s Duration, 10 Block Height, Suck & Spin)
-case FLAME -> {
-    double dm = getDmg(p); // Damage multiplier
-    
+case FLAME -> {  
     // Aim-based: Jis block par dekhoge wahan spawn hoga (Max 30 blocks door)
     org.bukkit.block.Block targetBlock = p.getTargetBlock(null, 30);
     if (targetBlock.getType() == Material.AIR) {
@@ -705,7 +711,7 @@ case TITAN -> {
 
             // Giant Aura Animation (Aapke charo taraf dhool aur pathar udenge)
             if (ticks % 2 == 0) {
-                w.spawnParticle(Particle.DUST_PLUME, cur, 15, 1.2, 0.1, 1.2, 0.05, Material.STONE.createBlockData());
+                w.spawnParticle(Particle.FALLING_DUST, cur, 15, 1.2, 0.1, 1.2, 0.05, Material.STONE.createBlockData());
                 w.spawnParticle(Particle.DUST, cur, 10, 1.5, 2.5, 1.5, new Particle.DustOptions(Color.fromRGB(120, 80, 40), 2.0f));
             }
 
