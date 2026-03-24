@@ -75,6 +75,16 @@ public class AbilityLogic implements Listener {
             }
         }
 
+        @EventHandler
+public void onTitanDamage(EntityDamageEvent event) {
+    if (event.getEntity() instanceof Player p) {
+        // Agar player Titan Mode mein hai, toh uska damage cancel kar do
+        if (p.hasMetadata("TitanMode")) {
+            event.setCancelled(true);
+        }
+     }
+    }
+
     // ── HUNTER MARK — extra damage handler ───────────────────────────────────────
 // onEntityDamage mein add karo — existing code ke baad
 
@@ -540,28 +550,100 @@ case FROST -> {
 }
 
 
-            // 5. FLAME — Fire Dash
-            case FLAME -> {
-                w.spawnParticle(Particle.FLAME, loc, 40, 0.5, 0.8, 0.5, 0.1);
-                w.spawnParticle(Particle.LAVA,  loc, 12, 0.3, 0.2, 0.3, 0.07);
-                p.setVelocity(dir.clone().multiply(2.3).setY(0.3));
-                w.playSound(loc, Sound.ENTITY_BLAZE_SHOOT, 1f, 1f);
-                new BukkitRunnable() { int t = 0;
-                    public void run() {
-                        if (t++ >= 8) { cancel(); return; }
-                        Location cur = p.getLocation();
-                        w.spawnParticle(Particle.FLAME,          cur, 15, 0.4, 0.5, 0.4, 0.07);
-                        w.spawnParticle(Particle.LAVA,           cur,  4, 0.2, 0.1, 0.2, 0.05);
-                        w.spawnParticle(Particle.SOUL_FIRE_FLAME,cur,  3, 0.3, 0.4, 0.3, 0.03);
-                        p.getNearbyEntities(1.8, 1.8, 1.8).forEach(e -> {
-                            if (e instanceof LivingEntity le && e != p) {
-                                le.setFireTicks(ticks(100, dr));
-                                le.damage(1.5 * dm, p);
-                            }
-                        });
-                    }
-                }.runTaskTimer(plugin, 0, 1);
+            // 5. FLAME — Fire Tornado (6s Duration, 10 Block Height, Suck & Spin)
+case FLAME -> {
+    double dm = getDmg(p); // Damage multiplier
+    
+    // Aim-based: Jis block par dekhoge wahan spawn hoga (Max 30 blocks door)
+    org.bukkit.block.Block targetBlock = p.getTargetBlock(null, 30);
+    if (targetBlock.getType() == Material.AIR) {
+        p.sendMessage("§cAim at a block to spawn the Tornado!");
+        return;
+    }
+    
+    // Tornado ka fixed center (zameen se thoda upar)
+    final Location center = targetBlock.getLocation().add(0.5, 1.0, 0.5);
+
+    new BukkitRunnable() {
+        int ticks = 0;
+        double angle = 0;
+
+        @Override
+        public void run() {
+            // 6 seconds = 120 ticks (Exact 6s baad gayab)
+            if (ticks >= 120) { 
+                cancel(); 
+                return; 
             }
+            ticks++;
+            angle += 0.4; // Tornado ke ghumne ki speed
+
+            // ── 1. DRAW TORNADO SHAPE (10 Blocks High) ──
+            for (double y = 0; y <= 10; y += 0.5) {
+                // Shape math: Niche patla, upar chauda (Cone shape)
+                double radius = 0.5 + (y * 0.25); 
+                
+                // 3 Spiral arms banayenge mast look ke liye
+                for (int arm = 0; arm < 3; arm++) {
+                    double armOffset = Math.toRadians(arm * 120);
+                    // (y * 0.5) se tornado "twist" hota hua dikhega
+                    double currentAngle = angle + (y * 0.5) + armOffset; 
+
+                    double cx = center.getX() + radius * Math.cos(currentAngle);
+                    double cz = center.getZ() + radius * Math.sin(currentAngle);
+                    Location partLoc = new Location(center.getWorld(), cx, center.getY() + y, cz);
+
+                    // Particles
+                    center.getWorld().spawnParticle(Particle.FLAME, partLoc, 2, 0, 0, 0, 0);
+                    if (y % 2 == 0) {
+                        center.getWorld().spawnParticle(Particle.CAMPFIRE_COSY_SMOKE, partLoc, 1, 0, 0, 0, 0);
+                    }
+                    if (Math.random() < 0.1) {
+                        center.getWorld().spawnParticle(Particle.LAVA, partLoc, 1, 0, 0, 0, 0);
+                    }
+                }
+            }
+
+            // ── 2. SUCK, SPIN & DAMAGE ENTITIES ──
+            // 8 blocks ke radius mein jo bhi hoga, kheencha chala aayega
+            for (org.bukkit.entity.Entity e : center.getWorld().getNearbyEntities(center, 8, 10, 8)) {
+                if (!(e instanceof LivingEntity le) || e == p) continue; // Owner is safe!
+
+                Location eLoc = e.getLocation();
+                
+                // Center calculate karo taaki entity seedha khinche
+                Location tCenter = center.clone();
+                tCenter.setY(eLoc.getY()); 
+
+                Vector toCenter = tCenter.toVector().subtract(eLoc.toVector());
+                double dist = toCenter.length();
+
+                // Agar 8 block ke andar hai, toh vacuum chalu
+                if (dist > 0 && dist <= 8) {
+                    toCenter.normalize();
+                    
+                    // Cross Product math: Entity ko gol ghumane ke liye (Spin vector)
+                    Vector spin = new Vector(-toCenter.getZ(), 0, toCenter.getX());
+                    
+                    // Final Velocity: Andar khincho (0.15) + Gol ghumao (0.4) + Hawa mein uthao (0.12)
+                    Vector vortexVel = toCenter.multiply(0.15).add(spin.multiply(0.4)).setY(0.12);
+                    
+                    e.setVelocity(vortexVel);
+                    e.setFallDistance(0f); // Fall damage se bachane ke liye (Glitch fix)
+                    
+                    // Aag lagao
+                    le.setFireTicks(60); 
+                    
+                    // Har 0.5 second mein (10 ticks) damage do
+                    if (ticks % 10 == 0) {
+                        le.damage(1.5 * dm, p); 
+                    }
+                }
+            }
+        }
+    }.runTaskTimer(plugin, 0, 1);
+}
+
 
             // 6. SHADOW — Shadow Step (teleport behind nearest player + backstab)
             case SHADOW -> {
@@ -580,31 +662,69 @@ case FROST -> {
                     w.spawnParticle(Particle.CRIT, tgt.getLocation(), 30, 0.4, 0.8, 0.4, 0.1);
                 } else p.sendMessage("§7No target in range.");
             }
+// 7. TITAN — Giant Form (5s Transformation)
+case TITAN -> {
+    double dm = getDmg(p);
+    
+    // ── 1. TRANSFORMATION START (Sounds & Effects) ──
+    w.playSound(loc, Sound.ENTITY_IRON_GOLEM_ATTACK, 1.5f, 0.5f);
+    w.playSound(loc, Sound.ENTITY_ZOMBIE_VILLAGER_CONVERTED, 1.2f, 0.5f);
+    w.playSound(loc, Sound.ENTITY_GENERIC_EXPLODE, 1.0f, 0.4f);
+    
+    // Bada dikhne ke liye Initial Burst
+    w.spawnParticle(Particle.EXPLOSION_EMITTER, loc, 5, 1, 2, 1, 0);
+    w.spawnParticle(Particle.CAMPFIRE_COSY_SMOKE, loc, 100, 1.5, 3, 1.5, 0.05);
 
-            // 7. TITAN — Ground Slam  [knockback 1 tick after damage]
-            case TITAN -> {
-                w.spawnParticle(Particle.EXPLOSION,  loc, 5, 1.0, 0, 1.0, 0);
-                w.spawnParticle(Particle.DUST_PLUME, loc, 120, 2.5, 0.2, 2.5, 0.2, Material.STONE.createBlockData());
-                w.spawnParticle(Particle.DUST,       loc, 70, 2, 0.3, 2, 0, new Particle.DustOptions(Color.fromRGB(100,60,20), 3f));
-                for (int ring = 1; ring <= 4; ring++) { final int fr = ring;
-                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                        for (int i = 0; i < 24; i++) { double a = Math.toRadians(i * 15); double r = fr * 1.8;
-                            w.spawnParticle(Particle.DUST_PLUME, loc.clone().add(Math.cos(a)*r,0.1,Math.sin(a)*r),
-                                4, 0, 0.6, 0, 0.12, Material.STONE.createBlockData());
-                        }
-                    }, ring * 3L);
-                }
-                w.playSound(loc, Sound.ENTITY_IRON_GOLEM_ATTACK, 1f, 0.4f);
-                w.playSound(loc, Sound.BLOCK_STONE_BREAK,        1f, 0.3f);
-                w.playSound(loc, Sound.ENTITY_GENERIC_EXPLODE, 0.8f, 0.5f);
-                p.getNearbyEntities(7, 7, 7).forEach(e -> {
+    // Jump Boost 3 & Resistance 255 (Invincibility) - 5 seconds
+    p.addPotionEffect(new PotionEffect(PotionEffectType.JUMP_BOOST, 100, 2)); // Level 3 (0 index = Level 1)
+    p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 100, 254)); // 255 Level = No Damage
+    
+    // Custom Metadata taaki doosre players aapko hit na kar sakein (Invincibility Check)
+    p.setMetadata("TitanMode", new org.bukkit.metadata.FixedMetadataValue(plugin, true));
+
+    p.sendTitle("§6§lTITAN FORM", "§eYou are Unstoppable!", 5, 40, 5);
+
+    // ── 2. TITAN ANIMATION RUNNABLE (5s) ──
+    new BukkitRunnable() {
+        int ticks = 0;
+
+        @Override
+        public void run() {
+            if (!p.isOnline() || ticks >= 100) { // 5 seconds complete
+                // ── 3. NORMAL FORM BACK ──
+                p.removeMetadata("TitanMode", plugin);
+                p.getWorld().playSound(p.getLocation(), Sound.ENTITY_IRON_GOLEM_DEATH, 1f, 1.5f);
+                p.getWorld().spawnParticle(Particle.CLOUD, p.getLocation(), 50, 1, 2, 1, 0.1);
+                p.sendMessage("§cTitan Form expired. You are back to normal.");
+                cancel();
+                return;
+            }
+
+            ticks++;
+            Location cur = p.getLocation();
+
+            // Giant Aura Animation (Aapke charo taraf dhool aur pathar udenge)
+            if (ticks % 2 == 0) {
+                w.spawnParticle(Particle.DUST_PLUME, cur, 15, 1.2, 0.1, 1.2, 0.05, Material.STONE.createBlockData());
+                w.spawnParticle(Particle.DUST, cur, 10, 1.5, 2.5, 1.5, new Particle.DustOptions(Color.fromRGB(120, 80, 40), 2.0f));
+            }
+
+            // Heavy Footsteps (Har 10 ticks par zameen hilegi)
+            if (ticks % 10 == 0) {
+                w.playSound(cur, Sound.BLOCK_ANVIL_LAND, 0.5f, 0.5f);
+                // Nearby enemies ko shockwave se peeche dhakelo
+                p.getNearbyEntities(5, 3, 5).forEach(e -> {
                     if (e instanceof LivingEntity le && e != p) {
-                        Vector vel = e.getLocation().toVector().subtract(loc.toVector()).normalize().multiply(2.2).setY(1.2);
-                        le.damage(6.0 * dm, p);
-                        Bukkit.getScheduler().runTaskLater(plugin, () -> { if (e.isValid()) e.setVelocity(vel); }, 1L);
+                        Vector push = le.getLocation().toVector().subtract(cur.toVector()).normalize().multiply(1.2).setY(0.4);
+                        le.setVelocity(push);
+                        le.damage(2.0 * dm, p);
                     }
                 });
             }
+        }
+    }.runTaskTimer(plugin, 0, 1);
+}
+
 // ── HUNTER PRIMARY — Hunter Dash ─────────────────────────────────────────────
 // Aim based — target ki taraf fast dash
 // Owner ko koi damage nahi, enemy ko damage hoga
