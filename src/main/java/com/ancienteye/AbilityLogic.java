@@ -79,6 +79,9 @@ public class AbilityLogic implements Listener {
             if (ae == EyeType.ECLIPSE) {
                 long t = atk.getWorld().getTime();
                 if (t > 13000 && t < 23000) e.setDamage(e.getDamage() * 1.30);
+
+            }
+        }
              
             
     // ── HUNTER MARK — extra damage handler ───────────────────────────────────────
@@ -2152,8 +2155,9 @@ case LIGHT -> {
                 hit = true;
                 return;
             }
-        }        private Location pos() {
-            // FIX: t value ko step ke saath multiply karo taaki beam aage badhe
+        } 
+        
+        private Location pos() {
             double t = (double) step * 1.2; // 0.5 se 0.8 kiya (Thoda fast aur smooth)
             return new Location(w,
                 startX + (beamDir.getX() * t),
