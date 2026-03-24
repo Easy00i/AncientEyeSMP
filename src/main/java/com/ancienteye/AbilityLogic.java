@@ -1293,13 +1293,12 @@ case ECLIPSE -> {
                 }
 
             } else {
-                // ── Phase 2: BLAST ────────────────────────────────────────
-                // FIX: cancel PEHLE, phir blast — no double fire
-                cancel();
+                // ── Phase 2: BLAST ─────────────────────────────────────
                 if (!blasted[0]) {
                     blasted[0] = true;
                     doEclipseBlast(p, w, target.getLocation().clone().add(0,1,0), dmg, plugin);
-                }
+                  }
+                 cancel();
             }
         }
     }.runTaskTimer(plugin, 0, 2); // 2 tick interval
