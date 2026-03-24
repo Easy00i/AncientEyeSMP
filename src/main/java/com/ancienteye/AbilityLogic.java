@@ -1871,18 +1871,17 @@ case LIGHT -> {
                 hit = true;
                 return;
             }
-        }
-
-        // FIX: fresh location har tick — beamPos.add() bug fix
-        private Location pos() {
-            double t = step * 0.5;
+        }        private Location pos() {
+            // FIX: t value ko step ke saath multiply karo taaki beam aage badhe
+            double t = (double) step * 1.2; // 0.5 se 0.8 kiya (Thoda fast aur smooth)
             return new Location(w,
-                startX + beamDir.getX() * t,
-                startY + beamDir.getY() * t,
-                startZ + beamDir.getZ() * t);
-        }
-    }.runTaskTimer(plugin, 0, 1);
-}
+                startX + (beamDir.getX() * t),
+                startY + (beamDir.getY() * t),
+                startZ + (beamDir.getZ() * t));
+            }
+          }
+       }.runTaskTimer(plugin, 0, 1);
+    }
 
 
 
@@ -2164,7 +2163,7 @@ case SPIRIT -> {
                 // 2. FIXED VELOCITY LOGIC
                 // Bukkit.getScheduler() hata kar direct velocity di hai taaki anti-cheat ise block na kare
                 double boostY = dashDir.getY() > 0.1 ? dashDir.getY() * 2.5 : 0.3;
-                p.setVelocity(dashDir.clone().multiply(4.2).setY(boostY)); 
+                p.setVelocity(dashDir.clone().multiply(2.0).setY(0.4)); 
                 p.setFallDistance(0f);
 
                 // 3. Trail Animation (Aapki original animation, no change)
@@ -2198,7 +2197,7 @@ case SPIRIT -> {
                         
                         // Velocity Maintainer: Dash ke beech mein speed kam na ho
                         if (t < 6) {
-                            p.setVelocity(dashDir.clone().multiply(3.0).setY(p.getVelocity().getY()));
+                            p.setVelocity(dashDir.clone().multiply(1.5).setY(p.getVelocity().getY()));
                         }
                         p.setFallDistance(0f);
                     }
