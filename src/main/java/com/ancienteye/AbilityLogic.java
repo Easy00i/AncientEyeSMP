@@ -674,7 +674,7 @@ case FLAME -> {
             }
 // 7. TITAN — Giant Form (5s Transformation)
 case TITAN -> {
-    double dm = getDmg(p);
+    dm = getDmg(p);
     
     // ── 1. TRANSFORMATION START (Sounds & Effects) ──
     w.playSound(loc, Sound.ENTITY_IRON_GOLEM_ATTACK, 1.5f, 0.5f);
@@ -1281,7 +1281,7 @@ case MIRAGE -> {
     w.playSound(p.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1f, 0.5f);
 
     // === Aim-Based Placement (10 blocks aage player ke look direction mein) ===
-    Vector dir = p.getLocation().getDirection().clone();
+    dir = p.getLocation().getDirection().clone();
     dir.setY(0).normalize();
     final Location base = p.getLocation().clone().add(dir.multiply(10));
     base.setY(p.getLocation().getY());
