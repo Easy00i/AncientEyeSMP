@@ -1298,7 +1298,7 @@ case MIRAGE -> {
             if (ticks >= 200) {
                 w.playSound(base, Sound.ENTITY_GENERIC_EXPLODE, 3f, 0.3f);
                 w.playSound(base, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 2f, 0.5f);
-                w.spawnParticle(Particle.EXPLOSION_LARGE, base, 15, 3, 1, 3, 0);
+                w.spawnParticle(Particle.EXPLOSION, base, 15, 3, 1, 3, 0);
 
                 // 15 TNT equivalent - center + 6 surrounding
                 base.getWorld().createExplosion(base.clone().add(0, 0.5, 0), 15f, false, false);
