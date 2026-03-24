@@ -79,20 +79,8 @@ public class AbilityLogic implements Listener {
             if (ae == EyeType.ECLIPSE) {
                 long t = atk.getWorld().getTime();
                 if (t > 13000 && t < 23000) e.setDamage(e.getDamage() * 1.30);
-            }
-        }
-    }
-
-        @EventHandler
-public void onTitanDamage(EntityDamageEvent event) {
-    if (event.getEntity() instanceof Player p) {
-        // Agar player Titan Mode mein hai, toh uska damage cancel kar do
-        if (p.hasMetadata("TitanMode")) {
-            event.setCancelled(true);
-        }
-     }
-    }
-
+             
+            
     // ── HUNTER MARK — extra damage handler ───────────────────────────────────────
 // onEntityDamage mein add karo — existing code ke baad
 
@@ -104,8 +92,19 @@ if (e.getEntity() instanceof LivingEntity victim) {
         // Attacker hunter hai ya koi bhi attack kare — extra damage
         e.setDamage(e.getDamage() * 1.5); // 50% extra damage
     }
+  }
 }
+
+        @EventHandler
+public void onTitanDamage(EntityDamageEvent event) {
+    if (event.getEntity() instanceof Player p) {
+        // Agar player Titan Mode mein hai, toh uska damage cancel kar do
+        if (p.hasMetadata("TitanMode")) {
+            event.setCancelled(true);
+        }
+     }
     }
+
     
 @EventHandler
 public void onPlayerKillXP(org.bukkit.event.entity.PlayerDeathEvent e) {
