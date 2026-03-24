@@ -2163,7 +2163,6 @@ case LIGHT -> {
                 startX + (beamDir.getX() * t),
                 startY + (beamDir.getY() * t),
                 startZ + (beamDir.getZ() * t));
-            }
           }
        }.runTaskTimer(plugin, 0, 1);
     }
