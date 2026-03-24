@@ -181,8 +181,8 @@ private String getDirectionLabel(Player from, Player to) {
         plugin.getCooldownManager().setCooldown(p, "P", getCd(p, eye, "primary"));
         Location loc = p.getLocation().clone();
         Vector   dir = p.getEyeLocation().getDirection().normalize();
-       final double   dm  = getDmg(p);
-        final   dr  = getDur(p);
+       final double  dm  = getDmg(p);
+        final double dr  = getDur(p);
         World    w   = p.getWorld();
 
         switch (eye) {
@@ -1637,7 +1637,7 @@ case GUARDIAN -> {
         Location loc = p.getLocation().clone();
         Vector   dir = p.getEyeLocation().getDirection().normalize();
         final double   dm  = getDmg(p);
-        final   dr  = getDur(p);
+        final double  dr  = getDur(p);
         World    w   = p.getWorld();
 
         switch (eye) {
