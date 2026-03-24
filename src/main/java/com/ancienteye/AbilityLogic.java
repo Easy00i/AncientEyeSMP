@@ -2721,46 +2721,145 @@ case ECLIPSE -> {
                 p.sendTitle("§6§l⚡ TITAN SHOCKWAVE!", "§7The ground shatters!", 5, 70, 15);
             }
 
-            /// METEOR SECONDARY
 case METEOR -> {
     double mDmg = ecfg("METEOR", "secondary-damage", 8.0);
-    w.playSound(p.getLocation(), Sound.ENTITY_GHAST_WARN, 1f, 0.5f);
     
-    for (int i = 0; i < 8; i++) { // 8 Meteors
-        Location dropLoc = p.getLocation().clone().add((Math.random() * 14) - 7, 12, (Math.random() * 14) - 7);
-        new BukkitRunnable() {
-            Location current = dropLoc.clone();
-            public void run() {
-                if (current.getBlock().getType().isSolid()) { // Zameen par takraya
-                    w.spawnParticle(Particle.EXPLOSION, current, 2);
-                    w.playSound(current, Sound.ENTITY_DRAGON_FIREBALL_EXPLODE, 1f, 1f);
-                    applySafeDamage(p, current, 4.0, mDmg);
-                    cancel(); return;
-                }
-                // Falling animation
-                w.spawnParticle(Particle.LAVA, current, 10, 0.3, 0.5, 0.3, 0.05);
-                w.spawnParticle(Particle.FLAME, current, 15, 0.4, 0.4, 0.4, 0.1);
-                current.subtract(0, 0.8, 0); // Tezi se neeche aana
-            }
-        }.runTaskTimer(plugin, i * 4, 1); // Ek ke baad ek girenge
-    }
-}
-            // MIRAGE SECONDARY
-            case MIRAGE -> {
-                w.playSound(p.getLocation(), Sound.ENTITY_BAT_TAKEOFF, 1.5f, 0.8f);
-                w.playSound(p.getLocation(), Sound.BLOCK_CONDUIT_DEACTIVATE, 1.5f, 2.0f);
-    
-                // Epic Smoke Poof
-                w.spawnParticle(Particle.CAMPFIRE_COSY_SMOKE, p.getLocation(), 80, 1.5, 1.5, 1.5, 0.05);
-                w.spawnParticle(Particle.SQUID_INK, p.getLocation(), 50, 1, 1, 1, 0.1);
-    
-                p.addPotionEffect(new PotionEffect(PotionEffectType.INVISIBILITY, 120, 0)); // 6 secs
-    p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED, 120, 2));        // Speed 3
-            }  // end case MIRAGE
+    // 8 Seconds Duration = 160 Ticks. 20 Meteors total.
+    // Har 8 ticks (0.4s) mein ek meteor girega.
+    new BukkitRunnable() {
+        int count = 0;
 
-        }  // end switch (activateSecondary)
-        p.playSound(loc, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.8f, 0.5f);
-    }  // end activateSecondary
+        @Override
+        public void run() {
+            if (count >= 20 || !p.isOnline()) {
+                cancel();
+                return;
+            }
+            count++;
+
+            // 40 Block Radius mein Random Location
+            double rx = (Math.random() * 80) - 40;
+            double rz = (Math.random() * 80) - 40;
+            Location dropLoc = p.getLocation().clone().add(rx, 40, rz); // 40 blocks upar se shuru
+
+            // Meteor Falling Logic
+            new BukkitRunnable() {
+                Location current = dropLoc.clone();
+                // Target ground location calculate karo trajectory ke liye
+                Vector direction = new Vector(0, -1, 0); 
+
+                @Override
+                public void run() {
+                    // 1. Zameen par takraya (Explosion & Shockwave)
+                    if (current.getBlock().getType().isSolid() || current.getY() <= current.getWorld().getMinHeight()) {
+                        
+                        // 2 TNT Equivalent Explosion (Power 8f approx)
+                        current.getWorld().createExplosion(current, 4f, false, false);
+                        w.spawnParticle(Particle.EXPLOSION_EMITTER, current, 3, 1, 1, 1, 0);
+                        w.playSound(current, Sound.ENTITY_GENERIC_EXPLODE, 1.5f, 0.5f);
+                        w.playSound(current, Sound.ENTITY_DRAGON_FIREBALL_EXPLODE, 1f, 0.8f);
+
+                        // Shockwave Animation (Expanding Ring)
+                        for (int i = 0; i < 30; i++) {
+                            double angle = i * (Math.PI * 2 / 30);
+                            double x = Math.cos(angle) * 4;
+                            double z = Math.sin(angle) * 4;
+                            w.spawnParticle(Particle.DUST_PLUME, current.clone().add(x, 0.1, z), 2, 0, 0.2, 0, 0.1, Material.STONE.createBlockData());
+                        }
+
+                        // Damage Only Enemies
+                        applySafeDamage(p, current, 6.0, mDmg); 
+                        cancel(); 
+                        return;
+                    }
+
+                    // 2. REAL METEOR ANIMATION (Photo Jaisa Trail)
+                    // Meteor Head (Mota Fireball)
+                    w.spawnParticle(Particle.LARGE_SMOKE, current, 5, 0.2, 0.2, 0.2, 0.02);
+                    w.spawnParticle(Particle.LAVA,        current, 8, 0.3, 0.3, 0.3, 0.05);
+                    
+                    // Long Fire Tail (Peeche nikalti hui aag)
+                    for (int t = 0; t < 5; t++) {
+                        Location tail = current.clone().subtract(direction.clone().multiply(t * 0.3));
+                        w.spawnParticle(Particle.FLAME, tail, 10, 0.2, 0.2, 0.2, 0.08);
+                        if (t > 2) w.spawnParticle(Particle.DUST, tail, 5, 0.3, 0.3, 0.3, new Particle.DustOptions(Color.fromRGB(80, 40, 0), 2.0f));
+                    }
+
+                    // Tezi se neeche girna (Speed 1.2 blocks per tick)
+                    current.add(0, -1.2, 0); 
+                }
+            }.runTaskTimer(plugin, 0, 1);
+        }
+    }.runTaskTimer(plugin, 0, 8); // Har meteor ke beech 0.4s ka gap
+}
+
+            case MIRAGE -> {
+    w.playSound(p.getLocation(), Sound.ENTITY_ILLUSIONER_MIRROR_MOVE, 1.5f, 0.5f);
+    w.playSound(p.getLocation(), Sound.ENTITY_WARDEN_EMERGE, 1.0f, 0.7f);
+
+    // Epic Smoke Poof (Mirror Effect)
+    w.spawnParticle(Particle.CAMPFIRE_COSY_SMOKE, p.getLocation(), 80, 2, 1, 2, 0.05);
+    w.spawnParticle(Particle.SQUID_INK, p.getLocation(), 50, 1.5, 1, 1.5, 0.1);
+
+    // List taaki 10s baad sabko ek saath remove kar sakein
+    java.util.List<org.bukkit.entity.Warden> minions = new java.util.ArrayList<>();
+
+    for (int i = 0; i < 5; i++) {
+        // Player ke charo taraf spawn karne ke liye math
+        double angle = i * (Math.PI * 2 / 5);
+        Location spawnLoc = p.getLocation().clone().add(Math.cos(angle) * 3, 0, Math.sin(angle) * 3);
+        
+        Warden warden = (Warden) w.spawnEntity(spawnLoc, org.bukkit.entity.EntityType.WARDEN);
+        
+        // 1. Name Set Karo (NotEasyOk's Minion)
+        warden.setCustomName("§7" + p.getName() + "'s §3Minion");
+        warden.setCustomNameVisible(true);
+        
+        // 2. Owner Safety & Targeting
+        warden.setRemoveWhenFarAway(true);
+        // Metadata daal do taaki listener ise pehchan sake
+        warden.setMetadata("MinionOf", new org.bukkit.metadata.FixedMetadataValue(plugin, p.getUniqueId().toString()));
+
+        minions.add(warden);
+        
+        // Emergence effect
+        w.spawnParticle(Particle.SONIC_BOOM, spawnLoc.add(0, 1, 0), 1, 0, 0, 0, 0);
+    }
+
+    // 3. 10 SECONDS TIMER (Follow & Cleanup)
+    new BukkitRunnable() {
+        int ticks = 0;
+        @Override
+        public void run() {
+            if (ticks >= 200 || !p.isOnline()) { // 10 seconds (200 ticks)
+                for (Warden m : minions) {
+                    if (m.isValid()) {
+                        w.spawnParticle(Particle.FLASH, m.getLocation().add(0, 1, 0), 5, 0.5, 0.5, 0.5, 0.05);
+                        m.remove();
+                    }
+                }
+                cancel();
+                return;
+            }
+
+            for (Warden m : minions) {
+                if (!m.isValid()) continue;
+                
+                // Owner ko follow karwana (Agar door chale gaye)
+                if (m.getLocation().distance(p.getLocation()) > 10) {
+                    m.getPathfinder().moveTo(p.getLocation());
+                }
+
+                // Owner ko target karne se rokna (Double Safety)
+                if (m.getTarget() != null && m.getTarget().equals(p)) {
+                    m.setTarget(null);
+                }
+            }
+            ticks += 10;
+        }
+    }.runTaskTimer(plugin, 0, 10);
+}
+
 
 
 
@@ -3068,6 +3167,20 @@ private void doEclipseBlast(Player p, World w, Location blastLoc,
                 () -> { if (e.isValid()) e.setVelocity(vel); }, 1L);
         }
     });
+}
+
+    @EventHandler
+public void onMinionAttack(EntityTargetLivingEntityEvent event) {
+    if (event.getEntity() instanceof Warden warden && event.getTarget() instanceof Player p) {
+        // Agar Warden ke paas "MinionOf" metadata hai aur target owner hai
+        if (warden.hasMetadata("MinionOf")) {
+            String ownerUUID = warden.getMetadata("MinionOf").get(0).asString();
+            if (p.getUniqueId().toString().equals(ownerUUID)) {
+                event.setCancelled(true); // Owner par gussa nahi karega!
+                event.setTarget(null);
+            }
+        }
+    }
 }
 
 
