@@ -674,7 +674,7 @@ case FLAME -> {
             }
 // 7. TITAN — Giant Form (5s Transformation)
 case TITAN -> {
-    dm = getDmg(p);
+    double titanDm = getDmg(p);
     
     // ── 1. TRANSFORMATION START (Sounds & Effects) ──
     w.playSound(loc, Sound.ENTITY_IRON_GOLEM_ATTACK, 1.5f, 0.5f);
@@ -727,7 +727,7 @@ case TITAN -> {
                     if (e instanceof LivingEntity le && e != p) {
                         Vector push = le.getLocation().toVector().subtract(cur.toVector()).normalize().multiply(1.2).setY(0.4);
                         le.setVelocity(push);
-                        le.damage(2.0 * dm, p);
+                        le.damage(2.0 *titanDm, p);
                     }
                 });
             }
