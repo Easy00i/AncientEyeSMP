@@ -1265,22 +1265,178 @@ case METEOR -> {
 }
 
 
-            // MIRAGE PRIMARY
 case MIRAGE -> {
-    w.playSound(p.getLocation(), Sound.ENTITY_ILLUSIONER_PREPARE_MIRROR, 1f, 1f);
+    // === Initial Activation Sound ===
+    w.playSound(p.getLocation(), Sound.ENTITY_ILLUSIONER_PREPARE_MIRROR, 1.5f, 0.7f);
+    w.playSound(p.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1f, 0.5f);
+
+    // === Aim-Based Placement (10 blocks aage player ke look direction mein) ===
+    Vector dir = p.getLocation().getDirection().clone();
+    dir.setY(0).normalize();
+    final Location base = p.getLocation().clone().add(dir.multiply(10));
+    base.setY(p.getLocation().getY());
+
     new BukkitRunnable() {
         int ticks = 0;
+        double spin = 0;
+
+        @Override
         public void run() {
-            if (ticks++ >= 100 || !p.isOnline() || p.isDead()) { cancel(); return; } // 5 seconds
-            
-            // 3 Clones (Particles rotating around player)
-            for (int i = 0; i < 3; i++) {
-                double angle = (ticks * 0.2) + (i * (Math.PI * 2 / 3)); // Math magic for rotation
-                Location clone = p.getLocation().clone().add(Math.cos(angle) * 3, 1, Math.sin(angle) * 3);
-                
-                // Human shape particles
-                w.spawnParticle(Particle.WITCH, clone, 10, 0.2, 0.8, 0.2, 0.05);
-                w.spawnParticle(Particle.PORTAL, clone, 15, 0.3, 1.0, 0.3, 0.1);
+            if (!p.isOnline() || p.isDead()) { cancel(); return; }
+
+            // === 10 Seconds Baad: Explosion + Cleanup ===
+            if (ticks >= 200) {
+                w.playSound(base, Sound.ENTITY_GENERIC_EXPLODE, 3f, 0.3f);
+                w.playSound(base, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 2f, 0.5f);
+                w.spawnParticle(Particle.EXPLOSION_LARGE, base, 15, 3, 1, 3, 0);
+
+                // 15 TNT equivalent - center + 6 surrounding
+                base.getWorld().createExplosion(base.clone().add(0, 0.5, 0), 15f, false, false);
+                for (int i = 0; i < 6; i++) {
+                    double a = i * (Math.PI / 3);
+                    base.getWorld().createExplosion(
+                        base.clone().add(Math.cos(a) * 4, 0, Math.sin(a) * 4),
+                        7f, false, false
+                    );
+                }
+                cancel();
+                return;
+            }
+
+            spin += 0.05;
+            final double TOP = 18.0;
+
+            // ========== TOP LARGE MAGIC CIRCLE (2nd photo jaisa bada circle upar) ==========
+            Location top = base.clone().add(0, TOP, 0);
+
+            // 4 concentric rings - outer se inner, opposite directions
+            ring(w, top, 7.0,  90, spin);
+            ring(w, top, 5.5,  70, -spin * 1.3);
+            ring(w, top, 4.0,  55,  spin * 1.8);
+            ring(w, top, 2.5,  35, -spin * 2.5);
+
+            // 6 satellite circles on outer ring (photo mein jo chote circles hain)
+            for (int i = 0; i < 6; i++) {
+                double a = (Math.PI * 2.0 / 6) * i + spin;
+                Location sc = top.clone().add(Math.cos(a) * 6.0, 0, Math.sin(a) * 6.0);
+                ring(w, sc, 1.2, 22, -spin * 2);
+                // Star inside each small circle
+                for (int s = 0; s < 5; s++) {
+                    double sa = (Math.PI * 2.0 / 5) * s - spin;
+                    drawLine(w,
+                        sc.clone().add(Math.cos(sa) * 1.0, 0, Math.sin(sa) * 1.0),
+                        sc.clone().add(Math.cos(sa + Math.PI * 2.0 / 5 * 2) * 1.0, 0, Math.sin(sa + Math.PI * 2.0 / 5 * 2) * 1.0),
+                        8);
+                }
+            }
+
+            // Hexagram (Star of David lines) inside top circle
+            for (int i = 0; i < 6; i++) {
+                double a1 = (Math.PI * 2.0 / 6) * i + spin;
+                double a2 = (Math.PI * 2.0 / 6) * ((i + 2) % 6) + spin;
+                drawLine(w,
+                    top.clone().add(Math.cos(a1) * 4.5, 0, Math.sin(a1) * 4.5),
+                    top.clone().add(Math.cos(a2) * 4.5, 0, Math.sin(a2) * 4.5),
+                    18);
+            }
+
+            // ========== MIDDLE RINGS (top se bottom tak descending - 2nd photo ka middle part) ==========
+            double[][] midData = {{13.0, 5.0}, {10.0, 3.5}, {7.0, 2.8}, {4.5, 4.5}};
+            for (int r = 0; r < midData.length; r++) {
+                Location ml = base.clone().add(0, midData[r][0], 0);
+                double ms = (r % 2 == 0) ? spin * 1.5 : -spin * 1.5;
+                ring(w, ml, midData[r][1],        45, ms);
+                ring(w, ml, midData[r][1] * 0.65, 30, -ms);
+                // Cross lines inside each mid ring
+                for (int i = 0; i < 4; i++) {
+                    double a = (Math.PI / 2.0) * i + ms;
+                    drawLine(w,
+                        ml.clone().add(Math.cos(a) * midData[r][1], 0, Math.sin(a) * midData[r][1]),
+                        ml.clone().add(Math.cos(a + Math.PI) * midData[r][1], 0, Math.sin(a + Math.PI) * midData[r][1]),
+                        12);
+                }
+            }
+
+            // ========== BOTTOM CIRCLE (ground pe - photo mein neeche wala bada circle) ==========
+            Location bot = base.clone().add(0, 0.2, 0);
+            ring(w, bot, 6.5, 80, -spin);
+            ring(w, bot, 5.0, 65,  spin * 1.2);
+            ring(w, bot, 3.5, 48, -spin * 1.8);
+            ring(w, bot, 2.0, 32,  spin * 2.5);
+
+            // Bottom satellite circles (5 chote circles neeche)
+            for (int i = 0; i < 5; i++) {
+                double a = (Math.PI * 2.0 / 5) * i - spin;
+                Location sc = bot.clone().add(Math.cos(a) * 5.2, 0, Math.sin(a) * 5.2);
+                ring(w, sc, 1.0, 18, spin * 2);
+            }
+            // Hexagram lines in bottom circle
+            for (int i = 0; i < 6; i++) {
+                double a1 = (Math.PI * 2.0 / 6) * i - spin;
+                double a2 = (Math.PI * 2.0 / 6) * ((i + 2) % 6) - spin;
+                drawLine(w,
+                    bot.clone().add(Math.cos(a1) * 4.0, 0, Math.sin(a1) * 4.0),
+                    bot.clone().add(Math.cos(a2) * 4.0, 0, Math.sin(a2) * 4.0),
+                    14);
+            }
+
+            // ========== YELLOW LASER (top se ground tak — MOTA) ==========
+            for (double y = 0.2; y <= TOP; y += 0.18) {
+                Location lp = base.clone().add(0, y, 0);
+                // Core bright yellow
+                w.spawnParticle(Particle.DUST, lp, 3, 0.08, 0, 0.08, 0,
+                    new Particle.DustOptions(Color.fromRGB(255, 255, 0), 2.8f));
+                // Outer orange glow
+                w.spawnParticle(Particle.DUST, lp, 2, 0.18, 0, 0.18, 0,
+                    new Particle.DustOptions(Color.fromRGB(255, 210, 30), 3.8f));
+            }
+            // Laser sparkle particles
+            w.spawnParticle(Particle.END_ROD, base.clone().add(0, TOP / 2.0, 0),
+                5, 0.25, TOP / 2.0 * 0.85, 0.25, 0.004);
+
+            // ========== DAMAGE NEARBY ENEMIES (30 block radius, 2 hearts = 4 HP, har 0.5s) ==========
+            if (ticks % 10 == 0) {
+                for (Entity e : base.getNearbyEntities(30, 30, 30)) {
+                    if (!(e instanceof LivingEntity victim)) continue;
+                    if (e.equals(p)) continue; // Owner ko kuch nahi hoga
+                    if (e instanceof Player ep) {
+                        if (ep.getGameMode() == GameMode.CREATIVE ||
+                            ep.getGameMode() == GameMode.SPECTATOR) continue;
+                    }
+                    victim.damage(4.0, p);
+                    e.getWorld().spawnParticle(Particle.DAMAGE_INDICATOR,
+                        victim.getLocation().add(0, 1, 0), 5, 0.3, 0.3, 0.3, 0);
+                }
+            }
+
+            // Ambient sounds
+            if (ticks % 20 == 0) w.playSound(base, Sound.BLOCK_BEACON_AMBIENT, 1f, 0.3f);
+            if (ticks % 7  == 0) w.playSound(base, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.25f, 2f);
+
+            ticks++;
+        }
+
+        // === Helper: Circle/Ring draw karo ===
+        private void ring(World world, Location center, double radius, int pts, double offset) {
+            for (int i = 0; i < pts; i++) {
+                double a = (Math.PI * 2.0 / pts) * i + offset;
+                Location pt = center.clone().add(Math.cos(a) * radius, 0, Math.sin(a) * radius);
+                world.spawnParticle(Particle.DUST, pt, 1, 0, 0, 0, 0,
+                    new Particle.DustOptions(Color.fromRGB(255, 50, 0), 1.8f));
+            }
+        }
+
+        // === Helper: Line draw karo do points ke beech ===
+        private void drawLine(World world, Location from, Location to, int steps) {
+            for (int i = 0; i <= steps; i++) {
+                double t = (double) i / steps;
+                Location pt = from.clone().add(
+                    (to.getX() - from.getX()) * t,
+                    (to.getY() - from.getY()) * t,
+                    (to.getZ() - from.getZ()) * t
+                );
+                world.spawnParticle(Particle.DUST, pt, 1, 0, 0, 0, 0,
+                    new Particle.DustOptions(Color.fromRGB(200, 40, 0), 1.5f));
             }
         }
     }.runTaskTimer(plugin, 0, 1);
