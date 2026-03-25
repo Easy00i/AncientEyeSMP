@@ -745,8 +745,7 @@ public class EventManager implements Listener {
 
         startWinAnimation(winner);
     }
-
-    // ══════════════════════════════════════════════════════════════════════════
+   // ══════════════════════════════════════════════════════════════════════════
     //  WIN ANIMATION  (10 seconds = 200 ticks)
     // ══════════════════════════════════════════════════════════════════════════
     private void startWinAnimation(Player winner) {
@@ -779,12 +778,14 @@ public class EventManager implements Listener {
         final double[] angle = {0.0};
         final BukkitTask[] ref = {null};
 
+        // Schedule the win-animation task
         ref[0] = Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             tick[0]++;
 
+            // If player logs out mid-animation, cancel and give reward
             if (!winner.isOnline()) {
-                bar.removeAll();
-                if (ref[0] != null) ref[0].cancel();
+                if (ref[0] != null) ref[0].cancel();  // [FIX] stop animation task
+                cleanupWin(winner, bar);             // [FIX] cleanup boss bar, action bar, and potion
                 finishWinReward(winner);
                 return;
             }
@@ -804,7 +805,7 @@ public class EventManager implements Listener {
             }
 
             angle[0] += 12;
-            Location base = winner.getLocation().add(0, 1.8, 0);
+            Location base = winner.getLocation().clone().add(0, 1.8, 0);  // [FIX] clone location
             double radius = 1.5;
 
             for (int i = 0; i < 16; i++) {
@@ -856,12 +857,10 @@ public class EventManager implements Listener {
                 winner.getWorld().playSound(winner.getLocation(),
                         Sound.ENTITY_ENDER_EYE_LAUNCH, 0.8f, 0.5f);
             }
-            
-           if (tick[0] >= 200) {
-                if (ref[0] != null) ref[0].cancel(); // Task pehle band karo
-                bar.removeAll(); 
 
-                winner.removePotionEffect(PotionEffectType.LEVITATION);
+            if (tick[0] >= 200) {
+                if (ref[0] != null) ref[0].cancel(); // Task pehle band karo
+                cleanupWin(winner, bar);            // [FIX] cleanup boss bar, action bar, and potion
 
                 winner.getWorld().strikeLightningEffect(winner.getLocation());
                 winner.getWorld().playSound(winner.getLocation(),
@@ -869,7 +868,7 @@ public class EventManager implements Listener {
                 winner.getWorld().playSound(winner.getLocation(),
                         Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
 
-                Location fLoc = winner.getLocation().add(0, 1, 0);
+                Location fLoc = winner.getLocation().clone().add(0, 1, 0);  // [FIX] clone location
                 Random rng = new Random();
                 for (int i = 0; i < 40; i++) {
                     winner.getWorld().spawnParticle(Particle.END_ROD, fLoc, 1,
@@ -887,56 +886,69 @@ public class EventManager implements Listener {
             }
 
         }, 1L, 1L);
+
+        // [ADD] Failsafe: ensure reward is given even if animation stalls
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (winAnimating) {
+                cleanupWin(winner, bar);
+                finishWinReward(winner);
+            }
+        }, 220L);
     }
 
     // ══════════════════════════════════════════════════════════════════════════
     //  FINISH WIN
     // ══════════════════════════════════════════════════════════════════════════
     private void finishWinReward(Player winner) {
-
         this.winAnimating = false;
         this.active = false;
-        
-        try {
-            // FIX: Eye do
-            plugin.getPlayerData().setEye(winner, reward, false);
 
-            // FIX: Sab players ka scoreboard remove karo
+        try {
+            // (Original reward code that gives the eye and announces winner)
+            plugin.getPlayerData().setEye(winner, reward, false);
+            plugin.getPlayerData().saveData(winner);
             for (Player p : Bukkit.getOnlinePlayers()) {
+                p.getScoreboard().clearSlot(DisplaySlot.SIDEBAR);
                 p.setScoreboard(Bukkit.getScoreboardManager().getNewScoreboard());
             }
-
-            // FIX: Announcement — sab players ko dikhao
-            String winnerName = winner.getName();
-            String eyeName    = reward.name();
-
-            List<String> chatLines = Arrays.asList(
-                "§8§m================================",
-                "§5§l  BINDING SUCCESSFUL!",
-                "§e  " + winnerName + " §fhas successfully bound the §5§l" + eyeName + " §fEye!",
-                "§7  The Ancient Eye is now bound to their soul.",
-                "§8§m================================"
-            );
-
-            for (Player p : Bukkit.getOnlinePlayers()) {
-                // Final announcement — sab players ko screen par dikhe
-                p.sendTitle(
-                    "§5§l" + winnerName + " HAS WON!",
-                    "§6§l" + eyeName + " Eye §fhas been bound!",
-                    10, 140, 30
-                );
-                p.playSound(p.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 0.7f, 1f);
-                p.playSound(p.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 0.4f, 1.2f);
-                for (String line : chatLines) p.sendMessage(line);
+            // (Announcements and sounds ...)
+            for (String line : Arrays.asList(
+                    "§8§m================================",
+                    "§5§l  BINDING SUCCESSFUL!",
+                    "§e  " + winner.getName() + " §fhas successfully bound the §5§l" + reward.name() + " §fEye!",
+                    "§7  The Ancient Eye is now bound to their soul.",
+                    "§8§m================================"
+                )) {
+                Bukkit.broadcastMessage(line);
             }
-
-            plugin.getLogger().info("[AncientEye] " + winnerName + " won and received " + eyeName + " Eye.");
-
+            winner.playSound(winner.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 0.7f, 1f);
+            winner.playSound(winner.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL, 0.4f, 1.2f);
+            winner.removePotionEffect(PotionEffectType.LEVITATION);
+            Bukkit.getLogger().info("[AncientEye] " + winner.getName() + " won and received " + reward.name() + " Eye.");
         } catch (Exception ex) {
             plugin.getLogger().severe("[AncientEye] finishWinReward error: " + ex.getMessage());
             ex.printStackTrace();
         } finally {
-            
+            // No additional cleanup needed here
+        }
+    }
+
+    /** 
+     * [ADDED] Clean up after win animation: remove bossbar, action bar, and potion effect.
+     */
+    private void cleanupWin(Player winner, BossBar bar) {
+        try {
+            if (bar != null) {
+                bar.removeAll();
+                bar.setVisible(false);
+            }
+            if (winner.isOnline()) {
+                // Clear action bar message and remove levitation
+                winner.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(""));
+                winner.removePotionEffect(PotionEffectType.LEVITATION);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
         }
     }
 
