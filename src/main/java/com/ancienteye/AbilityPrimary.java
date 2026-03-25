@@ -770,7 +770,6 @@ public class AbilityPrimary implements Listener {
                         }
                         if (ticks % 20 == 0) w.playSound(base, Sound.BLOCK_BEACON_AMBIENT, 1f, 0.3f);
                         if (ticks % 7  == 0) w.playSound(base, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.25f, 2f);
-                        ticks++;
                     }
                     private void mRing(World world, Location center, double radius, int pts, double offset) {
                         for (int i = 0; i < pts; i++) {
