@@ -98,20 +98,22 @@ public class AbilityLogic implements Listener {
         }
     }
 
-    // Warden minion — owner ko attack nahi karega
     @EventHandler
-    public void onMinionAttack(EntityTargetLivingEntityEvent event) {
-        if (event.getEntity() instanceof Warden warden && event.getTarget() instanceof Player p) {
-            if (warden.hasMetadata("MinionOf")) {
-                String ownerUUID = warden.getMetadata("MinionOf").get(0).asString();
-                if (p.getUniqueId().toString().equals(ownerUUID)) {
-                    event.setCancelled(true);
-                    event.setTarget(null);
-                }
+public void onMinionDamage(EntityDamageByEntityEvent event) {
+
+    if (event.getDamager() instanceof Warden warden &&
+        event.getEntity() instanceof Player p) {
+
+        if (warden.hasMetadata("MinionOf")) {
+
+            String ownerUUID = warden.getMetadata("MinionOf").get(0).asString();
+
+            if (p.getUniqueId().toString().equals(ownerUUID)) {
+                event.setCancelled(true);
             }
         }
     }
-
+}
     @EventHandler
     public void onPlayerKillXP(org.bukkit.event.entity.PlayerDeathEvent e) {
         if (e.getEntity().getKiller() == null) return;
