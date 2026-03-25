@@ -8,6 +8,8 @@ public class AncientEyePlugin extends JavaPlugin {
     private PlayerDataManager playerDataManager;
     private CooldownManager cooldownManager;
     private AbilityLogic abilityLogic;
+    private AbilityPrimary abilityPrimary;
+    private AbilitySecondary abilitySecondary;
     private AnimationTradeManager animationTradeManager;
     private CommandManager commandManager;
     private EventManager eventManager;
@@ -23,6 +25,8 @@ public class AncientEyePlugin extends JavaPlugin {
         this.playerDataManager     = new PlayerDataManager(this);
         this.cooldownManager       = new CooldownManager(this);
         this.abilityLogic          = new AbilityLogic(this);
+        this.abilityPrimary        = new AbilityPrimary(this);
+        this.abilitySecondary      = new AbilitySecondary(this);
         this.animationTradeManager = new AnimationTradeManager(this);
         this.eventManager          = new EventManager(this);
         this.commandManager        = new CommandManager(this);
@@ -32,7 +36,8 @@ public class AncientEyePlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(eventManager,                 this);
         getServer().getPluginManager().registerEvents(abilityLogic,                 this);
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(this), this);
-
+         getServer().getPluginManager().registerEvents(abilityPrimary,               this); 
+        getServer().getPluginManager().registerEvents(abilitySecondary,             this);
         // 3. Start Background Tasks
         new ParticleTask(this).runTaskTimer(this, 0, 5L);
 
@@ -75,6 +80,8 @@ public class AncientEyePlugin extends JavaPlugin {
     public PlayerDataManager getDataManager()          { return playerDataManager; }
     public CooldownManager getCooldownManager()        { return cooldownManager; }
     public AbilityLogic getAbilityLogic()              { return abilityLogic; }
+    public AbilityPrimary getAbilityPrimary()     { return abilityPrimary; }
+    public AbilitySecondary getAbilitySecondary() { return abilitySecondary; }
     public AnimationTradeManager getTradeManager()     { return animationTradeManager; }
     public EventManager getEventManager()              { return eventManager; }
 }
