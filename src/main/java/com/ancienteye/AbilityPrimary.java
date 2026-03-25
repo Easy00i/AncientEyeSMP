@@ -272,46 +272,89 @@ public class AbilityPrimary implements Listener {
             }
 
             // ── TITAN — Giant Form ────────────────────────────────────────
-            case TITAN -> {
-                final double titanDm = logic.getDmg(p);
-                w.playSound(loc, Sound.ENTITY_IRON_GOLEM_ATTACK, 1.5f, 0.5f);
-                w.playSound(loc, Sound.ENTITY_ZOMBIE_VILLAGER_CONVERTED, 1.2f, 0.5f);
-                w.playSound(loc, Sound.ENTITY_GENERIC_EXPLODE, 1.0f, 0.4f);
-                w.spawnParticle(Particle.EXPLOSION_EMITTER, loc, 5, 1, 2, 1, 0);
-                w.spawnParticle(Particle.CAMPFIRE_COSY_SMOKE, loc, 100, 1.5, 3, 1.5, 0.05);
-                p.addPotionEffect(new PotionEffect(PotionEffectType.JUMP_BOOST, 100, 2));
-                p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 100, 254));
-                p.setMetadata("TitanMode", new org.bukkit.metadata.FixedMetadataValue(plugin, true));
-                p.sendTitle("§6§lTITAN FORM", "§eYou are Unstoppable!", 5, 40, 5);
-                new BukkitRunnable() {
-                    int ticks = 0;
-                    public void run() {
-                        if (!p.isOnline() || ticks >= 100) {
-                            p.removeMetadata("TitanMode", plugin);
-                            p.getWorld().playSound(p.getLocation(), Sound.ENTITY_IRON_GOLEM_DEATH, 1f, 1.5f);
-                            p.getWorld().spawnParticle(Particle.CLOUD, p.getLocation(), 50, 1, 2, 1, 0.1);
-                            p.sendMessage("§cTitan Form expired.");
-                            cancel(); return;
-                        }
-                        ticks++;
-                        Location cur = p.getLocation();
-                        if (ticks % 2 == 0) {
-                            w.spawnParticle(Particle.DUST_PLUME, cur, 15, 1.2, 0.1, 1.2, 0.05, Material.STONE.createBlockData());
-                            w.spawnParticle(Particle.DUST, cur, 10, 1.5, 2.5, 1.5, 0, new Particle.DustOptions(Color.fromRGB(120, 80, 40), 2.0f));
-                        }
-                        if (ticks % 10 == 0) {
-                            w.playSound(cur, Sound.BLOCK_ANVIL_LAND, 0.5f, 0.5f);
-                            p.getNearbyEntities(5, 3, 5).forEach(e -> {
-                                if (e instanceof LivingEntity le && e != p) {
-                                    Vector push = le.getLocation().toVector().subtract(cur.toVector()).normalize().multiply(1.2).setY(0.4);
-                                    le.setVelocity(push);
-                                    le.damage(2.0 * titanDm, p);
-                                }
-                            });
-                        }
-                    }
-                }.runTaskTimer(plugin, 0, 1);
+case TITAN -> {
+    final double titanDm = logic.getDmg(p);
+
+    w.playSound(loc, Sound.ENTITY_IRON_GOLEM_ATTACK, 1.5f, 0.5f);
+    w.playSound(loc, Sound.ENTITY_ZOMBIE_VILLAGER_CONVERTED, 1.2f, 0.5f);
+    w.playSound(loc, Sound.ENTITY_GENERIC_EXPLODE, 1.0f, 0.4f);
+
+    w.spawnParticle(Particle.EXPLOSION_EMITTER, loc, 5, 1, 2, 1, 0);
+    w.spawnParticle(Particle.CAMPFIRE_COSY_SMOKE, loc, 100, 1.5, 3, 1.5, 0.05);
+
+    // Effects
+    p.addPotionEffect(new PotionEffect(PotionEffectType.JUMP_BOOST, 100, 2));
+    p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 100, 254));
+    p.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH, 100, 1));
+
+    // ✅ IMPORTANT — fake "giant power"
+    p.getAttribute(org.bukkit.attribute.Attribute.GENERIC_ATTACK_DAMAGE).setBaseValue(10.0);
+    p.getAttribute(org.bukkit.attribute.Attribute.GENERIC_ATTACK_KNOCKBACK).setBaseValue(2.0);
+
+    // ✅ Paper ONLY (agar support karta hai to player bada dikhega)
+    try {
+        p.getAttribute(org.bukkit.attribute.Attribute.GENERIC_SCALE).setBaseValue(2.0); // 1.0 = normal
+    } catch (Exception ignored) {}
+
+    p.setMetadata("TitanMode", new org.bukkit.metadata.FixedMetadataValue(plugin, true));
+
+    p.sendTitle("§6§lTITAN FORM", "§eYou are Unstoppable!", 5, 40, 5);
+
+    new BukkitRunnable() {
+        int ticks = 0;
+
+        public void run() {
+            if (!p.isOnline() || ticks >= 100) {
+
+                // RESET
+                p.removeMetadata("TitanMode", plugin);
+
+                try {
+                    p.getAttribute(org.bukkit.attribute.Attribute.GENERIC_SCALE).setBaseValue(1.0);
+                } catch (Exception ignored) {}
+
+                p.getAttribute(org.bukkit.attribute.Attribute.GENERIC_ATTACK_DAMAGE).setBaseValue(1.0);
+                p.getAttribute(org.bukkit.attribute.Attribute.GENERIC_ATTACK_KNOCKBACK).setBaseValue(0.0);
+
+                p.getWorld().playSound(p.getLocation(), Sound.ENTITY_IRON_GOLEM_DEATH, 1f, 1.5f);
+                p.getWorld().spawnParticle(Particle.CLOUD, p.getLocation(), 50, 1, 2, 1, 0.1);
+
+                p.sendMessage("§cTitan Form expired.");
+                cancel();
+                return;
             }
+
+            ticks++;
+            Location cur = p.getLocation();
+
+            // Visual heavy effect
+            if (ticks % 2 == 0) {
+                w.spawnParticle(Particle.DUST_PLUME, cur, 20, 1.5, 0.2, 1.5, 0.05, Material.STONE.createBlockData());
+                w.spawnParticle(Particle.DUST, cur, 15, 2.0, 3.0, 2.0, 0,
+                        new Particle.DustOptions(Color.fromRGB(120, 80, 40), 2.5f));
+            }
+
+            // Smash effect
+            if (ticks % 10 == 0) {
+                w.playSound(cur, Sound.BLOCK_ANVIL_LAND, 0.7f, 0.5f);
+
+                p.getNearbyEntities(6, 4, 6).forEach(e -> {
+                    if (e instanceof LivingEntity le && e != p) {
+
+                        Vector push = le.getLocation().toVector()
+                                .subtract(cur.toVector())
+                                .normalize()
+                                .multiply(1.5)
+                                .setY(0.5);
+
+                        le.setVelocity(push);
+                        le.damage(3.0 * titanDm, p);
+                    }
+                });
+            }
+        }
+    }.runTaskTimer(plugin, 0, 1);
+}
 
             // ── HUNTER — Dash ─────────────────────────────────────────────
             case HUNTER -> {
