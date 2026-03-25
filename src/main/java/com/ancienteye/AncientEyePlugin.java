@@ -1,6 +1,9 @@
 package com.ancienteye;
 
 import org.bukkit.plugin.java.JavaPlugin;
+import org.bukkit.entity.Player;
+import org.bukkit.Bukkit;
+import org.bukkit.potion.PotionEffectType;
 
 public class AncientEyePlugin extends JavaPlugin {
     private static AncientEyePlugin instance;
@@ -24,9 +27,12 @@ public class AncientEyePlugin extends JavaPlugin {
         // 1. Initialize Managers
         this.playerDataManager     = new PlayerDataManager(this);
         this.cooldownManager       = new CooldownManager(this);
+        
         this.abilityLogic          = new AbilityLogic(this);
-        this.abilityPrimary        = new AbilityPrimary(this);
-        this.abilitySecondary      = new AbilitySecondary(this);
+        
+        this.abilityPrimary        = new AbilityPrimary(this, this.abilityLogic);
+        this.abilitySecondary      = new AbilitySecondary(this, this.abilityLogic);
+        
         this.animationTradeManager = new AnimationTradeManager(this);
         this.eventManager          = new EventManager(this);
         this.commandManager        = new CommandManager(this);
@@ -36,11 +42,11 @@ public class AncientEyePlugin extends JavaPlugin {
         getServer().getPluginManager().registerEvents(eventManager,                 this);
         getServer().getPluginManager().registerEvents(abilityLogic,                 this);
         getServer().getPluginManager().registerEvents(new PlayerJoinListener(this), this);
-         getServer().getPluginManager().registerEvents(abilityPrimary,               this); 
+        getServer().getPluginManager().registerEvents(abilityPrimary,               this); 
         getServer().getPluginManager().registerEvents(abilitySecondary,             this);
+
         // 3. Start Background Tasks
         new ParticleTask(this).runTaskTimer(this, 0, 5L);
-
 
         // 4. Register Commands
         registerCommand("smpstart");
@@ -59,13 +65,14 @@ public class AncientEyePlugin extends JavaPlugin {
             playerDataManager.saveAllData();
         }
 
-        for (org.bukkit.entity.Player p : org.bukkit.Bukkit.getOnlinePlayers()) {
+        // Cleanup players on shutdown
+        for (Player p : Bukkit.getOnlinePlayers()) {
             p.setWalkSpeed(0.2f);
-            p.removePotionEffect(org.bukkit.potion.PotionEffectType.JUMP_BOOST);
-            p.removePotionEffect(org.bukkit.potion.PotionEffectType.LEVITATION);
+            p.removePotionEffect(PotionEffectType.JUMP_BOOST);
+            p.removePotionEffect(PotionEffectType.LEVITATION);
         }
 
-        org.bukkit.Bukkit.getLogger().info("[AncientEye] Disabled!");
+        getLogger().info("[AncientEye] Disabled!");
     }
 
     private void registerCommand(String name) {
@@ -75,13 +82,14 @@ public class AncientEyePlugin extends JavaPlugin {
         }
     }
 
+    // Getters
     public static AncientEyePlugin get()              { return instance; }
     public PlayerDataManager getPlayerData()           { return playerDataManager; }
     public PlayerDataManager getDataManager()          { return playerDataManager; }
     public CooldownManager getCooldownManager()        { return cooldownManager; }
     public AbilityLogic getAbilityLogic()              { return abilityLogic; }
-    public AbilityPrimary getAbilityPrimary()     { return abilityPrimary; }
-    public AbilitySecondary getAbilitySecondary() { return abilitySecondary; }
+    public AbilityPrimary getAbilityPrimary()         { return abilityPrimary; }
+    public AbilitySecondary getAbilitySecondary()     { return abilitySecondary; }
     public AnimationTradeManager getTradeManager()     { return animationTradeManager; }
     public EventManager getEventManager()              { return eventManager; }
 }
