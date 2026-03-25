@@ -410,7 +410,7 @@ public void onMinionDamage(EntityDamageByEntityEvent event) {
         });
     }
 
-    private void removeBoxGradually(Location center, int size, Map<Location, org.bukkit.block.BlockState> oldBlocks) {
+    public void removeBoxGradually(Location center, int size, Map<Location, org.bukkit.block.BlockState> oldBlocks) {
     new BukkitRunnable() {
         final List<Location> locs = new ArrayList<>(oldBlocks.keySet());
         int index = 0;
