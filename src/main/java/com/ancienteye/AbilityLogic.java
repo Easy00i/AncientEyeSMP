@@ -405,6 +405,32 @@ public void onMinionDamage(EntityDamageByEntityEvent event) {
         });
     }
 
+    private void removeBoxGradually(Location center, int size, Map<Location, org.bukkit.block.BlockState> oldBlocks) {
+    new BukkitRunnable() {
+        final List<Location> locs = new ArrayList<>(oldBlocks.keySet());
+        int index = 0;
+        int speed = 15; // Ek saath kitne blocks tootenge
+
+        @Override
+        public void run() {
+            for (int i = 0; i < speed; i++) {
+                if (index >= locs.size()) {
+                    this.cancel();
+                    oldBlocks.clear();
+                    return;
+                }
+                Location l = locs.get(index);
+                // Wapas purana block lagao (Air ya jo bhi tha)
+                l.getBlock().setType(oldBlocks.get(l).getType());
+                l.getWorld().playSound(l, Sound.BLOCK_STONE_BREAK, 0.4f, 0.8f);
+                l.getWorld().spawnParticle(Particle.SMOKE_NORMAL, l, 1, 0.05, 0.05, 0.05, 0.02);
+                index++;
+            }
+        }
+    }.runTaskTimer(plugin, 0L, 2L);
+    }
+    
+
     // ✅ FIX: owner is always excluded
     void applySafeDamage(Player owner, Location loc, double radius, double damage) {
         loc.getWorld().getNearbyEntities(loc, radius, radius, radius).forEach(entity -> {
