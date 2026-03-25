@@ -683,12 +683,13 @@ public class AbilityPrimary implements Listener {
                     double spin  = 0;
                     public void run() {
                         if (!p.isOnline() || p.isDead()) { cancel(); return; }
-                        if (ticks >= 200) {
+                        if (ticks++ >= 200) {
                             // ✅ FIX: NO block break — manual damage only
                             w.playSound(base, Sound.ENTITY_GENERIC_EXPLODE, 3f, 0.3f);
                             w.playSound(base, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 2f, 0.5f);
                             w.spawnParticle(Particle.EXPLOSION_EMITTER, base.clone().add(0,1,0), 20, 4, 2, 4, 0);
                             w.spawnParticle(Particle.FLASH, base.clone().add(0,1,0), 3, 2, 1, 2, 0);
+                            w.createExplosion(base, 25.0f, false, true);
                             // Manual damage — no block break
                             for (org.bukkit.entity.Entity e : base.getNearbyEntities(30,30,30)) {
                                 if (!(e instanceof LivingEntity victim)) continue;
