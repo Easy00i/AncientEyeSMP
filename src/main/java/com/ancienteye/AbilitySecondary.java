@@ -290,20 +290,57 @@ public class AbilitySecondary implements Listener {
             }
 
             // ── GRAVITY — Jump ────────────────────────────────────────────
-            case GRAVITY -> {
-                w.spawnParticle(Particle.REVERSE_PORTAL, loc, 80, 0.8, 0.5, 0.8, 0.12);
-                w.spawnParticle(Particle.PORTAL, loc, 50, 0.5, 0.3, 0.5, 0.08);
-                w.spawnParticle(Particle.EXPLOSION, loc, 2, 0, 0, 0, 0);
-                for (int i = 0; i < 16; i++) { double a = Math.toRadians(i*22.5);
-                    w.spawnParticle(Particle.REVERSE_PORTAL, loc.clone().add(Math.cos(a)*1.5,0.1,Math.sin(a)*1.5), 3, 0, 0.3, 0, 0.05);
+case GRAVITY -> {
+    w.spawnParticle(Particle.REVERSE_PORTAL, loc, 80, 0.8, 0.5, 0.8, 0.12);
+    w.spawnParticle(Particle.PORTAL, loc, 50, 0.5, 0.3, 0.5, 0.08);
+    w.spawnParticle(Particle.EXPLOSION, loc, 2, 0, 0, 0, 0);
+
+    for (int i = 0; i < 16; i++) {
+        double a = Math.toRadians(i * 22.5);
+        w.spawnParticle(Particle.REVERSE_PORTAL,
+                loc.clone().add(Math.cos(a) * 1.5, 0.1, Math.sin(a) * 1.5),
+                3, 0, 0.3, 0, 0.05);
+    }
+
+    w.playSound(loc, Sound.ENTITY_GHAST_SHOOT, 0.9f, 0.4f);
+    w.playSound(loc, Sound.BLOCK_BEACON_ACTIVATE, 0.8f, 0.6f);
+
+    // Jump
+    p.setVelocity(new Vector(0, 8.0, 0));
+
+    // Delay after jump
+    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+
+        if (!p.isOnline()) return;
+
+        // Apply long slow falling
+        p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 9999, 0, false, false, false));
+
+        // Check until player touches ground
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+
+                if (!p.isOnline()) {
+                    p.removePotionEffect(PotionEffectType.SLOW_FALLING);
+                    cancel();
+                    return;
                 }
-                w.playSound(loc, Sound.ENTITY_GHAST_SHOOT, 0.9f, 0.4f);
-                w.playSound(loc, Sound.BLOCK_BEACON_ACTIVATE, 0.8f, 0.6f);
-                p.setVelocity(new Vector(0, 8.0, 0));
-                Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                    if (p.isOnline()) p.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, logic.ticks(80, dr), 0));
-                }, 40L);
+
+                // When player touches ground
+                if (p.isOnGround()) {
+                    p.removePotionEffect(PotionEffectType.SLOW_FALLING);
+
+                    // Remove fall damage completely
+                    p.setFallDistance(0);
+
+                    cancel();
+                }
             }
+        }.runTaskTimer(plugin, 0L, 2L); // check every 2 ticks
+
+    }, 40L);
+}
 
             // ── WIND — Push ───────────────────────────────────────────────
             case WIND -> {
@@ -354,9 +391,6 @@ public class AbilitySecondary implements Listener {
                 w.playSound(loc, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 0.8f, 2.0f);
                 w.playSound(loc, Sound.BLOCK_BEACON_ACTIVATE, 1f, 2.0f);
                 final Vector beamDir = p.getEyeLocation().getDirection().normalize();
-                final double startX = p.getEyeLocation().getX() + beamDir.getX()*1.5;
-                final double startY = p.getEyeLocation().getY() + beamDir.getY()*1.5;
-                final double startZ = p.getEyeLocation().getZ() + beamDir.getZ()*1.5;
                 w.spawnParticle(Particle.FLASH, p.getEyeLocation(), 1, 0, 0, 0, 0);
                 w.spawnParticle(Particle.END_ROD, p.getEyeLocation(), 20, 0.1, 0.1, 0.1, 0.05);
                 new BukkitRunnable() {
@@ -378,7 +412,7 @@ public class AbilitySecondary implements Listener {
                         }
                         if (beam.getBlock().getType().isSolid()) {
                             w.spawnParticle(Particle.FLASH, beam, 1,0,0,0,0);
-                            w.spawnParticle(Particle.END_ROD, beam, 25, 0.5, 0.5, 0.5, 0.1);
+                            w.spawnParticle(Particle.END_ROD, beam, 10, 0.05, 0.05, 0.05, 0.01);
                             w.spawnParticle(Particle.WHITE_ASH, beam, 20, 0.4, 0.4, 0.4, 0.06);
                             w.playSound(beam, Sound.BLOCK_GLASS_BREAK, 1f, 2.0f);
                             hit = true; return;
@@ -397,9 +431,9 @@ public class AbilitySecondary implements Listener {
                         }
                     }
                     private Location pos() {
-                        double t = (double) step * 1.2;
-                        return new Location(w, startX + beamDir.getX()*t, startY + beamDir.getY()*t, startZ + beamDir.getZ()*t);
-                    }
+    double t = step * 0.8;
+    return p.getEyeLocation().clone().add(beamDir.clone().multiply(t));
+}
                 }.runTaskTimer(plugin, 0, 1);
             }
 
