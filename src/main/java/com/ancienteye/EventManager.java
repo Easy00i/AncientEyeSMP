@@ -906,7 +906,7 @@ public class EventManager implements Listener {
         try {
             // (Original reward code that gives the eye and announces winner)
             plugin.getPlayerData().setEye(winner, reward, false);
-            plugin.getPlayerData().saveData(winner);
+            plugin.getPlayerData().saveData();
             for (Player p : Bukkit.getOnlinePlayers()) {
                 p.getScoreboard().clearSlot(DisplaySlot.SIDEBAR);
                 p.setScoreboard(Bukkit.getScoreboardManager().getNewScoreboard());
