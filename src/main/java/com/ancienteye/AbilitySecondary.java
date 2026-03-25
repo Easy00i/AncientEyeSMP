@@ -404,10 +404,10 @@ case GRAVITY -> {
                         }
                         step++;
                         Location beam = pos();
-                        w.spawnParticle(Particle.END_ROD, beam, 4, 0.02, 0.02, 0.02, 0.0);
+                        w.spawnParticle(Particle.END_ROD, beam, 10, 0.05, 0.05, 0.05, 0.01);
                         w.spawnParticle(Particle.WHITE_ASH, beam, 2, 0.04, 0.04, 0.04, 0.01);
                         if (step % 4 == 0) w.spawnParticle(Particle.FLASH, beam, 1, 0, 0, 0, 0);
-                        for (int i = 0; i < 3; i++) { double a = Math.toRadians(i*120+step*15);
+                        for (int i = 0; i < 3; i++) { double a = Math.toRadians(i * 120 + step * 15);
                             w.spawnParticle(Particle.END_ROD, beam.clone().add(Math.cos(a)*0.12, Math.sin(a)*0.12, 0), 1,0,0,0,0);
                         }
                         if (beam.getBlock().getType().isSolid()) {
