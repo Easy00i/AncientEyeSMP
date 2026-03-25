@@ -371,6 +371,7 @@ public void onMinionDamage(EntityDamageByEntityEvent event) {
         w.spawnParticle(Particle.DRAGON_BREATH,     blastLoc, 80, 0.8, 0.8, 0.8, 0.08);
         w.spawnParticle(Particle.EXPLOSION_EMITTER, blastLoc,  2, 0, 0, 0, 0);
         w.spawnParticle(Particle.EXPLOSION,         blastLoc, 20, 1.0, 0.5, 1.0, 0.1);
+        w.createExplosion(blastLoc, 17.0f, false, false);
         Bukkit.getScheduler().runTaskLater(plug, () -> {
             w.spawnParticle(Particle.EXPLOSION_EMITTER, blastLoc, 3, 0.3, 0, 0.3, 0);
             w.spawnParticle(Particle.SQUID_INK,         blastLoc, 40, 0.6, 0.6, 0.6, 0.12);
