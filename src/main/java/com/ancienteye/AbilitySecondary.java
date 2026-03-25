@@ -858,6 +858,12 @@ case GRAVITY -> {
                     warden.setCustomName("§7" + p.getName() + "'s §3Minion");
                     warden.setCustomNameVisible(true);
                     warden.setRemoveWhenFarAway(true);
+
+                     warden.setAI(true);
+                     warden.setSilent(true);
+                     warden.setCollidable(false);
+                    
+                    
                     warden.setMetadata("MinionOf", new org.bukkit.metadata.FixedMetadataValue(plugin, p.getUniqueId().toString()));
                     minions.add(warden);
                     w.spawnParticle(Particle.SONIC_BOOM, spawnLoc.add(0, 1, 0), 1, 0, 0, 0, 0);
@@ -878,7 +884,11 @@ case GRAVITY -> {
                             if (!m.isValid()) continue;
                             // Follow owner
                             if (m.getLocation().distance(p.getLocation()) > 10) {
-                                m.getPathfinder().moveTo(p.getLocation());
+                                Location target = p.getLocation();
+                               Location current = m.getLocation();
+
+                               Vector dir = target.toVector().subtract(current.toVector()).normalize();
+                               m.setVelocity(dir.multiply(0.4));
                             }
                             // ✅ Owner ko target nahi karega
                             if (m.getTarget() != null && m.getTarget().equals(p)) {
