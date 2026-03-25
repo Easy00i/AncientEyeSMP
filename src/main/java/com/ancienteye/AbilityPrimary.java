@@ -11,7 +11,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
 import java.util.*;
 
-public class AbilityPrimary {
+public class AbilityPrimary implements Listener {
 
     private final AncientEyePlugin plugin;
     private final AbilityLogic logic;
