@@ -860,59 +860,112 @@ case TITAN -> {
             }
 
             // ── ECLIPSE PRIMARY — Black Cube + Blast ─────────────────────
-            // ✅ FIX: cube shows for 3s then blasts — target.isDead check
-            case ECLIPSE -> {
-                double dmg = logic.ecfg("ECLIPSE", "primary-damage", 18.0);
-                LivingEntity target = logic.aim(p, 30.0);
-                if (target == null) { p.sendMessage("§cNo target found!"); return; }
-                w.playSound(p.getLocation(), Sound.ENTITY_WITHER_SHOOT, 1f, 0.5f);
-                w.playSound(target.getLocation(), Sound.ENTITY_ENDERMAN_STARE, 0.8f, 0.5f);
-                final boolean[] blasted = {false};
-                new BukkitRunnable() {
-                    int    ticks     = 0;
-                    double cubeAngle = 0;
-                    public void run() {
-                        if (!target.isValid() || target.isDead()) {
-                            if (!blasted[0]) { blasted[0] = true; logic.doEclipseBlast(p, w, target.getLocation().clone().add(0,1,0), dmg, plugin); }
-                            cancel(); return;
-                        }
-                        ticks++;
-                        if (ticks <= 30) {
-                            cubeAngle += 0.12;
-                            Location body = target.getLocation().clone().add(0, 1.0, 0);
-                            double r = 0.75 + Math.sin(ticks*0.3)*0.08;
-                            double cosA=Math.cos(cubeAngle), sinA=Math.sin(cubeAngle), cosT=Math.cos(0.4), sinT=Math.sin(0.4);
-                            double[][] verts = {{-r,-r,-r},{r,-r,-r},{r,r,-r},{-r,r,-r},{-r,-r,r},{r,-r,r},{r,r,r},{-r,r,r}};
-                            int[][] edges = {{0,1},{1,2},{2,3},{3,0},{4,5},{5,6},{6,7},{7,4},{0,4},{1,5},{2,6},{3,7}};
-                            double[][] rv = new double[8][3];
-                            for (int v = 0; v < 8; v++) {
-                                double x=verts[v][0],y=verts[v][1],z=verts[v][2];
-                                double nx=x*cosA-z*sinA, nz=x*sinA+z*cosA;
-                                double ny2=y*cosT-nz*sinT, nz2=y*sinT+nz*cosT;
-                                rv[v][0]=nx; rv[v][1]=ny2+r; rv[v][2]=nz2;
-                            }
-                            Particle.DustOptions black = new Particle.DustOptions(Color.fromRGB(10,0,20), 1.1f);
-                            for (int[] edge : edges) {
-                                double[] va=rv[edge[0]], vb=rv[edge[1]];
-                                for (int k = 0; k <= 5; k++) {
-                                    double t=(double)k/5;
-                                    Location pt = body.clone().add(va[0]+(vb[0]-va[0])*t, va[1]+(vb[1]-va[1])*t-r, va[2]+(vb[2]-va[2])*t);
-                                    w.spawnParticle(Particle.DUST, pt, 1,0,0,0,0, black);
-                                }
-                            }
-                            w.spawnParticle(Particle.SQUID_INK, body, 2, 0.1, 0.1, 0.1, 0.01);
-                            w.spawnParticle(Particle.DRAGON_BREATH, body, 3, 0.15, 0.15, 0.15, 0.02);
-                            if (ticks % 10 == 0) {
-                                float pitch = 0.4f + (ticks/30f)*1.2f;
-                                w.playSound(target.getLocation(), Sound.ENTITY_ENDERMAN_AMBIENT, 0.6f, pitch);
-                            }
-                        } else {
-                            if (!blasted[0]) { blasted[0] = true; logic.doEclipseBlast(p, w, target.getLocation().clone().add(0,1,0), dmg, plugin); }
-                            cancel();
-                        }
-                    }
-                }.runTaskTimer(plugin, 0, 2);
+case ECLIPSE -> {
+    double dmg = logic.ecfg("ECLIPSE", "primary-damage", 18.0);
+    LivingEntity target = logic.aim(p, 30.0);
+    if (target == null) { p.sendMessage("§cNo target found!"); return; }
+
+    w.playSound(p.getLocation(), Sound.ENTITY_WITHER_SHOOT, 1f, 0.5f);
+    w.playSound(target.getLocation(), Sound.ENTITY_ENDERMAN_STARE, 0.8f, 0.5f);
+
+    final boolean[] blasted = {false};
+
+    new BukkitRunnable() {
+        int ticks = 0;
+        double cubeAngle = 0;
+
+        public void run() {
+
+            if (!target.isValid() || target.isDead()) {
+                if (!blasted[0]) {
+                    blasted[0] = true;
+                    logic.doEclipseBlast(p, w, target.getLocation().clone().add(0,1,0), dmg, plugin);
+                }
+                cancel(); return;
             }
+
+            ticks += 2; // ✅ FIX (time sync)
+
+            if (ticks <= 60) { // ✅ FIX (3 seconds cube)
+
+                cubeAngle += 0.12;
+
+                Location body = target.getLocation().clone().add(0, 1.0, 0);
+                double r = 0.75 + Math.sin(ticks*0.3)*0.08;
+
+                double cosA=Math.cos(cubeAngle), sinA=Math.sin(cubeAngle),
+                       cosT=Math.cos(0.4), sinT=Math.sin(0.4);
+
+                double[][] verts = {
+                    {-r,-r,-r},{r,-r,-r},{r,r,-r},{-r,r,-r},
+                    {-r,-r,r},{r,-r,r},{r,r,r},{-r,r,r}
+                };
+
+                int[][] edges = {
+                    {0,1},{1,2},{2,3},{3,0},
+                    {4,5},{5,6},{6,7},{7,4},
+                    {0,4},{1,5},{2,6},{3,7}
+                };
+
+                double[][] rv = new double[8][3];
+
+                for (int v = 0; v < 8; v++) {
+                    double x=verts[v][0], y=verts[v][1], z=verts[v][2];
+
+                    double nx=x*cosA-z*sinA;
+                    double nz=x*sinA+z*cosA;
+
+                    double ny2=y*cosT-nz*sinT;
+                    double nz2=y*sinT+nz*cosT;
+
+                    rv[v][0]=nx;
+                    rv[v][1]=ny2+r;
+                    rv[v][2]=nz2;
+                }
+
+                Particle.DustOptions black = new Particle.DustOptions(Color.fromRGB(10,0,20), 1.1f);
+
+                for (int[] edge : edges) {
+                    double[] va=rv[edge[0]], vb=rv[edge[1]];
+                    for (int k = 0; k <= 5; k++) {
+                        double t=(double)k/5;
+
+                        Location pt = body.clone().add(
+                            va[0]+(vb[0]-va[0])*t,
+                            va[1]+(vb[1]-va[1])*t-r,
+                            va[2]+(vb[2]-va[2])*t
+                        );
+
+                        w.spawnParticle(Particle.DUST, pt, 1,0,0,0,0, black);
+                    }
+                }
+
+                w.spawnParticle(Particle.SQUID_INK, body, 2, 0.1, 0.1, 0.1, 0.01);
+                w.spawnParticle(Particle.DRAGON_BREATH, body, 3, 0.15, 0.15, 0.15, 0.02);
+
+                if (ticks % 20 == 0) { // ✅ FIX (sound sync)
+                    float pitch = 0.4f + (ticks/60f)*1.2f;
+                    w.playSound(target.getLocation(), Sound.ENTITY_ENDERMAN_AMBIENT, 0.6f, pitch);
+                }
+
+            } else {
+
+                if (!blasted[0]) {
+                    blasted[0] = true;
+
+                    Location blastLoc = target.getLocation().clone().add(0,1,0);
+
+                    // ✅ FIX: delay blast (2 sec baad)
+                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                        logic.doEclipseBlast(p, w, blastLoc, dmg, plugin);
+                    }, 40L);
+                }
+
+                cancel();
+            }
+        }
+    }.runTaskTimer(plugin, 0, 2);
+}
 
             // ── GUARDIAN — Dome ───────────────────────────────────────────
             case GUARDIAN -> {
