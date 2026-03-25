@@ -141,7 +141,7 @@ public class AbilityPrimary implements Listener {
             case STORM -> {
                 double dmg = logic.ecfg("STORM", "primary-damage", 12.0);
                 LivingEntity target = logic.aim(p, 30.0);
-                if (target == null) { p.sendMessage("§cKoi target nahi mila!"); return; }
+                if (target == null) { p.sendMessage("§ctarget!"); return; }
                 Location tLoc = target.getLocation();
                 w.strikeLightningEffect(tLoc);
                 w.playSound(tLoc, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 2f, 1f);
