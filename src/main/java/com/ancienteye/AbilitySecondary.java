@@ -9,6 +9,7 @@ import org.bukkit.entity.*;
 import org.bukkit.potion.*;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.util.Vector;
+import org.bukkit.inventory.ItemStack;
 import java.util.*;
 
 public class AbilitySecondary {
