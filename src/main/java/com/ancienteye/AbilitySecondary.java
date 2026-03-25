@@ -412,7 +412,7 @@ public class AbilitySecondary {
                     Bukkit.getScheduler().runTaskLater(plugin, () -> {
                         double r = fr * 1.9;
                         for (int i = 0; i < 24; i++) { double a = Math.toRadians(i*15);
-                            w.spawnParticle(Particle.BLOCK_CRACK, loc.clone().add(Math.cos(a)*r,0.2,Math.sin(a)*r), 4, 0, 0.6, 0, 0.14, Material.STONE.createBlockData());
+                            w.spawnParticle(Particle.DUST_PLUME, loc.clone().add(Math.cos(a)*r,0.2,Math.sin(a)*r), 4, 0, 0.6, 0, 0.14, Material.STONE.createBlockData());
                         }
                     }, ring * 3L);
                 }
