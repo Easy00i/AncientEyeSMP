@@ -121,7 +121,7 @@ public class PlayerDataManager {
 
     // Public method — called by onDisable() to force-save before shutdown
     public void saveAllData() { saveData(); }
-    private void saveData() {
+    public void saveData() {
         // 1. Pehle purana players section poora saaf karo taaki junk data na rahe
         dataConfig.set("players", null); 
 
