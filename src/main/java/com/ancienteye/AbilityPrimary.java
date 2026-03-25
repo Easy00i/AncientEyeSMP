@@ -295,7 +295,7 @@ public class AbilityPrimary {
                         ticks++;
                         Location cur = p.getLocation();
                         if (ticks % 2 == 0) {
-                            w.spawnParticle(Particle.BLOCK_CRACK, cur, 15, 1.2, 0.1, 1.2, 0.05, Material.STONE.createBlockData());
+                            w.spawnParticle(Particle.DUST_PLUME, cur, 15, 1.2, 0.1, 1.2, 0.05, Material.STONE.createBlockData());
                             w.spawnParticle(Particle.DUST, cur, 10, 1.5, 2.5, 1.5, 0, new Particle.DustOptions(Color.fromRGB(120, 80, 40), 2.0f));
                         }
                         if (ticks % 10 == 0) {
