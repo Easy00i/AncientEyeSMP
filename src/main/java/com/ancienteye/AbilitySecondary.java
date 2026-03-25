@@ -12,7 +12,7 @@ import org.bukkit.util.Vector;
 import org.bukkit.inventory.ItemStack;
 import java.util.*;
 
-public class AbilitySecondary {
+public class AbilityPrimary implements Listener {
 
     private final AncientEyePlugin plugin;
     private final AbilityLogic logic;
