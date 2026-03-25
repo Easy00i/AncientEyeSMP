@@ -34,18 +34,70 @@ public class AbilityPrimary implements Listener {
 
         switch (eye) {
 
-            // ── VOID — Void Blink ─────────────────────────────────────────
-            case VOID -> {
-                logic.voidRift(w, loc);
-                w.playSound(loc, Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 0.6f);
-                w.playSound(loc, Sound.BLOCK_PORTAL_AMBIENT, 0.5f, 1.5f);
-                for (int i = 1; i <= 8; i++)
-                    w.spawnParticle(Particle.PORTAL, loc.clone().add(dir.clone().multiply(i)), 5, 0.15, 0.35, 0.15, 0.08);
-                Location dest = logic.safe(loc.clone().add(dir.clone().multiply(8)));
-                logic.voidRift(w, dest);
-                w.strikeLightningEffect(dest);
-                p.teleport(dest);
+                        case VOID -> {
+                Location center = p.getLocation();
+                int size = 8; // 16x16 ka box matlab radius 8
+                long durationTicks = 200L; // 10 seconds
+                
+                // 1. Box Banane ka Logic (3 Seconds = 60 Ticks)
+                new BukkitRunnable() {
+                    int layer = 0;
+                    final Map<Location, org.bukkit.block.BlockState> oldBlocks = new HashMap<>();
+
+                    @Override
+                    public void run() {
+                        if (layer > size) { // Box complete
+                            this.cancel();
+                            
+                            // 2. 10 Seconds ka Wait aur Darkness Effect
+                            new BukkitRunnable() {
+                                @Override
+                                public void run() {
+                                    // 3. Box Hatane ka Logic (3 Seconds)
+                                    removeBoxGradually(center, size, oldBlocks);
+                                }
+                            }.runTaskLater(plugin, durationTicks);
+                            return;
+                        }
+
+                        // Ek-ek karke walls aur roof banana (Animation)
+                        for (int x = -size; x <= size; x++) {
+                            for (int y = 0; y <= size; y++) {
+                                for (int z = -size; z <= size; z++) {
+                                    // Check agar ye boundary (wall/floor/roof) hai
+                                    if (Math.abs(x) == size || y == 0 || y == size || Math.abs(z) == size) {
+                                        Location bLoc = center.clone().add(x, y, z);
+                                        // Sirf agar hawa hai ya replaceable block hai
+                                        if (bLoc.getBlock().getType() == Material.AIR || bLoc.getBlock().isPassable()) {
+                                            if (!oldBlocks.containsKey(bLoc)) {
+                                                oldBlocks.put(bLoc, bLoc.getBlock().getState());
+                                                bLoc.getBlock().setType(Material.OBSIDIAN);
+                                                
+                                                // Sound aur Particle
+                                                if (layer % 2 == 0) {
+                                                    bLoc.getWorld().playSound(bLoc, Sound.BLOCK_STONE_PLACE, 0.5f, 0.5f);
+                                                    bLoc.getWorld().spawnParticle(Particle.PORTAL, bLoc, 2, 0.1, 0.1, 0.1, 0.05);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Enamy ko Darkness dena (Box ke andar)
+                        for (Entity e : center.getWorld().getNearbyEntities(center, size, size, size)) {
+                            if (e instanceof Player target && !target.equals(p)) {
+                                target.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 40, 1, false, false));
+                                target.addPotionEffect(new PotionEffect(PotionEffectType.BLINDNESS, 40, 1, false, false));
+                            }
+                        }
+                        
+                        layer++;
+                    }
+                }.runTaskTimer(plugin, 0L, 3L); // 3 ticks delay per layer (approx 3s total)
             }
+
 
             // ── PHANTOM — Arcane Circle Trap ──────────────────────────────
             case PHANTOM -> {
