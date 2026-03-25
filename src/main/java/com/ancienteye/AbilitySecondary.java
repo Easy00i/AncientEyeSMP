@@ -404,8 +404,8 @@ public class AbilitySecondary {
             // ── EARTH — Slam ──────────────────────────────────────────────
             // ✅ FIX: BLOCK_CRACK instead of DUST_PLUME
             case EARTH -> {
-                w.spawnParticle(Particle.BLOCK_CRACK, loc, 160, 3, 0.2, 3, 0.26, Material.DIRT.createBlockData());
-                w.spawnParticle(Particle.BLOCK_CRACK, loc, 100, 3, 0.2, 3, 0.26, Material.STONE.createBlockData());
+                w.spawnParticle(Particle.DUST_PLUME, loc, 160, 3, 0.2, 3, 0.26, Material.DIRT.createBlockData());
+                w.spawnParticle(Particle.DUST_PLUME, loc, 100, 3, 0.2, 3, 0.26, Material.STONE.createBlockData());
                 w.spawnParticle(Particle.EXPLOSION, loc, 4, 0.9, 0, 0.9, 0);
                 for (int ring = 1; ring <= 5; ring++) { final int fr = ring;
                     Bukkit.getScheduler().runTaskLater(plugin, () -> {
