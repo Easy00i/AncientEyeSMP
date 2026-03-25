@@ -800,8 +800,7 @@ public class EventManager implements Listener {
                 StringBuilder pb = new StringBuilder("§5§l[");
                 for (int i = 0; i < 20; i++) pb.append(i < filled ? "§e█" : "§8█");
                 pb.append("§5§l] §e").append(pct).append("%");
-                winner.spigot().sendMessage(ChatMessageType.ACTION_BAR,
-                    new TextComponent("§5§l✨ Binding " + reward.name() + "  " + pb));
+                winner.sendActionBar("§5§l✨ Binding " + reward.name() + "  " + pb);
             }
 
             angle[0] += 12;
@@ -837,7 +836,7 @@ public class EventManager implements Listener {
             }
 
             if (tick[0] % 3 == 0) {
-                Location loc = winner.getLocation();
+                Location loc = winner.getLocation().clone();
                 for (int y = 0; y <= 22; y++) {
                     winner.getWorld().spawnParticle(Particle.DRAGON_BREATH,
                             loc.clone().add(0, y, 0), 2, 0.12, 0, 0.12, 0);
@@ -944,7 +943,7 @@ public class EventManager implements Listener {
             }
             if (winner.isOnline()) {
                 // Clear action bar message and remove levitation
-                winner.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(""));
+                winner.sendActionBar(" ");
                 winner.removePotionEffect(PotionEffectType.LEVITATION);
             }
         } catch (Exception e) {
