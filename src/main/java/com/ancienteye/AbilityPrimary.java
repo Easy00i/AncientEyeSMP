@@ -1050,6 +1050,7 @@ case ECLIPSE -> {
         }
         p.playSound(loc, Sound.ENTITY_ENDER_EYE_DEATH, 0.8f, 1f);
     }
+}
 
                     private void mRing(World world, Location center, double radius, int pts, double offset) {
                         for (int i = 0; i < pts; i++) {
