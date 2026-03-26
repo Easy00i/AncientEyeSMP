@@ -35,24 +35,76 @@ public class AbilitySecondary implements Listener {
 
         switch (eye) {
 
-            // ── VOID — Void Trap ──────────────────────────────────────────
-            case VOID -> {
-                w.spawnParticle(Particle.PORTAL,         loc, 120, 2.5, 2.5, 2.5, 0.18);
-                w.spawnParticle(Particle.REVERSE_PORTAL, loc,  80, 2.0, 2.0, 2.0, 0.12);
-                w.spawnParticle(Particle.DRAGON_BREATH,  loc,  50, 1.5, 1.5, 1.5, 0.06);
-                w.playSound(loc, Sound.BLOCK_BEACON_AMBIENT, 1f, 0.3f);
-                w.playSound(loc, Sound.ENTITY_ENDERMAN_SCREAM, 0.6f, 0.4f);
-                for (int wave = 0; wave < 3; wave++) { final int fw = wave;
-                    Bukkit.getScheduler().runTaskLater(plugin, () ->
-                        p.getNearbyEntities(12, 12, 12).forEach(e -> {
-                            if (e instanceof LivingEntity le && e != p) {
-                                Vector vel = loc.toVector().subtract(e.getLocation().toVector()).normalize().multiply(2.2);
-                                le.damage(2.5 * dm, p);
-                                Bukkit.getScheduler().runTaskLater(plugin, () -> { if (e.isValid()) e.setVelocity(vel); }, 1L);
-                            }
-                        }), wave * 10L);
+                   case VOID -> {
+                // 1. Aim Based Targeting (15 blocks ki range mein)
+                org.bukkit.entity.Entity target = p.getTargetEntity(15);
+                
+                // Agar samne koi enemy nahi hai, toh ability waste na ho
+                if (!(target instanceof org.bukkit.entity.LivingEntity enamy)) {
+                    p.sendMessage("§c⚠️ Aim mein koi enemy nahi hai!");
+                    return;
                 }
+
+                Location loc = enamy.getLocation();
+                long durationTicks = 100L; // 5 seconds (20 ticks = 1s)
+
+                // 2. Freeze aur Darkness Effects (5 seconds ka timer)
+                enamy.addPotionEffect(new org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.DARKNESS, (int) durationTicks, 1, false, false));
+                enamy.addPotionEffect(new org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.BLINDNESS, (int) durationTicks, 1, false, false));
+                // Move aur Jump block karne ke liye (Freeze effect)
+                enamy.addPotionEffect(new org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.SLOW, (int) durationTicks, 255, false, false));
+                enamy.addPotionEffect(new org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.JUMP, (int) durationTicks, 250, false, false));
+
+                // Trap Activate Sound
+                w.playSound(loc, Sound.BLOCK_BEACON_ACTIVATE, 1f, 0.5f);
+                w.playSound(loc, Sound.ENTITY_ENDERMAN_STARE, 0.8f, 0.5f);
+
+                // 3. Particle Task (Jail aur Orbiting Ring)
+                new org.bukkit.scheduler.BukkitRunnable() {
+                    int ticks = 0;
+                    double ringAngle = 0;
+
+                    @Override
+                    public void run() {
+                        // Agar 5 second (100 ticks) pure ho gaye YA enemy mar gaya/leave kar diya
+                        if (ticks >= durationTicks || !enamy.isValid()) {
+                            // Trap tutne ka sound
+                            w.playSound(enamy.getLocation(), Sound.BLOCK_GLASS_BREAK, 1f, 0.5f);
+                            w.playSound(enamy.getLocation(), Sound.BLOCK_BEACON_DEACTIVATE, 1f, 1f);
+                            this.cancel();
+                            return;
+                        }
+
+                        Location eLoc = enamy.getLocation();
+
+                        // --- SHAPE 1: DARK JAIL (Black Smoke ki deewarein) ---
+                        // 8 pillars banayenge target ke charo taraf
+                        for (int i = 0; i < 8; i++) {
+                            double angle = (Math.PI / 4) * i;
+                            double x = Math.cos(angle) * 1.2;
+                            double z = Math.sin(angle) * 1.2;
+                            
+                            // Niche se upar tak particle (Jail ke sariye)
+                            for (double y = 0; y <= 2.5; y += 0.5) {
+                                w.spawnParticle(Particle.SMOKE_LARGE, eLoc.clone().add(x, y, z), 1, 0, 0, 0, 0);
+                            }
+                        }
+
+                        // --- SHAPE 2: ORBITING VOID RING (Bich mein ghoomne wala ring) ---
+                        ringAngle += 0.4; // Ghoomne ki speed
+                        for (int i = 0; i < 6; i++) { // Ring ke 6 points
+                            double orbit = ringAngle + (Math.PI / 3) * i;
+                            double rx = Math.cos(orbit) * 1.5;
+                            double rz = Math.sin(orbit) * 1.5;
+                            // Y + 1.2 matlab enemy ki kamar/chhati ke paas ghoomega
+                            w.spawnParticle(Particle.PORTAL, eLoc.clone().add(rx, 1.2, rz), 2, 0, 0, 0, 0);
+                        }
+
+                        ticks += 2; // Har 2 ticks mein update hoga
+                    }
+                }.runTaskTimer(plugin, 0L, 2L);
             }
+
 
             // ── PHANTOM — Reveal ──────────────────────────────────────────
             case PHANTOM -> {
