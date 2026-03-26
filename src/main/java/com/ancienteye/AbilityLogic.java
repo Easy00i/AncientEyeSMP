@@ -149,7 +149,7 @@ public void onMinionDamage(EntityDamageByEntityEvent event) {
         }
     }
 
-    private String getDirectionLabel(Player from, Player to) {
+    public String getDirectionLabel(Player from, Player to) {
         double dx    = to.getLocation().getX() - from.getLocation().getX();
         double dz    = to.getLocation().getZ() - from.getLocation().getZ();
         double angle = Math.toDegrees(Math.atan2(dz, dx));
@@ -298,7 +298,7 @@ public void onMinionDamage(EntityDamageByEntityEvent event) {
         return (r != null && r.getHitEntity() instanceof LivingEntity le) ? le : null;
     }
 
-    void crystalAura(Player p) {
+  public  void crystalAura(Player p) {
         World w = p.getWorld(); Location l = p.getLocation();
         Particle.DustOptions d = new Particle.DustOptions(Color.fromRGB(100,220,255), 2f);
         for (double a = 0; a < Math.PI*2; a += Math.PI/10) {
@@ -309,7 +309,7 @@ public void onMinionDamage(EntityDamageByEntityEvent event) {
         w.spawnParticle(Particle.END_ROD, l, 40, 0.5, 1.2, 0.5, 0.04);
     }
 
-    void voidRift(World w, Location l) {
+  public  void voidRift(World w, Location l) {
         w.spawnParticle(Particle.PORTAL,         l, 70, 0.6, 0.9, 0.6, 0.28);
         w.spawnParticle(Particle.REVERSE_PORTAL, l, 45, 0.4, 0.7, 0.4, 0.16);
         w.spawnParticle(Particle.DRAGON_BREATH,  l, 30, 0.3, 0.5, 0.3, 0.06);
@@ -330,7 +330,7 @@ public void onMinionDamage(EntityDamageByEntityEvent event) {
         return i;
     }
 
-    void whiteLightScreen(Player ep, int durationTicks, AncientEyePlugin plug) {
+   public void whiteLightScreen(Player ep, int durationTicks, AncientEyePlugin plug) {
         new BukkitRunnable() {
             int t = 0;
             @Override
@@ -357,7 +357,7 @@ public void onMinionDamage(EntityDamageByEntityEvent event) {
         return sb.toString();
     }
 
-    void restoreOrDrop(Player p, ItemStack stored, Runnable setter, ItemStack current) {
+     public void restoreOrDrop(Player p, ItemStack stored, Runnable setter, ItemStack current) {
         if (stored == null) return;
         boolean slotEmpty = (current == null || current.getType() == Material.AIR);
         if (slotEmpty) {
@@ -370,7 +370,7 @@ public void onMinionDamage(EntityDamageByEntityEvent event) {
     }
 
     // Eclipse blast helper
-    void doEclipseBlast(Player p, World w, Location blastLoc, double dmg, AncientEyePlugin plug) {
+    public void doEclipseBlast(Player p, World w, Location blastLoc, double dmg, AncientEyePlugin plug) {
         double localDm = getDmg(p);
         w.spawnParticle(Particle.SQUID_INK,         blastLoc, 60, 0.5, 0.5, 0.5, 0.15);
         w.spawnParticle(Particle.DRAGON_BREATH,     blastLoc, 80, 0.8, 0.8, 0.8, 0.08);
@@ -437,7 +437,7 @@ public void onMinionDamage(EntityDamageByEntityEvent event) {
     
 
     // ✅ FIX: owner is always excluded
-    void applySafeDamage(Player owner, Location loc, double radius, double damage) {
+  public void applySafeDamage(Player owner, Location loc, double radius, double damage) {
         loc.getWorld().getNearbyEntities(loc, radius, radius, radius).forEach(entity -> {
             if (!(entity instanceof LivingEntity victim)) return;
             if (entity.equals(owner)) return; // Owner ko kuch nahi
