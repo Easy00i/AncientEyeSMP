@@ -930,8 +930,7 @@ case TITAN -> {
                     }
                 }.runTaskTimer(plugin, 0, 1);
             }
-
-            // ── ECLIPSE PRIMARY — Black Cube + Blast ─────────────────────
+// ── ECLIPSE PRIMARY — Black Cube + Blast ─────────────────────
 case ECLIPSE -> {
     double dmg = logic.ecfg("ECLIPSE", "primary-damage", 18.0);
     LivingEntity target = logic.aim(p, 30.0);
@@ -941,6 +940,7 @@ case ECLIPSE -> {
     w.playSound(target.getLocation(), Sound.ENTITY_ENDERMAN_STARE, 0.8f, 0.5f);
 
     final boolean[] blasted = {false};
+    final Location[] cubeLocation = {target.getLocation().clone()}; // ✅ LINE 1 - ADD THIS
 
     new BukkitRunnable() {
         int ticks = 0;
@@ -956,9 +956,10 @@ case ECLIPSE -> {
                 cancel(); return;
             }
 
-            ticks += 2; // ✅ FIX (time sync)
+            ticks += 2;
+            cubeLocation[0] = target.getLocation().clone(); // ✅ LINE 2 - ADD THIS
 
-            if (ticks <= 60) { // ✅ FIX (3 seconds cube)
+            if (ticks <= 60) {
 
                 cubeAngle += 0.12;
 
@@ -1015,7 +1016,7 @@ case ECLIPSE -> {
                 w.spawnParticle(Particle.SQUID_INK, body, 2, 0.1, 0.1, 0.1, 0.01);
                 w.spawnParticle(Particle.DRAGON_BREATH, body, 3, 0.15, 0.15, 0.15, 0.02);
 
-                if (ticks % 20 == 0) { // ✅ FIX (sound sync)
+                if (ticks % 20 == 0) {
                     float pitch = 0.4f + (ticks/60f)*1.2f;
                     w.playSound(target.getLocation(), Sound.ENTITY_ENDERMAN_AMBIENT, 0.6f, pitch);
                 }
@@ -1025,9 +1026,8 @@ case ECLIPSE -> {
                 if (!blasted[0]) {
                     blasted[0] = true;
 
-                    Location blastLoc = target.getLocation().clone().add(0,1,0);
+                    Location blastLoc = cubeLocation[0].clone().add(0,1,0); // ✅ LINE 3 - CHANGE THIS (pehle target.getLocation() tha)
 
-                    // ✅ FIX: delay blast (2 sec baad)
                     Bukkit.getScheduler().runTaskLater(plugin, () -> {
                         logic.doEclipseBlast(p, w, blastLoc, dmg, plugin);
                     }, 40L);
