@@ -45,15 +45,15 @@ public class AbilitySecondary implements Listener {
                     return;
                 }
 
-                Location loc = enamy.getLocation();
+                Location targetLoc = enamy.getLocation();
                 long durationTicks = 100L; // 5 seconds (20 ticks = 1s)
 
                 // 2. Freeze aur Darkness Effects (5 seconds ka timer)
                 enamy.addPotionEffect(new org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.DARKNESS, (int) durationTicks, 1, false, false));
                 enamy.addPotionEffect(new org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.BLINDNESS, (int) durationTicks, 1, false, false));
                 // Move aur Jump block karne ke liye (Freeze effect)
-                enamy.addPotionEffect(new org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.SLOW, (int) durationTicks, 255, false, false));
-                enamy.addPotionEffect(new org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.JUMP, (int) durationTicks, 250, false, false));
+                enamy.addPotionEffect(new org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.SLOWNESS, (int) durationTicks, 255, false, false));
+                enamy.addPotionEffect(new org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.JUMP_BOOST, (int) durationTicks, 250, false, false));
 
                 // Trap Activate Sound
                 w.playSound(loc, Sound.BLOCK_BEACON_ACTIVATE, 1f, 0.5f);
@@ -86,7 +86,7 @@ public class AbilitySecondary implements Listener {
                             
                             // Niche se upar tak particle (Jail ke sariye)
                             for (double y = 0; y <= 2.5; y += 0.5) {
-                                w.spawnParticle(Particle.SMOKE_LARGE, eLoc.clone().add(x, y, z), 1, 0, 0, 0, 0);
+                                w.spawnParticle(Particle.LARGE_SMOKE, eLoc.clone().add(x, y, z), 1, 0, 0, 0, 0);
                             }
                         }
 
