@@ -886,20 +886,6 @@ case TITAN -> {
                         if (ticks % 20 == 0) w.playSound(base, Sound.BLOCK_BEACON_AMBIENT, 1f, 0.3f);
                         if (ticks % 7  == 0) w.playSound(base, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.25f, 2f);
                     }
-                    private void mRing(World world, Location center, double radius, int pts, double offset) {
-                        for (int i = 0; i < pts; i++) {
-                            double a = (Math.PI*2.0/pts)*i + offset;
-                            Location pt = center.clone().add(Math.cos(a)*radius, 0, Math.sin(a)*radius);
-                            world.spawnParticle(Particle.DUST, pt, 1,0,0,0,0, new Particle.DustOptions(Color.fromRGB(255,50,0), 1.8f));
-                        }
-                    }
-                    private void mLine(World world, Location from, Location to, int steps) {
-                        for (int i = 0; i <= steps; i++) {
-                            double t = (double)i/steps;
-                            Location pt = from.clone().add((to.getX()-from.getX())*t,(to.getY()-from.getY())*t,(to.getZ()-from.getZ())*t);
-                            world.spawnParticle(Particle.DUST, pt, 1,0,0,0,0, new Particle.DustOptions(Color.fromRGB(200,40,0), 1.5f));
-                        }
-                    }
                 }.runTaskTimer(plugin, 0, 1);
             }
 
@@ -1064,4 +1050,19 @@ case ECLIPSE -> {
         }
         p.playSound(loc, Sound.ENTITY_ENDER_EYE_DEATH, 0.8f, 1f);
     }
-}
+
+                    private void mRing(World world, Location center, double radius, int pts, double offset) {
+                        for (int i = 0; i < pts; i++) {
+                            double a = (Math.PI*2.0/pts)*i + offset;
+                            Location pt = center.clone().add(Math.cos(a)*radius, 0, Math.sin(a)*radius);
+                            world.spawnParticle(Particle.DUST, pt, 1,0,0,0,0, new Particle.DustOptions(Color.fromRGB(255,50,0), 1.8f));
+                        }
+                    }
+                    private void mLine(World world, Location from, Location to, int steps) {
+                        for (int i = 0; i <= steps; i++) {
+                            double t = (double)i/steps;
+                            Location pt = from.clone().add((to.getX()-from.getX())*t,(to.getY()-from.getY())*t,(to.getZ()-from.getZ())*t);
+                            world.spawnParticle(Particle.DUST, pt, 1,0,0,0,0, new Particle.DustOptions(Color.fromRGB(200,40,0), 1.5f));
+                        }
+                    }
+               }
