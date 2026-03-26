@@ -41,7 +41,7 @@ public class AbilitySecondary implements Listener {
                 
                 // Agar samne koi enemy nahi hai, toh ability waste na ho
                 if (!(target instanceof org.bukkit.entity.LivingEntity enamy)) {
-                    p.sendMessage("§c⚠️ Aim mein koi enemy nahi hai!");
+                    p.sendMessage("§c⚠️ No Target found!");
                     return;
                 }
 
