@@ -779,12 +779,26 @@ case TITAN -> {
                 mirDir.setY(0); mirDir.normalize();
                 final Location base = p.getLocation().clone().add(mirDir.multiply(10));
                 base.setY(p.getLocation().getY());
-                new BukkitRunnable() {
-                    int    ticks = 0;
-                    double spin  = 0;
-                    public void run() {
-                        if (!p.isOnline() || p.isDead()) { cancel(); return; }
-                        if (ticks++ >= 200) {
+                final boolean[] blasted = {false}; // ✅ Flag to prevent multiple blasts
+    
+    new BukkitRunnable() {
+        int    ticks = 0;
+        double spin  = 0;
+        public void run() {
+            if (!p.isOnline() || p.isDead()) { 
+                if (!blasted[0]) {
+                    blasted[0] = true;
+                    // Optional: cleanup effect if needed
+                }
+                cancel(); 
+                return; 
+            }
+            
+            if (ticks++ >= 200) {
+                // ✅ Only blast once
+                if (!blasted[0]) {
+                    blasted[0] = true;
+
                             // ✅ FIX: NO block break — manual damage only
                             w.playSound(base, Sound.ENTITY_GENERIC_EXPLODE, 3f, 0.3f);
                             w.playSound(base, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 2f, 0.5f);
