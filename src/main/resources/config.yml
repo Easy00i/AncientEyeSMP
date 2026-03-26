@@ -8,6 +8,7 @@
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 settings:
   particles-enabled: true
+  particle-interval: 5
   kills-for-level-2: 5
   kills-for-level-3: 10
 
