@@ -351,7 +351,7 @@ case TITAN -> {
 
     // ✅ Paper ONLY (agar support karta hai to player bada dikhega)
     try {
-        p.getAttribute(org.bukkit.attribute.Attribute.GENERIC_SCALE).setBaseValue(2.0); // 1.0 = normal
+        p.getAttribute(org.bukkit.attribute.Attribute.GENERIC_SCALE).setBaseValue(4.0); // 1.0 = normal
     } catch (Exception ignored) {}
 
     p.setMetadata("TitanMode", new org.bukkit.metadata.FixedMetadataValue(plugin, true));
