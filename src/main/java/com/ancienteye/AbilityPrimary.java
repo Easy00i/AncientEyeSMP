@@ -816,6 +816,9 @@ case TITAN -> {
                             }
                             cancel(); return;
                         }
+                          return;
+                      }
+            
                         spin += 0.05;
                         final double TOP = 18.0;
                         // ✅ Bigger rings
