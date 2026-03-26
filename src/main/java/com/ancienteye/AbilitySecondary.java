@@ -898,64 +898,61 @@ case GRAVITY -> {
                     }
                 }.runTaskTimer(plugin, 0, 8);
             }
+// ── MIRAGE — Warden Minions ────────────────────────────────────
+// ✅ FIX: owner safe, follow, 10s remove
+case MIRAGE -> {
+    w.playSound(p.getLocation(), Sound.ENTITY_ILLUSIONER_MIRROR_MOVE, 1.5f, 0.5f);
+    w.playSound(p.getLocation(), Sound.ENTITY_WARDEN_EMERGE, 1.0f, 0.7f);
+    w.spawnParticle(Particle.CAMPFIRE_COSY_SMOKE, p.getLocation(), 80, 2, 1, 2, 0.05);
+    w.spawnParticle(Particle.SQUID_INK, p.getLocation(), 50, 1.5, 1, 1.5, 0.1);
+    java.util.List<Warden> minions = new java.util.ArrayList<>();
+    for (int i = 0; i < 5; i++) {
+        double angle = i * (Math.PI * 2 / 5);
+        Location spawnLoc = p.getLocation().clone().add(Math.cos(angle)*3, 0, Math.sin(angle)*3);
+        Warden warden = (Warden) w.spawnEntity(spawnLoc, org.bukkit.entity.EntityType.WARDEN);
+        warden.setCustomName("§7" + p.getName() + "'s §3Minion");
+        warden.setCustomNameVisible(true);
+        warden.setRemoveWhenFarAway(true);
 
-            // ── MIRAGE — Warden Minions ────────────────────────────────────
-            // ✅ FIX: owner safe, follow, 10s remove
-            case MIRAGE -> {
-                w.playSound(p.getLocation(), Sound.ENTITY_ILLUSIONER_MIRROR_MOVE, 1.5f, 0.5f);
-                w.playSound(p.getLocation(), Sound.ENTITY_WARDEN_EMERGE, 1.0f, 0.7f);
-                w.spawnParticle(Particle.CAMPFIRE_COSY_SMOKE, p.getLocation(), 80, 2, 1, 2, 0.05);
-                w.spawnParticle(Particle.SQUID_INK, p.getLocation(), 50, 1.5, 1, 1.5, 0.1);
-                java.util.List<Warden> minions = new java.util.ArrayList<>();
-                for (int i = 0; i < 5; i++) {
-                    double angle = i * (Math.PI * 2 / 5);
-                    Location spawnLoc = p.getLocation().clone().add(Math.cos(angle)*3, 0, Math.sin(angle)*3);
-                    Warden warden = (Warden) w.spawnEntity(spawnLoc, org.bukkit.entity.EntityType.WARDEN);
-                    warden.setCustomName("§7" + p.getName() + "'s §3Minion");
-                    warden.setCustomNameVisible(true);
-                    warden.setRemoveWhenFarAway(true);
-
-                     warden.setAI(true);
-                     warden.setSilent(true);
-                     warden.setCollidable(false);
-                    
-                    
-                    warden.setMetadata("MinionOf", new org.bukkit.metadata.FixedMetadataValue(plugin, p.getUniqueId().toString()));
-                    minions.add(warden);
-                    w.spawnParticle(Particle.SONIC_BOOM, spawnLoc.add(0, 1, 0), 1, 0, 0, 0, 0);
-                }
-                new BukkitRunnable() {
-                    int ticks = 0;
-                    public void run() {
-                        if (ticks >= 200 || !p.isOnline()) {
-                            for (Warden m : minions) {
-                                if (m.isValid()) {
-                                    w.spawnParticle(Particle.FLASH, m.getLocation().add(0, 1, 0), 5, 0.5, 0.5, 0.5, 0.05);
-                                    m.remove();
-                                }
-                            }
-                            cancel(); return;
-                        }
-                        for (Warden m : minions) {
-                            if (!m.isValid()) continue;
-                            // Follow owner
-                            if (m.getLocation().distance(p.getLocation()) > 10) {
-                                Location target = p.getLocation();
-                               Location current = m.getLocation();
-
-                               Vector dir = target.toVector().subtract(current.toVector()).normalize();
-                               m.setVelocity(dir.multiply(0.4));
-                            }
-                            // ✅ Owner ko target nahi karega
-                            if (m.getTarget() != null && m.getTarget().equals(p)) {
-                                m.setTarget(null);
-                            }
-                        }
-                        ticks += 10;
-                    }
-                }.runTaskTimer(plugin, 0, 10);
-            }
-        }
-        p.playSound(loc, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.8f, 0.5f);
+        warden.setAI(true);
+        warden.setSilent(true);
+        warden.setCollidable(false);
+        
+        // ✅ ADD THIS LINE - Darkness effect owner ko nahi lagega
+        warden.addPotionEffect(new PotionEffect(PotionEffectType.DARKNESS, 999999, 0, false, false, false));
+        
+        warden.setMetadata("MinionOf", new org.bukkit.metadata.FixedMetadataValue(plugin, p.getUniqueId().toString()));
+        minions.add(warden);
+        w.spawnParticle(Particle.SONIC_BOOM, spawnLoc.add(0, 1, 0), 1, 0, 0, 0, 0);
     }
+    new BukkitRunnable() {
+        int ticks = 0;
+        public void run() {
+            if (ticks >= 200 || !p.isOnline()) {
+                for (Warden m : minions) {
+                    if (m.isValid()) {
+                        w.spawnParticle(Particle.FLASH, m.getLocation().add(0, 1, 0), 5, 0.5, 0.5, 0.5, 0.05);
+                        m.remove();
+                    }
+                }
+                cancel(); return;
+            }
+            for (Warden m : minions) {
+                if (!m.isValid()) continue;
+                // Follow owner
+                if (m.getLocation().distance(p.getLocation()) > 10) {
+                    Location target = p.getLocation();
+                    Location current = m.getLocation();
+
+                    Vector dir = target.toVector().subtract(current.toVector()).normalize();
+                    m.setVelocity(dir.multiply(0.4));
+                }
+                // ✅ Owner ko target nahi karega
+                if (m.getTarget() != null && m.getTarget().equals(p)) {
+                    m.setTarget(null);
+                }
+            }
+            ticks += 10;
+        }
+    }.runTaskTimer(plugin, 0, 10);
 }
