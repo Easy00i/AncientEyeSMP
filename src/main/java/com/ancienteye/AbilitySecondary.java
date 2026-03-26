@@ -671,13 +671,17 @@ case GRAVITY -> {
 
             // ── TIME — Time Dash ──────────────────────────────────────────
             case TIME -> {
-                final Vector dashDir = p.getEyeLocation().getDirection().normalize();
+                Vector dashDir = p.getEyeLocation().getDirection().clone();
+                dashDir.setY(0);
+               if (dashDir.length() < 0.1) dashDir = p.getLocation().getDirection().clone().setY(0);
+               dashDir.normalize();
+             final Vector finalDashDir = dashDir.clone();
                 w.spawnParticle(Particle.ELECTRIC_SPARK, loc, 60, 0.3, 0.5, 0.3, 0.15);
                 w.spawnParticle(Particle.FLASH, loc, 1, 0, 0, 0, 0);
                 w.spawnParticle(Particle.REVERSE_PORTAL, loc, 30, 0.4, 0.6, 0.4, 0.1);
                 w.playSound(loc, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.6f, 2.0f);
                 w.playSound(loc, Sound.ENTITY_ELDER_GUARDIAN_CURSE, 0.4f, 2.0f);
-                p.setVelocity(dashDir.clone().multiply(2.0).setY(0.4));
+                p.setVelocity(finalDashDir.clone().multiply(2.2).setY(0.6));
                 p.setFallDistance(0f);
                 new BukkitRunnable() {
                     int t = 0; double trailAngle = 0;
@@ -692,7 +696,7 @@ case GRAVITY -> {
                             w.spawnParticle(Particle.ELECTRIC_SPARK, cur.clone().add(Math.cos(a)*0.4, 0.5+Math.sin(a)*0.3, Math.sin(a)*0.4), 1,0,0,0, 0.04);
                         }
                         w.spawnParticle(Particle.END_ROD, cur, 3, 0.1, 0.2, 0.1, 0.02);
-                        if (t < 6) p.setVelocity(dashDir.clone().multiply(1.5).setY(p.getVelocity().getY()));
+                        if (t <= 3 && p.getVelocity().length() < 0.5) p.setVelocity(finalDashDir.clone().multiply(1.8).setY(0.5));
                         p.setFallDistance(0f);
                     }
                 }.runTaskTimer(plugin, 1L, 1L);
