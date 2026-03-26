@@ -59,7 +59,8 @@ public class AbilityPrimary implements Listener {
                                 @Override
                                 public void run() {
                                     // 3. Box Hatane ka Logic (3 Seconds)
-                                    removeBoxGradually(center, size, oldBlocks);
+                                    logic.removeBoxGradually(center, size, oldBlocks);
+
                                 }
                             }.runTaskLater(plugin, durationTicks);
                             return;
