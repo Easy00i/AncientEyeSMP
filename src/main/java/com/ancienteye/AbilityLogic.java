@@ -428,7 +428,7 @@ public void onMinionDamage(EntityDamageByEntityEvent event) {
                 // Wapas purana block lagao (Air ya jo bhi tha)
                 l.getBlock().setType(oldBlocks.get(l).getType());
                 l.getWorld().playSound(l, Sound.BLOCK_STONE_BREAK, 0.4f, 0.8f);
-                l.getWorld().spawnParticle(Particle.SMOKE_NORMAL, l, 1, 0.05, 0.05, 0.05, 0.02);
+                l.getWorld().spawnParticle(Particle.SMOKE, l, 1, 0.05, 0.05, 0.05, 0.02);
                 index++;
             }
         }
