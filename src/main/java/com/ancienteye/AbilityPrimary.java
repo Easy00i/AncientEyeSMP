@@ -823,15 +823,15 @@ case TITAN -> {
                         final double TOP = 18.0;
                         // ✅ Bigger rings
                         Location top = base.clone().add(0, TOP, 0);
-                        mRing(w, top, 10.0, 110, spin);         // bigger
-                        mRing(w, top, 8.0,  90, -spin*1.3);
-                        mRing(w, top, 6.0,  70,  spin*1.8);
-                        mRing(w, top, 4.0,  50, -spin*2.5);
-                        mRing(w, top, 2.5,  35,  spin*3.0);
+                        logic.mRing(w, top, 10.0, 110, spin);         // bigger
+                        logic.mRing(w, top, 8.0,  90, -spin*1.3);
+                        logic.mRing(w, top, 6.0,  70,  spin*1.8);
+                        logic.mRing(w, top, 4.0,  50, -spin*2.5);
+                        logic.mRing(w, top, 2.5,  35,  spin*3.0);
                         for (int i = 0; i < 8; i++) {    // 8 satellite circles
                             double a = (Math.PI*2.0/8)*i + spin;
                             Location sc = top.clone().add(Math.cos(a)*8.5, 0, Math.sin(a)*8.5);
-                            mRing(w, sc, 1.5, 28, -spin*2);
+                            logic.mRing(w, sc, 1.5, 28, -spin*2);
                             for (int s = 0; s < 5; s++) {
                                 double sa  = (Math.PI*2.0/5)*s - spin;
                                 double sa2 = (Math.PI*2.0/5)*((s+2)%5) - spin;
@@ -840,34 +840,34 @@ case TITAN -> {
                         }
                         for (int i = 0; i < 6; i++) {  // Hexagram
                             double a1=(Math.PI*2.0/6)*i+spin, a2=(Math.PI*2.0/6)*((i+2)%6)+spin;
-                            mLine(w, top.clone().add(Math.cos(a1)*6.0,0,Math.sin(a1)*6.0), top.clone().add(Math.cos(a2)*6.0,0,Math.sin(a2)*6.0), 20);
+                            logic.mRing(w, top.clone().add(Math.cos(a1)*6.0,0,Math.sin(a1)*6.0), top.clone().add(Math.cos(a2)*6.0,0,Math.sin(a2)*6.0), 20);
                         }
                         // Middle rings
                         double[][] midData = {{13.0,6.0},{10.0,5.0},{7.0,4.0},{4.5,5.5}};
                         for (int r = 0; r < midData.length; r++) {
                             Location ml = base.clone().add(0, midData[r][0], 0);
                             double ms = (r%2==0) ? spin*1.5 : -spin*1.5;
-                            mRing(w, ml, midData[r][1], 55, ms);
-                            mRing(w, ml, midData[r][1]*0.65, 40, -ms);
+                            logic.mRing(w, ml, midData[r][1], 55, ms);
+                            logic.mRing(w, ml, midData[r][1]*0.65, 40, -ms);
                             for (int i = 0; i < 4; i++) { double a=(Math.PI/2.0)*i+ms;
-                                mLine(w, ml.clone().add(Math.cos(a)*midData[r][1],0,Math.sin(a)*midData[r][1]), ml.clone().add(Math.cos(a+Math.PI)*midData[r][1],0,Math.sin(a+Math.PI)*midData[r][1]), 14);
+                                logic.mRing(w, ml.clone().add(Math.cos(a)*midData[r][1],0,Math.sin(a)*midData[r][1]), ml.clone().add(Math.cos(a+Math.PI)*midData[r][1],0,Math.sin(a+Math.PI)*midData[r][1]), 14);
                             }
                         }
                         // Bottom circle — y=1.5 ground safe
                         Location bot = base.clone().add(0, 1.5, 0);
-                        mRing(w, bot, 8.0, 100, -spin);
-                        mRing(w, bot, 6.5,  80,  spin*1.2);
-                        mRing(w, bot, 5.0,  65, -spin*1.8);
-                        mRing(w, bot, 3.5,  48,  spin*2.5);
-                        mRing(w, bot, 2.0,  32, -spin*3.0);
+                        logic.mRing(w, bot, 8.0, 100, -spin);
+                        logic.mRing(w, bot, 6.5,  80,  spin*1.2);
+                        logic.mRing(w, bot, 5.0,  65, -spin*1.8);
+                        logic.mRing(w, bot, 3.5,  48,  spin*2.5);
+                        logic.mRing(w, bot, 2.0,  32, -spin*3.0);
                         for (int i = 0; i < 6; i++) {
                             double a=(Math.PI*2.0/6)*i-spin;
                             Location sc = bot.clone().add(Math.cos(a)*6.5,0,Math.sin(a)*6.5);
-                            mRing(w, sc, 1.2, 20, spin*2);
+                            logic.mRing(w, sc, 1.2, 20, spin*2);
                         }
                         for (int i = 0; i < 6; i++) {
                             double a1=(Math.PI*2.0/6)*i-spin, a2=(Math.PI*2.0/6)*((i+2)%6)-spin;
-                            mLine(w, bot.clone().add(Math.cos(a1)*5.0,0,Math.sin(a1)*5.0), bot.clone().add(Math.cos(a2)*5.0,0,Math.sin(a2)*5.0), 16);
+                            logic.mRing(w, bot.clone().add(Math.cos(a1)*5.0,0,Math.sin(a1)*5.0), bot.clone().add(Math.cos(a2)*5.0,0,Math.sin(a2)*5.0), 16);
                         }
                         // ✅ Laser y=1.5 se start — ground block touch nahi
                         for (double y = 1.5; y <= TOP; y += 0.18) {
