@@ -957,3 +957,4 @@ case MIRAGE -> {
     }.runTaskTimer(plugin, 0, 10);
 }
         }
+    }
