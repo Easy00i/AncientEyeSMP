@@ -769,128 +769,150 @@ case TITAN -> {
                     }
                 }.runTaskTimer(plugin, 5, 1);
             }
+// ── MIRAGE — Magic Circle ─────────────────────────────────────
+case MIRAGE -> {
+    w.playSound(p.getLocation(), Sound.ENTITY_ILLUSIONER_PREPARE_MIRROR, 1.5f, 0.7f);
+    w.playSound(p.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1f, 0.5f);
+    final Vector mirDir = p.getLocation().getDirection().clone();
+    mirDir.setY(0); mirDir.normalize();
+    final Location base = p.getLocation().clone().add(mirDir.multiply(10));
+    base.setY(p.getLocation().getY());
+    final boolean[] blasted = {false};
 
-            // ── MIRAGE — Magic Circle ─────────────────────────────────────
-            // ✅ FIX: laser y=1.5, no block break, bigger rings
-            case MIRAGE -> {
-                w.playSound(p.getLocation(), Sound.ENTITY_ILLUSIONER_PREPARE_MIRROR, 1.5f, 0.7f);
-                w.playSound(p.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1f, 0.5f);
-                final Vector mirDir = p.getLocation().getDirection().clone();
-                mirDir.setY(0); mirDir.normalize();
-                final Location base = p.getLocation().clone().add(mirDir.multiply(10));
-                base.setY(p.getLocation().getY());
-                final boolean[] blasted = {false}; // ✅ Flag to prevent multiple blasts
-    
     new BukkitRunnable() {
         int    ticks = 0;
         double spin  = 0;
         public void run() {
-            if (!p.isOnline() || p.isDead()) { 
-                if (!blasted[0]) {
-                    blasted[0] = true;
-                    // Optional: cleanup effect if needed
-                }
-                cancel(); 
-                return; 
+            if (!p.isOnline() || p.isDead()) {
+                cancel(); return;
             }
-            
-            if (ticks++ >= 200) {
-                // ✅ Only blast once
-                if (!blasted[0]) {
-                    blasted[0] = true;
 
-                            // ✅ FIX: NO block break — manual damage only
-                            w.playSound(base, Sound.ENTITY_GENERIC_EXPLODE, 3f, 0.3f);
-                            w.playSound(base, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 2f, 0.5f);
-                            w.spawnParticle(Particle.EXPLOSION_EMITTER, base.clone().add(0,1,0), 20, 4, 2, 4, 0);
-                            w.spawnParticle(Particle.FLASH, base.clone().add(0,1,0), 3, 2, 1, 2, 0);
-                            w.createExplosion(base, 25.0f, false, true);
-                            // Manual damage — no block break
-                            for (org.bukkit.entity.Entity e : base.getNearbyEntities(30,30,30)) {
-                                if (!(e instanceof LivingEntity victim)) continue;
-                                if (e.equals(p)) continue;
-                                if (e instanceof Player ep && (ep.getGameMode()==GameMode.CREATIVE||ep.getGameMode()==GameMode.SPECTATOR)) continue;
-                                double dist = e.getLocation().distance(base);
-                                victim.damage(Math.max(5, 60 - dist*1.5), p);
-                                victim.setVelocity(e.getLocation().toVector().subtract(base.toVector()).normalize().multiply(2).setY(0.8));
-                            }
-                            cancel(); return;
-                        }
-                          return;
-                      }
-            
-                        spin += 0.05;
-                        final double TOP = 18.0;
-                        // ✅ Bigger rings
-                        Location top = base.clone().add(0, TOP, 0);
-                        logic.mRing(w, top, 10.0, 110, spin);         // bigger
-                        logic.mRing(w, top, 8.0,  90, -spin*1.3);
-                        logic.mRing(w, top, 6.0,  70,  spin*1.8);
-                        logic.mRing(w, top, 4.0,  50, -spin*2.5);
-                        logic.mRing(w, top, 2.5,  35,  spin*3.0);
-                        for (int i = 0; i < 8; i++) {    // 8 satellite circles
-                            double a = (Math.PI*2.0/8)*i + spin;
-                            Location sc = top.clone().add(Math.cos(a)*8.5, 0, Math.sin(a)*8.5);
-                            logic.mRing(w, sc, 1.5, 28, -spin*2);
-                            for (int s = 0; s < 5; s++) {
-                                double sa  = (Math.PI*2.0/5)*s - spin;
-                                double sa2 = (Math.PI*2.0/5)*((s+2)%5) - spin;
-                                mLine(w, sc.clone().add(Math.cos(sa)*1.3,0,Math.sin(sa)*1.3), sc.clone().add(Math.cos(sa2)*1.3,0,Math.sin(sa2)*1.3), 10);
-                            }
-                        }
-                        for (int i = 0; i < 6; i++) {  // Hexagram
-                            double a1=(Math.PI*2.0/6)*i+spin, a2=(Math.PI*2.0/6)*((i+2)%6)+spin;
-                            logic.mRing(w, top.clone().add(Math.cos(a1)*6.0,0,Math.sin(a1)*6.0), top.clone().add(Math.cos(a2)*6.0,0,Math.sin(a2)*6.0), 20);
-                        }
-                        // Middle rings
-                        double[][] midData = {{13.0,6.0},{10.0,5.0},{7.0,4.0},{4.5,5.5}};
-                        for (int r = 0; r < midData.length; r++) {
-                            Location ml = base.clone().add(0, midData[r][0], 0);
-                            double ms = (r%2==0) ? spin*1.5 : -spin*1.5;
-                            logic.mRing(w, ml, midData[r][1], 55, ms);
-                            logic.mRing(w, ml, midData[r][1]*0.65, 40, -ms);
-                            for (int i = 0; i < 4; i++) { double a=(Math.PI/2.0)*i+ms;
-                                logic.mRing(w, ml.clone().add(Math.cos(a)*midData[r][1],0,Math.sin(a)*midData[r][1]), ml.clone().add(Math.cos(a+Math.PI)*midData[r][1],0,Math.sin(a+Math.PI)*midData[r][1]), 14);
-                            }
-                        }
-                        // Bottom circle — y=1.5 ground safe
-                        Location bot = base.clone().add(0, 1.5, 0);
-                        logic.mRing(w, bot, 8.0, 100, -spin);
-                        logic.mRing(w, bot, 6.5,  80,  spin*1.2);
-                        logic.mRing(w, bot, 5.0,  65, -spin*1.8);
-                        logic.mRing(w, bot, 3.5,  48,  spin*2.5);
-                        logic.mRing(w, bot, 2.0,  32, -spin*3.0);
-                        for (int i = 0; i < 6; i++) {
-                            double a=(Math.PI*2.0/6)*i-spin;
-                            Location sc = bot.clone().add(Math.cos(a)*6.5,0,Math.sin(a)*6.5);
-                            logic.mRing(w, sc, 1.2, 20, spin*2);
-                        }
-                        for (int i = 0; i < 6; i++) {
-                            double a1=(Math.PI*2.0/6)*i-spin, a2=(Math.PI*2.0/6)*((i+2)%6)-spin;
-                            logic.mRing(w, bot.clone().add(Math.cos(a1)*5.0,0,Math.sin(a1)*5.0), bot.clone().add(Math.cos(a2)*5.0,0,Math.sin(a2)*5.0), 16);
-                        }
-                        // ✅ Laser y=1.5 se start — ground block touch nahi
-                        for (double y = 1.5; y <= TOP; y += 0.18) {
-                            Location lp = base.clone().add(0, y, 0);
-                            w.spawnParticle(Particle.DUST, lp, 3, 0.08, 0, 0.08, 0, new Particle.DustOptions(Color.fromRGB(255,255,0), 2.8f));
-                            w.spawnParticle(Particle.DUST, lp, 2, 0.18, 0, 0.18, 0, new Particle.DustOptions(Color.fromRGB(255,210,30), 3.8f));
-                        }
-                        w.spawnParticle(Particle.END_ROD, base.clone().add(0,TOP/2.0,0), 5, 0.25, TOP/2.0*0.85, 0.25, 0.004);
-                        // Damage 30 block radius
-                        if (ticks % 10 == 0) {
-                            for (org.bukkit.entity.Entity e : base.getNearbyEntities(30,30,30)) {
-                                if (!(e instanceof LivingEntity victim)) continue;
-                                if (e.equals(p)) continue;
-                                if (e instanceof Player ep && (ep.getGameMode()==GameMode.CREATIVE||ep.getGameMode()==GameMode.SPECTATOR)) continue;
-                                victim.damage(4.0, p);
-                                e.getWorld().spawnParticle(Particle.DAMAGE_INDICATOR, victim.getLocation().add(0,1,0), 5, 0.3,0.3,0.3,0);
-                            }
-                        }
-                        if (ticks % 20 == 0) w.playSound(base, Sound.BLOCK_BEACON_AMBIENT, 1f, 0.3f);
-                        if (ticks % 7  == 0) w.playSound(base, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.25f, 2f);
+            if (ticks++ >= 200) {
+                if (!blasted[0]) {
+                    blasted[0] = true;
+                    w.playSound(base, Sound.ENTITY_GENERIC_EXPLODE, 3f, 0.3f);
+                    w.playSound(base, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 2f, 0.5f);
+                    w.spawnParticle(Particle.EXPLOSION_EMITTER, base.clone().add(0,1,0), 20, 4, 2, 4, 0);
+                    w.spawnParticle(Particle.FLASH, base.clone().add(0,1,0), 3, 2, 1, 2, 0);
+                    w.createExplosion(base, 25.0f, false, true);
+                    for (org.bukkit.entity.Entity e : base.getNearbyEntities(30,30,30)) {
+                        if (!(e instanceof LivingEntity victim)) continue;
+                        if (e.equals(p)) continue;
+                        if (e instanceof Player ep && (ep.getGameMode()==GameMode.CREATIVE||ep.getGameMode()==GameMode.SPECTATOR)) continue;
+                        double dist = e.getLocation().distance(base);
+                        victim.damage(Math.max(5, 60 - dist*1.5), p);
+                        victim.setVelocity(e.getLocation().toVector().subtract(base.toVector()).normalize().multiply(2).setY(0.8));
                     }
-                }.runTaskTimer(plugin, 0, 1);
+                }
+                cancel(); return;
             }
+
+            spin += 0.05;
+
+            // ── TOP RINGS (build limit tak — y=256) ──────────────────
+            final double TOP = 240.0; // build height tak
+            Location top = base.clone().add(0, TOP, 0);
+            logic.mRing(w, top, 10.0, 110, spin);
+            logic.mRing(w, top, 8.0,  90, -spin*1.3);
+            logic.mRing(w, top, 6.0,  70,  spin*1.8);
+            logic.mRing(w, top, 4.0,  50, -spin*2.5);
+            logic.mRing(w, top, 2.5,  35,  spin*3.0);
+            for (int i = 0; i < 8; i++) {
+                double a = (Math.PI*2.0/8)*i + spin;
+                Location sc = top.clone().add(Math.cos(a)*8.5, 0, Math.sin(a)*8.5);
+                logic.mRing(w, sc, 1.5, 28, -spin*2);
+            }
+            // Hexagram — FIX: removed wrong mRing/mLine calls, replaced with correct
+            for (int i = 0; i < 6; i++) {
+                double a1 = (Math.PI*2.0/6)*i + spin;
+                logic.mRing(w, top, 6.0, 20, a1); // FIX: correct mRing call
+            }
+
+            // ── MIDDLE RINGS ──────────────────────────────────────────
+            double[][] midData = {{50.0,6.0},{80.0,5.0},{120.0,4.0},{160.0,5.5}}; // FIX: higher Y levels
+            for (int r = 0; r < midData.length; r++) {
+                Location ml = base.clone().add(0, midData[r][0], 0);
+                double ms = (r%2==0) ? spin*1.5 : -spin*1.5;
+                logic.mRing(w, ml, midData[r][1], 55, ms);
+                logic.mRing(w, ml, midData[r][1]*0.65, 40, -ms);
+                for (int i = 0; i < 4; i++) {
+                    double a = (Math.PI/2.0)*i + ms;
+                    logic.mRing(w, ml, midData[r][1]*0.5, 14, a); // FIX: correct mRing call
+                }
+            }
+
+            // ── BOTTOM RINGS ──────────────────────────────────────────
+            Location bot = base.clone().add(0, 1.5, 0);
+            logic.mRing(w, bot, 8.0, 100, -spin);
+            logic.mRing(w, bot, 6.5,  80,  spin*1.2);
+            logic.mRing(w, bot, 5.0,  65, -spin*1.8);
+            logic.mRing(w, bot, 3.5,  48,  spin*2.5);
+            logic.mRing(w, bot, 2.0,  32, -spin*3.0);
+            for (int i = 0; i < 6; i++) {
+                double a = (Math.PI*2.0/6)*i - spin;
+                Location sc = bot.clone().add(Math.cos(a)*6.5, 0, Math.sin(a)*6.5);
+                logic.mRing(w, sc, 1.2, 20, spin*2);
+            }
+            for (int i = 0; i < 6; i++) {
+                double a1 = (Math.PI*2.0/6)*i - spin;
+                logic.mRing(w, bot, 5.0, 16, a1); // FIX: correct mRing call
+            }
+
+            // ── LASER — y=1.5 se TOP (240) tak ───────────────────────
+            // Main laser — thick yellow core
+            for (double y = 1.5; y <= TOP; y += 0.15) {
+                Location lp = base.clone().add(0, y, 0);
+                // Core — bright yellow
+                w.spawnParticle(Particle.DUST, lp, 3,
+                    0.06, 0, 0.06, 0,
+                    new Particle.DustOptions(Color.fromRGB(255, 255, 0), 3.0f));
+                // Mid glow — gold
+                w.spawnParticle(Particle.DUST, lp, 2,
+                    0.14, 0, 0.14, 0,
+                    new Particle.DustOptions(Color.fromRGB(255, 200, 0), 2.5f));
+                // Outer glow — white
+                if (((int)(y*10)) % 3 == 0) {
+                    w.spawnParticle(Particle.END_ROD, lp,
+                        1, 0.2, 0, 0.2, 0.002);
+                }
+            }
+
+            // Rotating helixes around laser — advanced visual
+            for (int h = 0; h < 3; h++) {
+                double helixOff = (Math.PI * 2.0 / 3) * h;
+                for (double y = 1.5; y <= TOP; y += 6.0) {
+                    double helixA = spin * 4 + helixOff + y * 0.04;
+                    double hx = Math.cos(helixA) * 0.5;
+                    double hz = Math.sin(helixA) * 0.5;
+                    w.spawnParticle(Particle.DUST,
+                        base.clone().add(hx, y, hz), 1,
+                        0, 0, 0, 0,
+                        new Particle.DustOptions(Color.fromRGB(255, 230, 50), 1.5f));
+                }
+            }
+
+            // Top burst glow
+            if (ticks % 5 == 0) {
+                w.spawnParticle(Particle.FLASH, top, 1, 0, 0, 0, 0);
+                w.spawnParticle(Particle.END_ROD, top, 5, 0.5, 0.2, 0.5, 0.05);
+            }
+
+            // Damage
+            if (ticks % 10 == 0) {
+                for (org.bukkit.entity.Entity e : base.getNearbyEntities(30,30,30)) {
+                    if (!(e instanceof LivingEntity victim)) continue;
+                    if (e.equals(p)) continue;
+                    if (e instanceof Player ep && (ep.getGameMode()==GameMode.CREATIVE||ep.getGameMode()==GameMode.SPECTATOR)) continue;
+                    victim.damage(4.0, p);
+                    e.getWorld().spawnParticle(Particle.DAMAGE_INDICATOR, victim.getLocation().add(0,1,0), 5, 0.3,0.3,0.3,0);
+                }
+            }
+            if (ticks % 20 == 0) w.playSound(base, Sound.BLOCK_BEACON_AMBIENT, 1f, 0.3f);
+            if (ticks % 7  == 0) w.playSound(base, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.25f, 2f);
+        }
+    }.runTaskTimer(plugin, 0, 1);
+}
+
 
             // ── OCEAN — Tsunami Wave ───────────────────────────────────────
             case OCEAN -> {
