@@ -768,7 +768,8 @@ case TITAN -> {
                         }
                     }
                 }.runTaskTimer(plugin, 5, 1);
-            }/ ── MIRAGE — Magic Circle ─────────────────────────────────────
+            }
+                // ── MIRAGE — Magic Circle ─────────────────────────────────────
 case MIRAGE -> {
     w.playSound(p.getLocation(), Sound.ENTITY_ILLUSIONER_PREPARE_MIRROR, 1.5f, 0.7f);
     w.playSound(p.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1f, 0.5f);
