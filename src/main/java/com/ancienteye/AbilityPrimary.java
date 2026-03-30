@@ -937,9 +937,9 @@ case MIRAGE -> {
 // Aim based, 6 seconds, owner safe
 // Photo 2 jaisi white ring structure + center se black beam neeche girega
 case ECLIPSE -> {
-    p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, ticks(200, dr), 3));
-    p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED,       ticks(200, dr), 2));
-    p.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, ticks(220, dr), 0));
+    p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, logic.ticks(200, dr), 3));
+    p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED,       logic.ticks(200, dr), 2));
+    p.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, logic.ticks(220, dr), 0));
 
     // Aim — ground pe raycast
     Location groundLoc = null;
@@ -1003,7 +1003,7 @@ case ECLIPSE -> {
                                 if (!(e instanceof LivingEntity le)) continue;
                                 if (e.getUniqueId().equals(p.getUniqueId())) continue;
                                 if (e instanceof Player ep && (ep.getGameMode()==GameMode.CREATIVE||ep.getGameMode()==GameMode.SPECTATOR)) continue;
-                                le.damage(8.0 * getDmg(p), p);
+                                le.damage(8.0 * logic.getDmg(p), p);
                                 Vector vel = e.getLocation().toVector().subtract(blastLoc.toVector())
                                     .normalize().multiply(3.0).setY(1.2);
                                 Bukkit.getScheduler().runTaskLater(plugin,
