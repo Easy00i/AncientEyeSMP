@@ -858,31 +858,11 @@ public class EventManager implements Listener {
             }
 
             if (tick[0] >= 200) {
-                if (ref[0] != null) ref[0].cancel(); // Task pehle band karo
-                cleanupWin(winner, bar);            // [FIX] cleanup boss bar, action bar, and potion
-
-                winner.getWorld().strikeLightningEffect(winner.getLocation());
-                winner.getWorld().playSound(winner.getLocation(),
-                        Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 1f, 0.5f);
-                winner.getWorld().playSound(winner.getLocation(),
-                        Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1f);
-
-                Location fLoc = winner.getLocation().clone().add(0, 1, 0);  // [FIX] clone location
-                Random rng = new Random();
-                for (int i = 0; i < 40; i++) {
-                    winner.getWorld().spawnParticle(Particle.END_ROD, fLoc, 1,
-                            (rng.nextDouble() - 0.5) * 2,
-                            rng.nextDouble() * 2,
-                            (rng.nextDouble() - 0.5) * 2, 0.15);
-                    winner.getWorld().spawnParticle(Particle.DRAGON_BREATH, fLoc, 1,
-                            (rng.nextDouble() - 0.5) * 2,
-                            rng.nextDouble() * 2,
-                            (rng.nextDouble() - 0.5) * 2, 0.05);
-                }
-
-                finishWinReward(winner);
-                return;
-            }
+    if (ref[0] != null) ref[0].cancel();
+    fullCleanup(winner, bar);
+    finishWinReward(winner);
+    return;
+}
 
         }, 1L, 1L);
 
@@ -936,20 +916,26 @@ public class EventManager implements Listener {
      * [ADDED] Clean up after win animation: remove bossbar, action bar, and potion effect.
      */
     private void cleanupWin(Player winner, BossBar bar) {
-        try {
-            if (bar != null) {
-                bar.removeAll();
-                bar.setVisible(false);
+    fullCleanup(winner, bar);
+}
+
+private void fullCleanup(Player winner, BossBar bar) {
+    try {
+        if (bar != null) { bar.removeAll(); bar.setVisible(false); }
+        if (!winner.isOnline()) return;
+        winner.removePotionEffect(PotionEffectType.LEVITATION);
+        winner.removePotionEffect(PotionEffectType.SLOW_FALLING);
+        new BukkitRunnable() {
+            int t = 0;
+            public void run() {
+                if (t++ >= 100 || !winner.isOnline()) { cancel(); return; }
+                winner.sendActionBar("");
             }
-            if (winner.isOnline()) {
-                // Clear action bar message and remove levitation
-                winner.sendActionBar(" ");
-                winner.removePotionEffect(PotionEffectType.LEVITATION);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
+        }.runTaskTimer(plugin, 0, 1);
+        winner.resetTitle();
+        winner.setWalkSpeed(0.2f);
+    } catch (Exception e) { e.printStackTrace(); }
+}
 
     // ══════════════════════════════════════════════════════════════════════════
     //  PUBLIC UTILS
