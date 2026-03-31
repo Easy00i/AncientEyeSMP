@@ -1071,14 +1071,14 @@ case MIRAGE -> {
     w.playSound(p.getLocation(), Sound.ENTITY_WARDEN_EMERGE, 1.0f, 0.7f);
     w.spawnParticle(Particle.CAMPFIRE_COSY_SMOKE, p.getLocation(), 80, 2, 1, 2, 0.05);
     w.spawnParticle(Particle.SQUID_INK, p.getLocation(), 50, 1.5, 1, 1.5, 0.1);
-    java.util.List<Warden> minions = new java.util.ArrayList<>();
+   final java.util.List<Warden> minions = new java.util.ArrayList<>();
     for (int i = 0; i < 5; i++) {
         double angle = i * (Math.PI * 2 / 5);
         Location spawnLoc = p.getLocation().clone().add(Math.cos(angle)*3, 0, Math.sin(angle)*3);
         Warden warden = (Warden) w.spawnEntity(spawnLoc, org.bukkit.entity.EntityType.WARDEN);
         warden.setCustomName("§7" + p.getName() + "'s §3Minion");
         warden.setCustomNameVisible(true);
-        warden.setRemoveWhenFarAway(true);
+        warden.setRemoveWhenFarAway(false);
 
         warden.setAI(true);
         warden.setSilent(true);
@@ -1120,7 +1120,17 @@ case MIRAGE -> {
             }
         }
     }, 200L);
+
+    // Backup removal after 12 seconds (force remove if any left)
+Bukkit.getScheduler().runTaskLater(plugin, () -> {
+    for (Warden m : minions) {
+        if (m != null && m.isValid()) {
+            m.remove();
+          }
+       }
+      minions.clear();
+     }, 240L);
+   }              
+ }
 }
-        }
-    }
 }
