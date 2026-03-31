@@ -897,7 +897,7 @@ case OCEAN -> {
     Bukkit.getScheduler().runTaskLater(plugin, () -> {
         waveActive[0] = false;
         // Remove water blocks
-        for (Location loc : waterBlocks) {
+        for (Location waterLoc : waterBlocks) {
             if (loc.getBlock().getType() == Material.WATER) {
                 loc.getBlock().setType(Material.AIR);
             }
