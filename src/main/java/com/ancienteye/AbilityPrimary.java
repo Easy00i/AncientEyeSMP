@@ -1281,7 +1281,6 @@ case GUARDIAN -> {
            }
        }
             }.runTaskTimer(plugin, 0, 1);
-        }
 
                         // ✅ SAFETY TIMEOUT - 5 SECOND BAAD METEOR FORCE REMOVE
                 Bukkit.getScheduler().runTaskLater(plugin, () -> {
