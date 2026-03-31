@@ -840,7 +840,7 @@ case OCEAN -> {
                     double intensity = Math.sin(Math.PI * heightFactor) * centerFactor;
                     if (intensity < 0.1) continue;
                     Location waterLoc = pt.clone().add(0, y, 0);
-                    w.spawnParticle(Particle.WATER_SPLASH, waterLoc, 2, 0.2, 0.1, 0.2, 0.05);
+                    w.spawnParticle(Particle.SPLASH, waterLoc, 2, 0.2, 0.1, 0.2, 0.05);
                     w.spawnParticle(Particle.BUBBLE_POP, waterLoc, 3, 0.2, 0.1, 0.2, 0.02);
                     if (y % 3 == 0) {
                         w.spawnParticle(Particle.DRIPPING_WATER, waterLoc, 1, 0.1, 0.1, 0.1, 0);
@@ -872,7 +872,7 @@ case OCEAN -> {
                                 }
                                 if (le.isValid() && !le.equals(p)) {
                                     le.damage(2.0, p);
-                                    le.getWorld().spawnParticle(Particle.WATER_SPLASH, le.getLocation().add(0,1,0), 5, 0.3,0.3,0.3,0.05);
+                                    le.getWorld().spawnParticle(Particle.SPLASH, le.getLocation().add(0,1,0), 5, 0.3,0.3,0.3,0.05);
                                 }
                             }
                         }.runTaskTimer(plugin, 20L, 20L);
@@ -897,7 +897,7 @@ case OCEAN -> {
     Bukkit.getScheduler().runTaskLater(plugin, () -> {
         waveActive[0] = false;
         // Remove water blocks
-        for (Location loc : waterBlocks) {
+        for ( : waterBlocks) {
             if (loc.getBlock().getType() == Material.WATER) {
                 loc.getBlock().setType(Material.AIR);
             }
