@@ -898,8 +898,8 @@ case OCEAN -> {
         waveActive[0] = false;
         // Remove water blocks
         for (Location waterLoc : waterBlocks) {
-            if (loc.getBlock().getType() == Material.WATER) {
-                loc.getBlock().setType(Material.AIR);
+            if (waterLoc.getBlock().getType() == Material.WATER) {
+                waterLoc.getBlock().setType(Material.AIR);
             }
         }
         waterBlocks.clear();
