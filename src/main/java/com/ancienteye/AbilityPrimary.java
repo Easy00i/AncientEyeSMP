@@ -1290,3 +1290,6 @@ case GUARDIAN -> {
         }
     }.runTaskTimer(plugin, 0, 1);
 }
+        }
+    }
+}
