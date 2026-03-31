@@ -719,27 +719,189 @@ case GRAVITY -> {
                 }, 8L);
             }
 
-            // ── OCEAN — Bubble Prison ─────────────────────────────────────
-            case OCEAN -> {
-                w.playSound(p.getLocation(), Sound.ITEM_BUCKET_FILL, 2f, 0.5f);
-                p.getWorld().getNearbyEntities(p.getLocation(), 6, 6, 6).forEach(e -> {
-                    if (e instanceof LivingEntity le && e != p) {
-                        le.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 80, 4));
+// ── OCEAN — Tsunami Wave with Water Flood ─────────────────────
+case OCEAN -> {
+    // Custom effects
+    w.playSound(p.getLocation(), Sound.ENTITY_ELDER_GUARDIAN_CURSE, 2f, 0.5f);
+    w.playSound(p.getLocation(), Sound.ITEM_BUCKET_EMPTY_FISH, 2f, 0.8f);
+    p.sendTitle("§3§l🌊 TSUNAMI", "§bThe ocean rises!", 5, 60, 10);
+
+    // Aim direction (horizontal only)
+    Vector direction = p.getEyeLocation().getDirection().clone();
+    direction.setY(0);
+    direction.normalize();
+
+    // Wave dimensions
+    final double WAVE_WIDTH = 12.0;   // radius for wave visual
+    final double WAVE_HEIGHT = 35.0;  // wave height
+    final double SPEED = 1.2;         // wave speed (blocks per second)
+    final int DURATION_TICKS = 200;   // 10 seconds
+
+    // Flood area: cylinder radius 30, from y=0 to y=35 (adjust as needed)
+    final int FLOOD_RADIUS = 30;
+    final int FLOOD_TOP_Y = (int) (p.getLocation().getY() + 35); // 35 blocks above player's feet
+    final int FLOOR_Y = (int) p.getLocation().getY() - 1; // ground level
+
+    // Store affected blocks (optional – for performance we won't store, just set water then air)
+    // Instead we'll simply set water and later remove.
+
+    // Wave start position
+    Location waveCenter = p.getLocation().clone().add(direction.clone().multiply(3));
+    waveCenter.setY(waveCenter.getY() + 1);
+
+    final Set<UUID> affected = new HashSet<>();
+    final boolean[] waveActive = {true};
+
+    // ── Red sky effect ──────────────────────────────────────────────
+    new BukkitRunnable() {
+        int t = 0;
+        @Override
+        public void run() {
+            if (!waveActive[0] || t++ >= DURATION_TICKS / 5) {
+                cancel();
+                return;
+            }
+            Location skyLoc = p.getLocation().clone().add(0, 80, 0);
+            for (int i = 0; i < 30; i++) {
+                double xOff = (Math.random() - 0.5) * 40;
+                double zOff = (Math.random() - 0.5) * 40;
+                w.spawnParticle(Particle.DUST, skyLoc.clone().add(xOff, Math.random() * 20, zOff),
+                        1, 0, 0, 0, 0,
+                        new Particle.DustOptions(Color.fromRGB(200, 50, 50), 2.5f));
+            }
+        }
+    }.runTaskTimer(plugin, 0, 5);
+
+    // ── Place water blocks (flood) – done in layers to avoid lag ─────
+    // We'll schedule a repeating task that places one Y‑level each tick
+    final int startY = FLOOR_Y;
+    final int endY = FLOOD_TOP_Y;
+    final int centerX = p.getLocation().getBlockX();
+    final int centerZ = p.getLocation().getBlockZ();
+    final int radius = FLOOD_RADIUS;
+
+    // Store the locations of water blocks to remove later
+    final java.util.List<Location> waterBlocks = new java.util.ArrayList<>();
+
+    new BukkitRunnable() {
+        int y = startY;
+        @Override
+        public void run() {
+            if (!waveActive[0] || y > endY) {
+                cancel();
+                return;
+            }
+            // Place water at this Y level
+            for (int x = -radius; x <= radius; x++) {
+                for (int z = -radius; z <= radius; z++) {
+                    if (x*x + z*z <= radius*radius) {
+                        Location blockLoc = new Location(w, centerX + x, y, centerZ + z);
+                        // Only replace non-solid blocks (air, plants, etc.) to avoid griefing
+                        if (!blockLoc.getBlock().getType().isSolid() || blockLoc.getBlock().getType() == Material.AIR) {
+                            blockLoc.getBlock().setType(Material.WATER);
+                            waterBlocks.add(blockLoc.clone());
+                        }
+                    }
+                }
+            }
+            y++;
+        }
+    }.runTaskTimer(plugin, 0, 1); // one layer per tick
+
+    // ── Wave movement and damage ─────────────────────────────────────
+    new BukkitRunnable() {
+        int ticks = 0;
+        double distance = 0;
+
+        @Override
+        public void run() {
+            if (!waveActive[0] || ticks >= DURATION_TICKS) {
+                // Cleanup
+                waveActive[0] = false;
+                cancel();
+                return;
+            }
+
+            distance += SPEED / 20.0;
+            Location currentWaveCenter = waveCenter.clone().add(direction.clone().multiply(distance));
+
+            // Spawn wave particles (visual only)
+            for (double wX = -WAVE_WIDTH; wX <= WAVE_WIDTH; wX += 0.5) {
+                Vector perp = new Vector(-direction.getZ(), 0, direction.getX()).normalize();
+                Location pt = currentWaveCenter.clone().add(perp.clone().multiply(wX));
+                for (double y = 0; y <= WAVE_HEIGHT; y += 1.0) {
+                    double centerFactor = 1 - Math.abs(wX) / WAVE_WIDTH;
+                    double heightFactor = y / WAVE_HEIGHT;
+                    double intensity = Math.sin(Math.PI * heightFactor) * centerFactor;
+                    if (intensity < 0.1) continue;
+                    Location waterLoc = pt.clone().add(0, y, 0);
+                    w.spawnParticle(Particle.WATER_SPLASH, waterLoc, 2, 0.2, 0.1, 0.2, 0.05);
+                    w.spawnParticle(Particle.BUBBLE_POP, waterLoc, 3, 0.2, 0.1, 0.2, 0.02);
+                    if (y % 3 == 0) {
+                        w.spawnParticle(Particle.DRIPPING_WATER, waterLoc, 1, 0.1, 0.1, 0.1, 0);
+                    }
+                }
+            }
+
+            // Apply effects to nearby entities (damage, push)
+            for (org.bukkit.entity.Entity e : w.getNearbyEntities(currentWaveCenter, WAVE_WIDTH + 5, WAVE_HEIGHT + 5, WAVE_WIDTH + 5)) {
+                if (!(e instanceof LivingEntity le)) continue;
+                if (e.equals(p)) continue;
+                if (e instanceof Player ep && (ep.getGameMode() == GameMode.CREATIVE || ep.getGameMode() == GameMode.SPECTATOR)) continue;
+
+                Vector toEntity = e.getLocation().toVector().subtract(currentWaveCenter.toVector());
+                double horizontalDist = new Vector(toEntity.getX(), 0, toEntity.getZ()).length();
+                if (horizontalDist <= WAVE_WIDTH + 1.5 && Math.abs(e.getLocation().getY() - currentWaveCenter.getY()) <= WAVE_HEIGHT + 1) {
+                    if (!affected.contains(e.getUniqueId())) {
+                        affected.add(e.getUniqueId());
+                        le.damage(16.0, p); // 8 hearts initial damage
+                        le.getWorld().playSound(le.getLocation(), Sound.ENTITY_PLAYER_HURT_DROWN, 1f, 1f);
+                        // Drowning effect every second
                         new BukkitRunnable() {
-                            int ticks = 0;
+                            int t = 0;
+                            @Override
                             public void run() {
-                                if (ticks++ >= 80 || le.isDead()) { cancel(); return; }
-                                for (double i = 0; i < Math.PI; i += Math.PI/6) {
-                                    for (double j = 0; j < 2*Math.PI; j += Math.PI/6) {
-                                        double x=1.5*Math.sin(i)*Math.cos(j), y=1.5*Math.sin(i)*Math.sin(j)+1, z=1.5*Math.cos(i);
-                                        w.spawnParticle(Particle.SPLASH, le.getLocation().clone().add(x,y,z), 1, 0,0,0,0);
-                                    }
+                                if (!le.isValid() || t++ >= (DURATION_TICKS - ticks) / 20) {
+                                    cancel();
+                                    return;
+                                }
+                                if (le.isValid() && !le.equals(p)) {
+                                    le.damage(2.0, p);
+                                    le.getWorld().spawnParticle(Particle.WATER_SPLASH, le.getLocation().add(0,1,0), 5, 0.3,0.3,0.3,0.05);
                                 }
                             }
-                        }.runTaskTimer(plugin, 0, 3);
+                        }.runTaskTimer(plugin, 20L, 20L);
                     }
-                });
+                    le.setVelocity(direction.clone().multiply(0.5).setY(0.2));
+                }
             }
+
+            // Sound effects
+            if (ticks % 10 == 0) {
+                w.playSound(currentWaveCenter, Sound.ENTITY_DOLPHIN_SPLASH, 1.5f, 0.8f);
+            }
+            if (ticks % 20 == 0) {
+                w.playSound(currentWaveCenter, Sound.AMBIENT_UNDERWATER_ENTER, 2f, 0.6f);
+            }
+
+            ticks++;
+        }
+    }.runTaskTimer(plugin, 0, 1);
+
+    // ── After 10 seconds, remove all placed water blocks ─────────────
+    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+        waveActive[0] = false;
+        // Remove water blocks
+        for (Location loc : waterBlocks) {
+            if (loc.getBlock().getType() == Material.WATER) {
+                loc.getBlock().setType(Material.AIR);
+            }
+        }
+        waterBlocks.clear();
+        p.sendMessage("§bThe tsunami subsides. The water recedes.");
+        p.playSound(p.getLocation(), Sound.ITEM_BUCKET_EMPTY_FISH, 1f, 0.5f);
+    }, DURATION_TICKS);
+}
 
             // ── ECLIPSE — Orbital Strike ───────────────────────────────────
             // ✅ FIX: TNT block break ON, more rings (5 instead of 3)
