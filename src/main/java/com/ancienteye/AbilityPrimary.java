@@ -1251,7 +1251,8 @@ case GUARDIAN -> {
                 private void impact() {
                     if (cleaned[0]) return;
                     cleaned[0] = true;
-
+                    
+               try {
                     Location impactLoc = current.clone();
                     impactLoc.getWorld().createExplosion(impactLoc, 10.0f, true, true, p);
 
@@ -1269,11 +1270,28 @@ case GUARDIAN -> {
                         le.damage(15.0 * logic.getDmg(p), p);
                         le.setVelocity(e.getLocation().toVector().subtract(impactLoc.toVector()).normalize().multiply(2.5).setY(1.0));
                     }
-
-                    if (meteorEntity[0] != null) meteorEntity[0].remove();
-                }
+           } catch (Exception e) {
+             e.printStackTrace();
+           } finally {
+            // ✅ HAR HAAL MEIN METEOR REMOVE KARO
+        if (meteorEntity[0] != null && meteorEntity[0].isValid()) {
+            meteorEntity[0].remove();
+          }
+             meteorEntity[0] = null;
+           }
+       }
             }.runTaskTimer(plugin, 0, 1);
         }
+
+                        // ✅ SAFETY TIMEOUT - 5 SECOND BAAD METEOR FORCE REMOVE
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    if (!cleaned[0] && meteorEntity[0] != null && meteorEntity[0].isValid()) {
+                        meteorEntity[0].remove();
+                        meteorEntity[0] = null;
+                        cleaned[0] = true;
+                    }
+                }, 100L);
+            }
 
         private void cleanup() {
             if (cleaned[0]) return;
