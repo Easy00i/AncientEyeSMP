@@ -1100,30 +1100,191 @@ case ECLIPSE -> {
 }
 
 
-            // ── GUARDIAN — Dome ───────────────────────────────────────────
-            case GUARDIAN -> {
-                w.playSound(p.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 2f, 1.2f);
-                new BukkitRunnable() {
-                    int ticks = 0;
-                    public void run() {
-                        if (ticks++ >= 120 || !p.isOnline() || p.isDead()) {
-                            w.playSound(p.getLocation(), Sound.BLOCK_BEACON_DEACTIVATE, 2f, 1.2f);
-                            cancel(); return;
-                        }
-                        for (double t = 0; t <= Math.PI/2; t += Math.PI/10) {
-                            for (double r = 0; r <= 2*Math.PI; r += Math.PI/10) {
-                                double x=5.0*Math.sin(t)*Math.cos(r), y=5.0*Math.cos(t), z=5.0*Math.sin(t)*Math.sin(r);
-                                w.spawnParticle(Particle.ENCHANT, p.getLocation().clone().add(x, y, z), 1,0,0,0,0);
-                            }
-                        }
-                        p.getWorld().getNearbyEntities(p.getLocation(), 5, 5, 5).forEach(e -> {
-                            if (e instanceof Player ally) ally.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 40, 1));
-                        });
-                    }
-                }.runTaskTimer(plugin, 0, 3);
-            }
-        }
-        p.playSound(loc, Sound.ENTITY_ENDER_EYE_DEATH, 0.8f, 1f);
+            // ── GUARDIAN — Meteor Ring (Aim-based) ─────────────────────────────────────
+case GUARDIAN -> {
+    // Ray trace to find where the player is looking (up to 50 blocks)
+    org.bukkit.util.RayTraceResult ray = p.getWorld().rayTraceBlocks(
+            p.getEyeLocation(),
+            p.getEyeLocation().getDirection(),
+            50,
+            FluidCollisionMode.NEVER,
+            true
+    );
+    Location targetLoc;
+    if (ray != null && ray.getHitBlock() != null) {
+        targetLoc = ray.getHitBlock().getLocation().clone().add(0.5, 0, 0.5);
+    } else {
+        // fallback: 30 blocks in front
+        targetLoc = p.getEyeLocation().clone()
+                .add(p.getEyeLocation().getDirection().normalize().multiply(30));
+        targetLoc.setY(targetLoc.getY() - 2); // keep it near ground level
     }
-}
 
+    // The ring will be 20 blocks above the target location
+    Location ringCenter = targetLoc.clone().add(0, 20, 0);
+    Location meteorStart = ringCenter.clone(); // meteor starts at ring center
+
+    // Custom effects (same as before)
+    p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, logic.ticks(100, dr), 2, false, false, true));
+    p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED,       logic.ticks(100, dr), 1, false, false, true));
+    p.playSound(p.getLocation(), Sound.ENTITY_ELDER_GUARDIAN_CURSE, 1.5f, 0.6f);
+    p.playSound(p.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1.2f, 0.8f);
+    p.sendTitle("§b§l🌀 GUARDIAN RING", "§7The heavens are watching...", 5, 40, 10);
+
+    // Store meteor entity for cleanup
+    final org.bukkit.entity.ItemDisplay[] meteorEntity = {null};
+    final boolean[] meteorLanded = {false};
+    final boolean[] cleaned = {false};
+
+    // Ring animation runnable (identical to before, but uses new ringCenter)
+    new BukkitRunnable() {
+        int ticks = 0;
+        double spinAngle = 0;
+        final double RING_RADIUS = 3.5;
+        final int RING_POINTS = 64;
+
+        @Override
+        public void run() {
+            if (!p.isOnline() || p.isDead()) {
+                cleanup();
+                this.cancel();
+                return;
+            }
+
+            // Main ring
+            for (int i = 0; i < RING_POINTS; i++) {
+                double a = spinAngle + (Math.PI * 2 / RING_POINTS) * i;
+                double x = ringCenter.getX() + Math.cos(a) * RING_RADIUS;
+                double z = ringCenter.getZ() + Math.sin(a) * RING_RADIUS;
+                Location pt = new Location(w, x, ringCenter.getY(), z);
+                w.spawnParticle(Particle.DUST, pt, 1, 0, 0, 0, 0,
+                        new Particle.DustOptions(Color.fromRGB(0, 200, 255), 1.8f));
+                if (i % 6 == 0) {
+                    w.spawnParticle(Particle.END_ROD, pt, 1, 0.1, 0.1, 0.1, 0.02);
+                }
+            }
+
+            // Inner rings
+            double innerR = RING_RADIUS * 0.7;
+            for (int i = 0; i < 48; i++) {
+                double a = -spinAngle * 1.3 + (Math.PI * 2 / 48) * i;
+                double x = ringCenter.getX() + Math.cos(a) * innerR;
+                double z = ringCenter.getZ() + Math.sin(a) * innerR;
+                Location pt = new Location(w, x, ringCenter.getY() - 0.2, z);
+                w.spawnParticle(Particle.DUST, pt, 1, 0, 0, 0, 0,
+                        new Particle.DustOptions(Color.fromRGB(100, 150, 255), 1.4f));
+            }
+
+            if (ticks % 20 == 0) {
+                w.playSound(ringCenter, Sound.BLOCK_NOTE_BLOCK_PLING, 1f, 1.2f + ticks * 0.02f);
+            }
+
+            // After 2 seconds (40 ticks), spawn the meteor
+            if (ticks >= 40 && !meteorLanded[0]) {
+                meteorLanded[0] = true;
+                spawnMeteor();
+            }
+
+            // After 5 seconds (100 ticks), cancel everything
+            if (ticks >= 100) {
+                cleanup();
+                this.cancel();
+                return;
+            }
+
+            ticks++;
+            spinAngle += 0.1;
+        }
+
+        private void spawnMeteor() {
+            if (cleaned[0]) return;
+            w.playSound(ringCenter, Sound.ENTITY_ENDER_DRAGON_GROWL, 2f, 0.5f);
+
+            // Meteor item with custom model data (set your own ID)
+            org.bukkit.inventory.ItemStack meteorItem = new org.bukkit.inventory.ItemStack(Material.FIRE_CHARGE);
+            org.bukkit.inventory.meta.ItemMeta meta = meteorItem.getItemMeta();
+            meta.setCustomModelData(1001); // change to your model ID
+            meteorItem.setItemMeta(meta);
+
+            meteorEntity[0] = (org.bukkit.entity.ItemDisplay) w.spawnEntity(meteorStart, org.bukkit.entity.EntityType.ITEM_DISPLAY);
+            meteorEntity[0].setItemStack(meteorItem);
+            meteorEntity[0].setItemDisplayTransform(org.bukkit.entity.ItemDisplay.ItemDisplayTransform.GROUND);
+            meteorEntity[0].setGravity(false);
+            meteorEntity[0].setGlowing(true);
+            meteorEntity[0].setGlowColorOverride(Color.fromRGB(255, 80, 0));
+
+            new BukkitRunnable() {
+                int fallTicks = 0;
+                Location current = meteorStart.clone();
+                final Vector fallDir = new Vector(0, -1.2, 0);
+
+                @Override
+                public void run() {
+                    if (cleaned[0] || meteorEntity[0] == null || !meteorEntity[0].isValid()) {
+                        this.cancel();
+                        return;
+                    }
+                    current.add(fallDir);
+                    meteorEntity[0].teleport(current);
+
+                    // Fire trail
+                    for (int i = 0; i < 8; i++) {
+                        double offX = (Math.random() - 0.5) * 0.6;
+                        double offZ = (Math.random() - 0.5) * 0.6;
+                        w.spawnParticle(Particle.FLAME, current.clone().add(offX, -0.3, offZ), 1, 0, 0, 0, 0.02);
+                        w.spawnParticle(Particle.LAVA, current.clone().add(offX, -0.5, offZ), 1, 0, 0.1, 0, 0.01);
+                    }
+                    w.spawnParticle(Particle.CAMPFIRE_COSY_SMOKE, current.clone().add(0, -0.5, 0), 2, 0.2, 0.1, 0.2, 0.03);
+
+                    // Ground detection
+                    Location groundCheck = current.clone();
+                    groundCheck.setY(groundCheck.getY() - 1);
+                    if (groundCheck.getBlock().getType().isSolid() || fallTicks >= 30) {
+                        impact();
+                        this.cancel();
+                    }
+                    fallTicks++;
+                }
+
+                private void impact() {
+                    if (cleaned[0]) return;
+                    cleaned[0] = true;
+
+                    Location impactLoc = current.clone();
+                    impactLoc.getWorld().createExplosion(impactLoc, 10.0f, true, true, p);
+
+                    w.spawnParticle(Particle.EXPLOSION_EMITTER, impactLoc, 5, 1, 0.5, 1, 0);
+                    w.spawnParticle(Particle.FLASH, impactLoc, 3, 0.5, 0.5, 0.5, 0);
+                    w.spawnParticle(Particle.LAVA, impactLoc, 60, 2, 1, 2, 0.2);
+                    w.playSound(impactLoc, Sound.ENTITY_GENERIC_EXPLODE, 3f, 0.5f);
+                    w.playSound(impactLoc, Sound.ENTITY_DRAGON_FIREBALL_EXPLODE, 2f, 0.7f);
+
+                    // Damage nearby enemies (owner safe)
+                    for (org.bukkit.entity.Entity e : impactLoc.getWorld().getNearbyEntities(impactLoc, 12, 12, 12)) {
+                        if (!(e instanceof LivingEntity le)) continue;
+                        if (e.equals(p)) continue;
+                        if (e instanceof Player ep && (ep.getGameMode() == GameMode.CREATIVE || ep.getGameMode() == GameMode.SPECTATOR)) continue;
+                        le.damage(15.0 * logic.getDmg(p), p);
+                        le.setVelocity(e.getLocation().toVector().subtract(impactLoc.toVector()).normalize().multiply(2.5).setY(1.0));
+                    }
+
+                    if (meteorEntity[0] != null) meteorEntity[0].remove();
+                }
+            }.runTaskTimer(plugin, 0, 1);
+        }
+
+        private void cleanup() {
+            if (cleaned[0]) return;
+            cleaned[0] = true;
+            if (meteorEntity[0] != null && meteorEntity[0].isValid()) meteorEntity[0].remove();
+            // final particles
+            for (int i = 0; i < 30; i++) {
+                double rad = Math.random() * 4;
+                double ang = Math.random() * Math.PI * 2;
+                Location pt = ringCenter.clone().add(Math.cos(ang) * rad, Math.random() * 2, Math.sin(ang) * rad);
+                w.spawnParticle(Particle.CLOUD, pt, 1, 0, 0, 0, 0.05);
+            }
+            w.playSound(ringCenter, Sound.ENTITY_ENDER_EYE_DEATH, 1f, 1f);
+        }
+    }.runTaskTimer(plugin, 0, 1);
+}
