@@ -10,6 +10,8 @@ import org.bukkit.potion.*;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.event.Listener;
 import org.bukkit.util.Vector;
+import org.bukkit.FluidCollisionMode;
+import org.bukkit.util.RayTraceResult;
 import java.util.HashMap;
 import org.bukkit.Location;
 import org.bukkit.block.BlockState;
