@@ -854,7 +854,7 @@ case MIRAGE -> {
                                 if (!(e instanceof LivingEntity le)) continue;
                                 if (e.getUniqueId().equals(p.getUniqueId())) continue;
                                 if (e instanceof Player ep&&(ep.getGameMode()==GameMode.CREATIVE||ep.getGameMode()==GameMode.SPECTATOR)) continue;
-                                le.damage(6.0*getDmg(p),p);
+                                le.damage(6.0*logic.getDmg(p),p);
                                 Vector vel=e.getLocation().toVector().subtract(bl.toVector())
                                     .normalize().multiply(2.5).setY(0.8);
                                 Bukkit.getScheduler().runTaskLater(plugin,
