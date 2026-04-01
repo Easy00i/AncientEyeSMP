@@ -477,17 +477,17 @@ case LIGHT -> {
             Location end = eyeLoc.clone().add(dir.clone().multiply(distance));
 
             // --- Spawn particles along beam (thick white beam) ---
-            int steps = (int) (distance * 3);   // 3 particles per block
+            int steps = (int) (distance * 5);   // 3 particles per block
             for (int i = 0; i <= steps; i++) {
                 double t = (double) i / steps;
                 Location point = eyeLoc.clone().add(dir.clone().multiply(t * distance));
                 // Core white dust
-                w.spawnParticle(Particle.DUST, point, 1, 0.05, 0.05, 0.05, 0,
-                        new Particle.DustOptions(Color.WHITE, 1.5f));
+                w.spawnParticle(Particle.DUST, point,1, 0.02, 0.02, 0.02, 0,
+                        new Particle.DustOptions(Color.WHITE, 2.0f));
                 // Outer glow
-                w.spawnParticle(Particle.END_ROD, point, 1, 0.1, 0.1, 0.1, 0);
+                w.spawnParticle(Particle.END_ROD, point, 2, 0.03, 0.03, 0.03, 0.0);
                 // Occasional flash
-                if (i % 6 == 0) {
+                if (i % 4 == 0) {
                     w.spawnParticle(Particle.FLASH, point, 1, 0, 0, 0, 0);
                 }
             }
