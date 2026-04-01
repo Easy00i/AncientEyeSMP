@@ -923,9 +923,6 @@ case OCEAN -> {
                 p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE,   logic.ticks(200, dr), 3));
                 p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED,        logic.ticks(200, dr), 2));
                 p.addPotionEffect(new PotionEffect(PotionEffectType.NIGHT_VISION, logic.ticks(220, dr), 0));
-                w.playSound(loc, Sound.ENTITY_WITHER_AMBIENT, 1f, 0.3f);
-                w.playSound(loc, Sound.ENTITY_ENDER_DRAGON_GROWL, 1f, 0.5f);
-                p.sendTitle("\u00a75\u00a7lORBITAL STRIKE", "\u00a78Incoming...", 5, 60, 10);
                 p.setFallDistance(0f);
                 // ✅ 5 rings instead of 3
                 int   DROP_HEIGHT = 35;
