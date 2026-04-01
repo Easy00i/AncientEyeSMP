@@ -11,6 +11,8 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.event.Listener;
 import org.bukkit.util.Vector;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.FluidCollisionMode; 
+import org.bukkit.util.RayTraceResult;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
@@ -442,57 +444,75 @@ case GRAVITY -> {
                 });
             }
 
-            // ── LIGHT — Beam ──────────────────────────────────────────────
-            // ✅ FIX: properly fires beam toward aim direction
-            case LIGHT -> {
-                w.playSound(loc, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 0.8f, 2.0f);
-                w.playSound(loc, Sound.BLOCK_BEACON_ACTIVATE, 1f, 2.0f);
-                final Vector beamDir = p.getEyeLocation().getDirection().normalize();
-                w.spawnParticle(Particle.FLASH, p.getEyeLocation(), 1, 0, 0, 0, 0);
-                w.spawnParticle(Particle.END_ROD, p.getEyeLocation(), 20, 0.1, 0.1, 0.1, 0.05);
-                new BukkitRunnable() {
-                    int     step = 0;
-                    boolean hit  = false;
-                    public void run() {
-                        if (hit || step >= 80) {
-                            w.spawnParticle(Particle.FLASH, pos(), 1, 0, 0, 0, 0);
-                            w.spawnParticle(Particle.END_ROD, pos(), 15, 0.4, 0.4, 0.4, 0.08);
-                            cancel(); return;
-                        }
-                        step++;
-                        Location beam = pos();
-                        w.spawnParticle(Particle.END_ROD, beam, 10, 0.05, 0.05, 0.05, 0.01);
-                        w.spawnParticle(Particle.WHITE_ASH, beam, 2, 0.04, 0.04, 0.04, 0.01);
-                        if (step % 4 == 0) w.spawnParticle(Particle.FLASH, beam, 1, 0, 0, 0, 0);
-                        for (int i = 0; i < 3; i++) { double a = Math.toRadians(i * 120 + step * 15);
-                            w.spawnParticle(Particle.END_ROD, beam.clone().add(Math.cos(a)*0.12, Math.sin(a)*0.12, 0), 1,0,0,0,0);
-                        }
-                        if (beam.getBlock().getType().isSolid()) {
-                            w.spawnParticle(Particle.FLASH, beam, 1,0,0,0,0);
-                            w.spawnParticle(Particle.END_ROD, beam, 10, 0.05, 0.05, 0.05, 0.01);
-                            w.spawnParticle(Particle.WHITE_ASH, beam, 20, 0.4, 0.4, 0.4, 0.06);
-                            w.playSound(beam, Sound.BLOCK_GLASS_BREAK, 1f, 2.0f);
-                            hit = true; return;
-                        }
-                        for (org.bukkit.entity.Entity e : w.getNearbyEntities(beam, 0.7, 0.7, 0.7)) {
-                            if (!(e instanceof LivingEntity le) || e == p) continue;
-                            le.damage(10.0 * dm, p);
-                            Location eLoc = le.getLocation().add(0, 1, 0);
-                            w.spawnParticle(Particle.FLASH, eLoc, 1,0,0,0,0);
-                            w.spawnParticle(Particle.END_ROD, eLoc, 40, 0.6, 1.0, 0.6, 0.09);
-                            w.spawnParticle(Particle.WHITE_ASH, eLoc, 30, 0.5, 0.8, 0.5, 0.07);
-                            w.playSound(beam, Sound.ENTITY_PLAYER_LEVELUP, 0.8f, 2.0f);
-                            w.playSound(beam, Sound.ENTITY_LIGHTNING_BOLT_IMPACT, 0.6f, 2.0f);
-                            if (le instanceof Player ep && ep.isOnline()) logic.whiteLightScreen(ep, logic.ticks(40, dr), plugin);
-                            hit = true; return;
-                        }
-                    }
-                    private Location pos() {
-    double t = step * 0.8;
-    return p.getEyeLocation().clone().add(beamDir.clone().multiply(t));
-}
-                }.runTaskTimer(plugin, 0, 1);
+            // ── LIGHT — Continuous Beam (4 seconds, owner safe) ────────────────────
+case LIGHT -> {
+    final Vector beamDir = p.getEyeLocation().getDirection().normalize();
+    final Location startLoc = p.getEyeLocation().clone();
+    final int DURATION_TICKS = 80;          // 4 seconds
+    final double MAX_RANGE = 50.0;          // beam max length
+    final double DAMAGE_PER_HIT = 4.0;      // 2 hearts
+    final int DAMAGE_COOLDOWN_TICKS = 10;    // damage only once per 0.5 seconds per entity
+    final java.util.Map<UUID, Integer> lastDamageTick = new java.util.HashMap<>();
+
+    // Start beam runnable
+    new BukkitRunnable() {
+        int ticks = 0;
+
+        @Override
+        public void run() {
+            if (!p.isOnline() || ticks >= DURATION_TICKS) {
+                // Cleanup: just cancel, no lingering particles
+                cancel();
+                return;
             }
+
+            // Ray trace to find beam endpoint (first solid block or max range)
+            Location eyeLoc = p.getEyeLocation();
+            Vector dir = eyeLoc.getDirection().normalize();
+            org.bukkit.util.RayTraceResult ray = w.rayTraceBlocks(eyeLoc, dir, MAX_RANGE,
+                    FluidCollisionMode.NEVER, true);
+            double distance = (ray != null && ray.getHitBlock() != null)
+                    ? ray.getHitBlock().getLocation().distance(eyeLoc)
+                    : MAX_RANGE;
+            Location end = eyeLoc.clone().add(dir.clone().multiply(distance));
+
+            // --- Spawn particles along beam (thick white beam) ---
+            int steps = (int) (distance * 3);   // 3 particles per block
+            for (int i = 0; i <= steps; i++) {
+                double t = (double) i / steps;
+                Location point = eyeLoc.clone().add(dir.clone().multiply(t * distance));
+                // Core white dust
+                w.spawnParticle(Particle.DUST, point, 1, 0.05, 0.05, 0.05, 0,
+                        new Particle.DustOptions(Color.WHITE, 1.5f));
+                // Outer glow
+                w.spawnParticle(Particle.END_ROD, point, 1, 0.1, 0.1, 0.1, 0);
+                // Occasional flash
+                if (i % 6 == 0) {
+                    w.spawnParticle(Particle.FLASH, point, 1, 0, 0, 0, 0);
+                }
+            }
+
+            // --- Damage entities along the beam (with cooldown) ---
+            org.bukkit.util.RayTraceResult entityRay = w.rayTraceEntities(eyeLoc, dir, distance,
+                    0.5, e -> e instanceof LivingEntity && !e.equals(p));
+            if (entityRay != null && entityRay.getHitEntity() instanceof LivingEntity target) {
+                UUID targetId = target.getUniqueId();
+                int lastTick = lastDamageTick.getOrDefault(targetId, -100);
+                if (ticks - lastTick >= DAMAGE_COOLDOWN_TICKS) {
+                    target.damage(DAMAGE_PER_HIT, p);
+                    lastDamageTick.put(targetId, ticks);
+                    // Hit effect
+                    target.getWorld().spawnParticle(Particle.FLASH, target.getLocation().add(0, 1, 0),
+                            1, 0, 0, 0, 0);
+                    target.getWorld().playSound(target.getLocation(), Sound.ENTITY_PLAYER_HURT,
+                            0.8f, 1.2f);
+                }
+            }
+
+            ticks++;
+        }
+    }.runTaskTimer(plugin, 0, 1);
+}
 
             // ── EARTH — Slam ──────────────────────────────────────────────
             // ✅ FIX: BLOCK_CRACK instead of DUST_PLUME
