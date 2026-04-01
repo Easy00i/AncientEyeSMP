@@ -1150,19 +1150,28 @@ case ECLIPSE -> {
             }
 
             // ── BLACK BEAM — upar se neeche zameen tak ────────────────
-            Particle.DustOptions black = new Particle.DustOptions(
-                org.bukkit.Color.fromRGB(10, 0, 20), 2.0f);
-            Particle.DustOptions darkPurple = new Particle.DustOptions(
-                org.bukkit.Color.fromRGB(50, 0, 80), 1.5f);
-            for (double y = 60.0; y >= 0; y -= 0.35) {
-                Location lp = center.clone().add(0, y, 0);
-                w.spawnParticle(Particle.DUST, lp, 1, 0.02, 0, 0.02, 0, black);
-                if (((int)(y*10)) % 4 == 0)
-                    w.spawnParticle(Particle.DUST, lp, 1, 0.06, 0, 0.06, 0, darkPurple);
-                // Dragon breath particles for dark feel
-                if (((int)(y*10)) % 8 == 0)
-                    w.spawnParticle(Particle.DRAGON_BREATH, lp, 1, 0.08, 0, 0.08, 0.01);
-            }
+            // ── BLACK BEAM — upar se neeche zameen tak (enhanced) ────────
+Particle.DustOptions blackCore = new Particle.DustOptions(
+    org.bukkit.Color.fromRGB(10, 0, 20), 2.2f);
+Particle.DustOptions darkPurple = new Particle.DustOptions(
+    org.bukkit.Color.fromRGB(80, 0, 120), 1.8f);
+
+double topY = 52.0; // top ring ke level se start
+for (double y = topY; y >= 0; y -= 0.25) {
+    Location lp = center.clone().add(0, y, 0);
+    // Core black
+    w.spawnParticle(Particle.DUST, lp, 3, 0.08, 0, 0.08, 0, blackCore);
+    // Glow purple
+    w.spawnParticle(Particle.DUST, lp, 2, 0.12, 0, 0.12, 0, darkPurple);
+    // Sparkle (end rod)
+    if (((int)(y * 10)) % 4 == 0) {
+        w.spawnParticle(Particle.END_ROD, lp, 1, 0.05, 0, 0.05, 0.01);
+    }
+    // Dragon breath
+    if (((int)(y * 10)) % 6 == 0) {
+        w.spawnParticle(Particle.DRAGON_BREATH, lp, 1, 0.1, 0, 0.1, 0.02);
+    }
+}
 
             // Damage
             if (ticks % 20 == 0) {
