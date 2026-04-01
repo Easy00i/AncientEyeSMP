@@ -1151,29 +1151,31 @@ case ECLIPSE -> {
                 wring(sc, 1.2, 20, -spin*2);
             }
 
-            // ── BLACK BEAM — upar se neeche zameen tak ────────────────
-            // ── BLACK BEAM — upar se neeche zameen tak (enhanced) ────────
-Particle.DustOptions blackCore = new Particle.DustOptions(
-    org.bukkit.Color.fromRGB(10, 0, 20), 2.2f);
-Particle.DustOptions darkPurple = new Particle.DustOptions(
-    org.bukkit.Color.fromRGB(80, 0, 120), 1.8f);
+                        // ── BLACK BEAM — upar se neeche zameen tak (FIXED & OPTIMIZED) ────────
+            // Color ko pura black (0,0,0) kiya aur Size badha kar 5.0f kar diya
+            Particle.DustOptions blackCore = new Particle.DustOptions(org.bukkit.Color.fromRGB(0, 0, 0), 5.0f); 
+            Particle.DustOptions darkPurple = new Particle.DustOptions(org.bukkit.Color.fromRGB(80, 0, 150), 3.0f);
 
-double topY = 52.0; // top ring ke level se start
-for (double y = topY; y >= 0; y -= 0.25) {
-    Location lp = center.clone().add(0, y, 0);
-    // Core black
-    w.spawnParticle(Particle.DUST, lp, 3, 0.08, 0, 0.08, 0, blackCore);
-    // Glow purple
-    w.spawnParticle(Particle.DUST, lp, 2, 0.12, 0, 0.12, 0, darkPurple);
-    // Sparkle (end rod)
-    if (((int)(y * 10)) % 4 == 0) {
-        w.spawnParticle(Particle.END_ROD, lp, 1, 0.05, 0, 0.05, 0.01);
-    }
-    // Dragon breath
-    if (((int)(y * 10)) % 6 == 0) {
-        w.spawnParticle(Particle.DRAGON_BREATH, lp, 1, 0.1, 0, 0.1, 0.02);
-    }
-}
+            double topY = 52.0; 
+            // Gap 0.5 ka kiya (limit cross nahi hogi aur laser solid dikhegi)
+            for (double y = topY; y >= 0; y -= 0.5) {
+                Location lp = center.clone().add(0, y, 0);
+                
+                // Core - mota black dust
+                w.spawnParticle(Particle.DUST, lp, 1, 0, 0, 0, 0, blackCore);
+                // Glow - purple dust
+                w.spawnParticle(Particle.DUST, lp, 1, 0, 0, 0, 0, darkPurple);
+                
+                // Extra texture ke liye (Har 2 block par smoke/ink)
+                if (y % 2 == 0) {
+                    w.spawnParticle(Particle.SQUID_INK, lp, 2, 0.2, 0.2, 0.2, 0.02);
+                }
+                // Sparkle (Har 3 block par)
+                if (y % 3 == 0) {
+                    w.spawnParticle(Particle.END_ROD, lp, 1, 0.1, 0.1, 0.1, 0.01);
+                }
+            }
+
 
             // Damage
             if (ticks % 20 == 0) {
