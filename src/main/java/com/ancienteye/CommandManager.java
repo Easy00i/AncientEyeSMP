@@ -27,21 +27,21 @@ public class CommandManager implements CommandExecutor, TabCompleter {
         if (!(sender instanceof Player p)) return true;
 
         switch (cmd.getName().toLowerCase()) {
-            case "smpstart" -> {
+            case "smpstart" -> { // PUBLIC
                 if (plugin.getPlayerData().getEye(p) != EyeType.NONE) {
                     p.sendMessage("§cYou already have an Eye!");
                     return true;
                 }
                 plugin.getTradeManager().startSmpRitual(p);
             }
-            case "trade" -> {
+            case "trade" -> { // PUBLIC
                 if (args.length == 0) { p.sendMessage("§cUsage: /trade <player>"); return true; }
                 Player target = Bukkit.getPlayer(args[0]);
                 if (target != null && target != p) {
                     plugin.getTradeManager().sendTradeRequest(p, target);
                 }
             }
-            case "tradeaccept" -> {
+            case "tradeaccept" -> { // PUBLIC
                 if (args.length > 0) {
                     Player senderPlayer = Bukkit.getPlayer(args[0]);
                     if (senderPlayer != null) {
@@ -49,14 +49,15 @@ public class CommandManager implements CommandExecutor, TabCompleter {
                     }
                 }
             }
-            case "tradereject" -> p.sendMessage("§cTrade rejected.");
+            case "tradereject" -> p.sendMessage("§cTrade rejected."); // PUBLIC
             
             case "eye" -> {
-                if (args.length == 1 && args[0].equalsIgnoreCase("gui")) {
+                if (args.length == 1 && args[0].equalsIgnoreCase("gui")) { // PUBLIC
                     plugin.getAbilityLogic().openEyeGUI(p);
                     return true;
                 }
 
+                // ADMIN CHECK START (Baaki sab eye commands admin ke liye)
                 if (!p.hasPermission("eye.admin")) {
                     p.sendMessage("§cNo permission to use admin commands!");
                     return true;
@@ -86,8 +87,11 @@ public class CommandManager implements CommandExecutor, TabCompleter {
                     }
                 }
             }
-            case "event" -> {
-                if (!p.hasPermission("eye.admin")) return true;
+            case "event" -> { // ADMIN ONLY
+                if (!p.hasPermission("eye.admin")) {
+                    p.sendMessage("§cNo permission!");
+                    return true;
+                }
                 
                 if (args.length >= 1) {
                     if (args[0].equalsIgnoreCase("start")) {
@@ -118,8 +122,9 @@ public class CommandManager implements CommandExecutor, TabCompleter {
     @Override
     public @Nullable List<String> onTabComplete(@NotNull CommandSender sender, @NotNull Command cmd, @NotNull String alias, @NotNull String[] args) {
         List<String> completions = new ArrayList<>();
+        String cmdName = cmd.getName().toLowerCase();
 
-        if (cmd.getName().equalsIgnoreCase("eye")) {
+        if (cmdName.equals("eye")) {
             if (args.length == 1) {
                 completions.add("gui");
                 if (sender.hasPermission("eye.admin")) {
@@ -129,7 +134,7 @@ public class CommandManager implements CommandExecutor, TabCompleter {
                 }
             } else if (args.length == 2 && sender.hasPermission("eye.admin")) {
                 if (args[0].equalsIgnoreCase("give") || args[0].equalsIgnoreCase("reset")) {
-                    return null; 
+                    return null; // Player names suggest karega
                 }
             } else if (args.length == 3 && args[0].equalsIgnoreCase("give") && sender.hasPermission("eye.admin")) {
                 return Arrays.stream(EyeType.values())
@@ -140,27 +145,24 @@ public class CommandManager implements CommandExecutor, TabCompleter {
             }
         }
 
-        if (cmd.getName().equalsIgnoreCase("event") && sender.hasPermission("eye.admin")) {
+        if (cmdName.equals("event") && sender.hasPermission("eye.admin")) {
             if (args.length == 1) {
                 completions.add("start");
                 completions.add("stop");
             } else if (args.length == 2 && args[0].equalsIgnoreCase("start")) {
-                // FIX: sirf event eyes suggest karo — isEventEye() = true wale
                 return Arrays.stream(EyeType.values())
                         .filter(EyeType::isEventEye)
                         .map(Enum::name)
                         .filter(name -> name.toLowerCase().startsWith(args[1].toLowerCase()))
                         .collect(Collectors.toList());
             } else if (args.length == 3 && args[0].equalsIgnoreCase("start")) {
-                completions.add("5m");
-                completions.add("10m");
-                completions.add("30m");
-                completions.add("1h");
+                completions.addAll(Arrays.asList("5m", "10m", "30m", "1h"));
             }
         }
 
-        if (cmd.getName().equalsIgnoreCase("trade")) {
-            if (args.length == 1) return null;
+        // Trade aur TradeAccept dono ke liye player names suggest honge
+        if (cmdName.equals("trade") || cmdName.equals("tradeaccept")) {
+            if (args.length == 1) return null; // NULL return karne par Bukkit online players suggest karta hai
         }
 
         return completions.stream()
