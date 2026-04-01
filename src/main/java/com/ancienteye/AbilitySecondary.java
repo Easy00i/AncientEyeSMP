@@ -477,7 +477,7 @@ case LIGHT -> {
             Location end = eyeLoc.clone().add(dir.clone().multiply(distance));
 
             // --- Spawn particles along beam (thick white beam) ---
-            int steps = (int) (distance * 5);   // 3 particles per block
+            int steps = (int) (distance * 7);   // 3 particles per block
             for (int i = 0; i <= steps; i++) {
                 double t = (double) i / steps;
                 Location point = eyeLoc.clone().add(dir.clone().multiply(t * distance));
