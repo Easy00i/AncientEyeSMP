@@ -787,7 +787,7 @@ case MIRAGE -> {
         groundLoc.setY(p.getLocation().getBlockY());
     }
 
-    final Location base  = groundLoc.clone();
+    final Location base = groundLoc.clone();
     final boolean[] done = {false};
 
     w.playSound(p.getLocation(), Sound.ENTITY_ILLUSIONER_PREPARE_MIRROR, 1.5f, 0.7f);
@@ -795,16 +795,14 @@ case MIRAGE -> {
     w.playSound(base, Sound.ENTITY_ENDER_DRAGON_GROWL, 1f, 0.6f);
     p.sendTitle("\u00a7c\u00a7lMIRAGE", "\u00a77Ancient circle summoned...", 5, 50, 10);
 
-    // Blocks float up
     java.util.List<org.bukkit.entity.FallingBlock> floatingBlocks = new java.util.ArrayList<>();
     for (int fx = -3; fx <= 3; fx++) {
         for (int fz = -3; fz <= 3; fz++) {
             if (Math.sqrt(fx*fx+fz*fz) > 3.5) continue;
             org.bukkit.block.Block blk = base.clone().add(fx,-1,fz).getBlock();
             if (!blk.getType().isSolid()) continue;
-            org.bukkit.Material mat = blk.getType();
             org.bukkit.entity.FallingBlock fb = w.spawnFallingBlock(
-                blk.getLocation().clone().add(0.5,1.0,0.5), mat.createBlockData());
+                blk.getLocation().clone().add(0.5,1.0,0.5), blk.getType().createBlockData());
             fb.setDropItem(false); fb.setHurtEntities(false); fb.setGravity(false);
             fb.setVelocity(new Vector((Math.random()-0.5)*0.04,
                 0.015+Math.random()*0.025, (Math.random()-0.5)*0.04));
@@ -816,20 +814,75 @@ case MIRAGE -> {
         int    ticks = 0;
         double spin  = 0;
 
-        void rring(Location c, double r, int pts, double off) {
-            Particle.DustOptions RED = new Particle.DustOptions(Color.fromRGB(255,40,0), 1.8f);
+        // ── Core ring draw ───────────────────────────────────────────
+        void R(Location c, double r, int pts, double off, int rgb) {
+            Particle.DustOptions d = new Particle.DustOptions(
+                Color.fromRGB((rgb>>16)&0xFF,(rgb>>8)&0xFF,rgb&0xFF), 1.7f);
             for (int i=0;i<pts;i++) {
                 double a=(Math.PI*2.0/pts)*i+off;
-                w.spawnParticle(Particle.DUST,c.clone().add(Math.cos(a)*r,0,Math.sin(a)*r),
-                    1,0,0,0,0,RED);
+                w.spawnParticle(Particle.DUST,
+                    c.clone().add(Math.cos(a)*r,0,Math.sin(a)*r),1,0,0,0,0,d);
             }
         }
-        void sat(Location c, double r, int pts, double off) {
-            Particle.DustOptions R2 = new Particle.DustOptions(Color.fromRGB(200,30,0),1.4f);
-            for (int i=0;i<pts;i++) {
-                double a=(Math.PI*2.0/pts)*i+off;
-                w.spawnParticle(Particle.DUST,c.clone().add(Math.cos(a)*r,0,Math.sin(a)*r),
-                    1,0,0,0,0,R2);
+
+        // ── Spokes: center to radius ─────────────────────────────────
+        void spokes(Location c, double r, int count, double off, int rgb) {
+            Particle.DustOptions d = new Particle.DustOptions(
+                Color.fromRGB((rgb>>16)&0xFF,(rgb>>8)&0xFF,rgb&0xFF), 1.4f);
+            for (int s=0;s<count;s++) {
+                double a=(Math.PI*2.0/count)*s+off;
+                for (int k=1;k<=8;k++) {
+                    double t=k/8.0*r;
+                    w.spawnParticle(Particle.DUST,
+                        c.clone().add(Math.cos(a)*t,0,Math.sin(a)*t),1,0,0,0,0,d);
+                }
+            }
+        }
+
+        // ── Full ring group: outer+inner rings + spokes + satellites ──
+        void ringGroup(Location c, double outerR, double spin, boolean ccw) {
+            double s = ccw ? -spin : spin;
+            int RED   = 0xFF2800;
+            int RED2  = 0xC81E00;
+            int RED3  = 0xFF6030;
+
+            // Outer ring
+            R(c, outerR,      (int)(outerR*12), s,       RED);
+            // Inner ring 1
+            R(c, outerR*0.75, (int)(outerR*9), -s*1.3,   RED2);
+            // Inner ring 2
+            R(c, outerR*0.5,  (int)(outerR*7),  s*1.8,   RED3);
+            // Inner ring 3 (core)
+            R(c, outerR*0.28, (int)(outerR*4), -s*2.5,   RED);
+
+            // Spokes from center
+            spokes(c, outerR*0.95, 8, s*0.5, RED2);
+
+            // Satellites — circles on outer ring
+            int satCount = outerR > 8 ? 4 : outerR > 5 ? 3 : 2;
+            for (int i=0;i<satCount;i++) {
+                double a=(Math.PI*2.0/satCount)*i + s*0.7;
+                double satR = outerR*0.12;
+                Location sc = c.clone().add(Math.cos(a)*outerR*0.88, 0, Math.sin(a)*outerR*0.88);
+                // Satellite outer ring
+                R(sc, satR,      16, -s*2,   RED);
+                // Satellite inner ring
+                R(sc, satR*0.55, 10,  s*3,   RED2);
+                // Spokes inside satellite
+                spokes(sc, satR*0.9, 5, s, RED3);
+            }
+
+            // Tick marks on outer ring edge
+            int ticks2 = (int)(outerR*2.5);
+            for (int i=0;i<ticks2;i++) {
+                double a=(Math.PI*2.0/ticks2)*i+s;
+                double pa=a+Math.PI/2;
+                Location tl=c.clone().add(Math.cos(a)*outerR,0,Math.sin(a)*outerR);
+                for (int k=0;k<2;k++) {
+                    w.spawnParticle(Particle.DUST,
+                        tl.clone().add(Math.cos(pa)*(k-0.5)*0.4,0,Math.sin(pa)*(k-0.5)*0.4),
+                        1,0,0,0,0, new Particle.DustOptions(Color.fromRGB(255,40,0),1.5f));
+                }
             }
         }
 
@@ -843,8 +896,8 @@ case MIRAGE -> {
                     for (int b=0;b<20;b++) {
                         final int fb2=b;
                         Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                            double bx=base.getX()+(Math.random()-0.5)*12;
-                            double bz=base.getZ()+(Math.random()-0.5)*12;
+                            double bx=base.getX()+(Math.random()-0.5)*14;
+                            double bz=base.getZ()+(Math.random()-0.5)*14;
                             Location bl=new Location(w,bx,base.getY(),bz);
                             w.createExplosion(bl,3.5f,true,true);
                             w.spawnParticle(Particle.EXPLOSION_EMITTER,bl,1,0,0,0,0);
@@ -870,72 +923,26 @@ case MIRAGE -> {
                 cancel(); return;
             }
 
-            spin += 0.04;
+            spin += 0.035; // smooth slow spin
 
-            // ══════════════════════════════════════════════════════
-            // PHOTO JAISA STRUCTURE:
-            // UPAR = BIGGEST ring (y=30)
-            // Neeche = chota chota (y=0)
-            // Laser center se upar tak
-            // ══════════════════════════════════════════════════════
+            // ── 5 RINGS — UPAR bada, neeche chota ────────────────────
+            // Ring 1 TOP — BIGGEST (y=30) clockwise
+            ringGroup(base.clone().add(0, 30.0, 0), 12.0, spin, false);
 
-            // TOP — BIGGEST ring + 4 satellites (photo main sabse upar bada ring)
-            Location top = base.clone().add(0, 30.0, 0);
-            rring(top, 12.0, 140,  spin);
-            rring(top, 10.5, 120, -spin*1.2);
-            rring(top,  9.0, 100,  spin*1.5);
-            // 4 satellites on top ring (photo jaisa)
-            for (int i=0;i<4;i++) {
-                double a=(Math.PI*2.0/4)*i - spin*0.5;
-                Location sc=top.clone().add(Math.cos(a)*11.0,0,Math.sin(a)*11.0);
-                sat(sc, 1.5, 24, spin*2);
-                sat(sc, 0.7, 14, -spin*3);
-            }
-            // Tick marks
-            for (int i=0;i<24;i++) {
-                double a=(Math.PI*2.0/24)*i+spin;
-                Location tl=top.clone().add(Math.cos(a)*11.8,0,Math.sin(a)*11.8);
-                w.spawnParticle(Particle.DUST,tl,1,0,0,0,0,
-                    new Particle.DustOptions(Color.fromRGB(255,40,0),1.5f));
-            }
+            // Ring 2 (y=22) — counter-clockwise
+            ringGroup(base.clone().add(0, 22.0, 0), 8.5, spin, true);
 
-            // RING 2 — mid-high (y=22) — medium
-            Location r2 = base.clone().add(0, 22.0, 0);
-            rring(r2, 9.0, 100,  -spin*0.9);
-            rring(r2, 7.5,  84,   spin*1.1);
-            rring(r2, 6.0,  70,  -spin*1.4);
-            for (int i=0;i<3;i++) {
-                double a=(Math.PI*2.0/3)*i+spin*0.7;
-                Location sc=r2.clone().add(Math.cos(a)*8.2,0,Math.sin(a)*8.2);
-                sat(sc,1.0,18,-spin*2);
-            }
+            // Ring 3 (y=14) — clockwise
+            ringGroup(base.clone().add(0, 14.0, 0), 6.0, spin, false);
 
-            // RING 3 — middle (y=14) — smaller
-            Location r3 = base.clone().add(0, 14.0, 0);
-            rring(r3, 6.5, 80,  spin*1.2);
-            rring(r3, 5.2, 64, -spin*1.5);
-            rring(r3, 4.0, 50,  spin*2.0);
-            for (int i=0;i<3;i++) {
-                double a=(Math.PI*2.0/3)*i - spin*0.6;
-                Location sc=r3.clone().add(Math.cos(a)*6.0,0,Math.sin(a)*6.0);
-                sat(sc,0.8,14,spin*2.5);
-            }
+            // Ring 4 (y=7) — counter-clockwise
+            ringGroup(base.clone().add(0, 7.0, 0), 4.0, spin, true);
 
-            // RING 4 — low (y=7) — small
-            Location r4 = base.clone().add(0, 7.0, 0);
-            rring(r4, 4.5, 58,  -spin*1.4);
-            rring(r4, 3.5, 46,   spin*1.8);
-            rring(r4, 2.5, 34,  -spin*2.2);
+            // Ring 5 BOTTOM — SMALLEST (y=0.1) clockwise
+            ringGroup(base.clone().add(0, 0.1, 0), 2.5, spin, false);
 
-            // RING 5 — ground (y=0.1) — smallest
-            Location r5 = base.clone().add(0, 0.1, 0);
-            rring(r5, 3.0, 40,  spin*1.5);
-            rring(r5, 2.0, 28, -spin*2.0);
-            rring(r5, 1.2, 18,  spin*2.8);
-            rring(r5, 0.5, 10, -spin*3.5);
-
-            // ── YELLOW LASER — ground se upar tak ────────────────────
-            for (double y=0; y<=32.0; y+=0.35) {
+            // ── YELLOW LASER — ground se top tak ─────────────────────
+            for (double y=0; y<=31.0; y+=0.35) {
                 Location lp=base.clone().add(0,y,0);
                 w.spawnParticle(Particle.DUST,lp,1,0.02,0,0.02,0,
                     new Particle.DustOptions(Color.fromRGB(255,230,0),2.2f));
@@ -946,23 +953,19 @@ case MIRAGE -> {
                     w.spawnParticle(Particle.END_ROD,lp,1,0.02,0,0.02,0.001);
             }
 
-            // Floating blocks drift
+            // Floating blocks
             for (org.bukkit.entity.FallingBlock fb2:floatingBlocks) {
                 if (!fb2.isValid()) continue;
                 Vector vel=fb2.getVelocity();
                 if (vel.getY()<0.08) fb2.setVelocity(vel.setY(vel.getY()+0.002));
             }
 
-            // Ambient flame
             if (ticks%4==0) {
                 double ra=Math.random()*Math.PI*2;
-                double rr=Math.random()*12;
                 w.spawnParticle(Particle.FLAME,
-                    base.clone().add(Math.cos(ra)*rr,0.1,Math.sin(ra)*rr),
+                    base.clone().add(Math.cos(ra)*10,0.1,Math.sin(ra)*10),
                     1,0.1,0.1,0.1,0.02);
             }
-
-            // Damage
             if (ticks%20==0) {
                 for (org.bukkit.entity.Entity e:base.getWorld().getNearbyEntities(base,15,35,15)) {
                     if (!(e instanceof LivingEntity victim)) continue;
@@ -975,9 +978,8 @@ case MIRAGE -> {
         }
 
         void cleanup() {
-            for (org.bukkit.entity.FallingBlock fb2:floatingBlocks) {
+            for (org.bukkit.entity.FallingBlock fb2:floatingBlocks)
                 if (fb2.isValid()) fb2.remove();
-            }
             floatingBlocks.clear();
         }
     }.runTaskTimer(plugin, 0, 1);
