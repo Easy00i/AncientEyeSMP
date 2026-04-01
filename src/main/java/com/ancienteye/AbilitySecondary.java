@@ -913,29 +913,43 @@ case OCEAN -> {
         }
     }.runTaskTimer(plugin, 0, 1);
 
-    // ── After 10 seconds, remove all placed water blocks ─────────────
-    Bukkit.getScheduler().runTaskLater(plugin, () -> {
-        waveActive[0] = false;
-        // Loop through entire cylinder and remove any water
-    for (int x = -FLOOD_RADIUS; x <= FLOOD_RADIUS; x++) {
-        for (int z = -FLOOD_RADIUS; z <= FLOOD_RADIUS; z++) {
-            if (x*x + z*z <= FLOOD_RADIUS*FLOOD_RADIUS) {
-                for (int y = FLOOR_Y; y <= FLOOD_TOP_Y; y++) {
-                    Location blockLoc = new Location(w, centerX + x, y, centerZ + z);
-                    Material type = blockLoc.getBlock().getType();
-                    if (type == Material.WATER || type == Material.WATER_CAULDRON) {
-                        blockLoc.getBlock().setType(Material.AIR);
-                    }
+// ── After 10 seconds, remove ALL water in a larger area (radius 40) ──
+Bukkit.getScheduler().runTaskLater(plugin, () -> {
+    waveActive[0] = false;
+
+    // Use a larger radius to catch water that flowed out
+    int removeRadius = FLOOD_RADIUS + 10; // 38 blocks
+    int minX = centerX - removeRadius;
+    int maxX = centerX + removeRadius;
+    int minZ = centerZ - removeRadius;
+    int maxZ = centerZ + removeRadius;
+
+    for (int x = minX; x <= maxX; x++) {
+        for (int z = minZ; z <= maxZ; z++) {
+            // Optional: keep it as a square (faster) or use circular check
+            // Circle check is nicer but square is simpler and covers everything
+            // We'll do square for safety
+            for (int y = FLOOR_Y; y <= FLOOD_TOP_Y; y++) {
+                Location blockLoc = new Location(w, x, y, z);
+                Material type = blockLoc.getBlock().getType();
+                if (type == Material.WATER || type == Material.WATER_CAULDRON) {
+                    blockLoc.getBlock().setType(Material.AIR);
                 }
             }
         }
     }
 
-        waterBlocks.clear();
-        p.sendMessage("§bThe tsunami subsides. The water recedes.");
-        p.playSound(p.getLocation(), Sound.ITEM_BUCKET_EMPTY_FISH, 1f, 0.5f);
-    }, DURATION_TICKS);
-}
+    // Also remove any water that might be in the original waterBlocks list (extra safety)
+    for (Location loc : waterBlocks) {
+        if (loc.getBlock().getType() == Material.WATER) {
+            loc.getBlock().setType(Material.AIR);
+        }
+    }
+    waterBlocks.clear();
+
+    p.sendMessage("§bThe tsunami subsides. The water recedes.");
+    p.playSound(p.getLocation(), Sound.ITEM_BUCKET_EMPTY_FISH, 1f, 0.5f);
+}, DURATION_TICKS);
 
             // ── ECLIPSE — Orbital Strike ───────────────────────────────────
             // ✅ FIX: TNT block break ON, more rings (5 instead of 3)
