@@ -124,7 +124,6 @@ public class AbilityPrimary implements Listener {
                 }
                 final Location center = groundLoc.clone();
                 final double RADIUS = 7.5;
-                w.playSound(center, Sound.ENTITY_ENDERMAN_STARE, 1f, 0.5f);
                 w.playSound(center, Sound.BLOCK_BEACON_AMBIENT, 1f, 0.3f);
                 w.playSound(center, Sound.ENTITY_ILLUSIONER_CAST_SPELL, 0.8f, 0.6f);
 
@@ -137,7 +136,7 @@ public class AbilityPrimary implements Listener {
                                 double a = Math.toRadians(i * 10);
                                 w.spawnParticle(Particle.CLOUD, center.clone().add(Math.cos(a)*RADIUS, 0.1, Math.sin(a)*RADIUS), 2, 0.2, 0.1, 0.2, 0.03);
                             }
-                            w.playSound(center, Sound.ENTITY_ENDERMAN_TELEPORT, 1f, 0.7f);
+                        
                             cancel(); return;
                         }
                         spin += 0.04;
