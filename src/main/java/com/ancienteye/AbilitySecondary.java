@@ -896,12 +896,21 @@ case OCEAN -> {
     // ── After 10 seconds, remove all placed water blocks ─────────────
     Bukkit.getScheduler().runTaskLater(plugin, () -> {
         waveActive[0] = false;
-        // Remove water blocks
-        for (Location waterLoc : waterBlocks) {
-            if (waterLoc.getBlock().getType() == Material.WATER) {
-                waterLoc.getBlock().setType(Material.AIR);
+        // Loop through entire cylinder and remove any water
+    for (int x = -FLOOD_RADIUS; x <= FLOOD_RADIUS; x++) {
+        for (int z = -FLOOD_RADIUS; z <= FLOOD_RADIUS; z++) {
+            if (x*x + z*z <= FLOOD_RADIUS*FLOOD_RADIUS) {
+                for (int y = FLOOR_Y; y <= FLOOD_TOP_Y; y++) {
+                    Location blockLoc = new Location(w, centerX + x, y, centerZ + z);
+                    Material type = blockLoc.getBlock().getType();
+                    if (type == Material.WATER || type == Material.WATER_CAULDRON) {
+                        blockLoc.getBlock().setType(Material.AIR);
+                    }
+                }
             }
         }
+    }
+
         waterBlocks.clear();
         p.sendMessage("§bThe tsunami subsides. The water recedes.");
         p.playSound(p.getLocation(), Sound.ITEM_BUCKET_EMPTY_FISH, 1f, 0.5f);
