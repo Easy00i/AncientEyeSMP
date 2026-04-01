@@ -279,8 +279,8 @@ public class AnimationTradeManager {
             double cubeAngle = 0;
 
             @Override
-            public void run() {
-
+            public void run() {    
+             try { 
                 // DISCONNECT CHECK — full reset
                 if (!sender.isOnline() || !receiver.isOnline()) {
                     cleanupTrade(sender, receiver, sStartLoc, rStartLoc);
@@ -344,8 +344,13 @@ public class AnimationTradeManager {
                 }
 
                 ticks++;
-            }
-        }.runTaskTimer(plugin, 5, 1);
+        } catch (Exception e) {
+            e.printStackTrace();
+            cleanupTrade(sender, receiver, sStartLoc, rStartLoc);
+            this.cancel();
+          }
+        }
+       }.runTaskTimer(plugin, 5, 1);
     }
 
     // ── PURPLE BEAM — accurate braided wire ──────────────────────────────────
@@ -356,6 +361,8 @@ public class AnimationTradeManager {
         double dx    = b.getX() - a.getX();
         double dy    = b.getY() - a.getY();
         double dz    = b.getZ() - a.getZ();
+        double distSq = dx*dx + dy*dy + dz*dz;
+        if (distSq < 0.1) return;
 
         Vector dir   = new Vector(dx, dy, dz).normalize();
         Vector perp1 = getPerpendicular(dir);
