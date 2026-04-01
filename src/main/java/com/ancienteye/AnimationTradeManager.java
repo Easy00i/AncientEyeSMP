@@ -291,11 +291,14 @@ public class AnimationTradeManager {
                 angle     += 0.08;
                 cubeAngle += 0.04;
 
-                // POSITION LOCK — players ko freeze karo
-                if (ticks > 5) {
-                    forceLock(sender,   sStartLoc);
-                    forceLock(receiver, rStartLoc);
-                }
+              // Isko wahan paste karo jahan ticks badh rahe hain
+        if (ticks == 25) {
+          sender.setGravity(false);    // Player ko hawa mein lock kar dega
+         receiver.setGravity(false); 
+           sender.setVelocity(new Vector(0,0,0)); // Movement rok dega
+         receiver.setVelocity(new Vector(0,0,0));
+      }
+                 
 
                 Location sHover = sStartLoc.clone().add(0, 3.0, 0);
                 Location rHover = rStartLoc.clone().add(0, 3.0, 0);
@@ -464,23 +467,6 @@ public class AnimationTradeManager {
         }
     }
 
-    // ── FORCE LOCK ────────────────────────────────────────────────────────────
-    private void forceLock(Player p, Location startLoc) {
-        if (!p.isOnline()) return;
-        Location cur = p.getLocation();
-        double targetY = startLoc.getY() + 3.0;
-        double distXZ  = Math.sqrt(
-                Math.pow(cur.getX()-startLoc.getX(),2)+Math.pow(cur.getZ()-startLoc.getZ(),2));
-        if (distXZ > 0.5 || Math.abs(cur.getY()-targetY) > 1.0) {
-            Location lock = startLoc.clone();
-            lock.setY(targetY);
-            lock.setYaw(cur.getYaw());
-            lock.setPitch(cur.getPitch());
-            p.teleport(lock);
-        }
-        p.setVelocity(new Vector(0,0,0));
-    }
-
     // ── FREEZE ────────────────────────────────────────────────────────────────
     private void freezePlayer(Player p) {
         p.setWalkSpeed(0f);
@@ -491,6 +477,9 @@ public class AnimationTradeManager {
     private void unfreezePlayer(Player p) {
         if (!p.isOnline()) return;
         p.setWalkSpeed(0.2f);
+
+        p.setGravity(true);
+        
         p.removePotionEffect(PotionEffectType.JUMP_BOOST);
         p.removePotionEffect(PotionEffectType.SLOWNESS);
         p.removePotionEffect(PotionEffectType.LEVITATION);
