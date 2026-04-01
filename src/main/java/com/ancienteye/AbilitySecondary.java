@@ -1168,9 +1168,10 @@ Bukkit.getScheduler().runTaskLater(plugin, () -> {
             m.remove();
           }
        }
-      minions.clear();
-     }, 240L);
-   }              
- }
-}
+       minions.clear();
+         }, 240L);
+       }              
+      }
+    }
+  }
 }
