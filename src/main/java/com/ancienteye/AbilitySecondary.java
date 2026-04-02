@@ -512,7 +512,7 @@ case LIGHT -> {
             ticks++;
         }
     }.runTaskTimer(plugin, 0, 1);
-
+}
             // ── EARTH — Slam ──────────────────────────────────────────────
             // ✅ FIX: BLOCK_CRACK instead of DUST_PLUME
             case EARTH -> {
