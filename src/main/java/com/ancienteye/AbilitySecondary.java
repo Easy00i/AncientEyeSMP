@@ -940,11 +940,11 @@ Bukkit.getScheduler().runTaskLater(plugin, () -> {
     }
 
     // Also remove any water that might be in the original waterBlocks list (extra safety)
-    for (Location loc : waterBlocks) {
-        if (loc.getBlock().getType() == Material.WATER) {
-            loc.getBlock().setType(Material.AIR);
-        }
+    for (Location waterLoc : waterBlocks) {
+    if (waterLoc.getBlock().getType() == Material.WATER) {
+        waterLoc.getBlock().setType(Material.AIR);
     }
+}
     waterBlocks.clear();
 
     p.sendMessage("§bThe tsunami subsides. The water recedes.");
