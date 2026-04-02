@@ -949,7 +949,8 @@ Bukkit.getScheduler().runTaskLater(plugin, () -> {
 
     p.sendMessage("§bThe tsunami subsides. The water recedes.");
     p.playSound(p.getLocation(), Sound.ITEM_BUCKET_EMPTY_FISH, 1f, 0.5f);
-}, DURATION_TICKS);
+  }, DURATION_TICKS);
+}
 
             // ── ECLIPSE — Orbital Strike ───────────────────────────────────
             // ✅ FIX: TNT block break ON, more rings (5 instead of 3)
