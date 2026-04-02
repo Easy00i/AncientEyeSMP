@@ -1051,11 +1051,11 @@ case ECLIPSE -> {
         // White ring helper
         void wring(Location c, double r, int pts, double off) {
             Particle.DustOptions white = new Particle.DustOptions(
-                org.bukkit.Color.fromRGB(220, 220, 255), 1.5f);
+                org.bukkit.Color.fromRGB(220, 220, 255), 3.5f);
             for (int i = 0; i < pts; i++) {
                 double a = (Math.PI*2.0/pts)*i + off;
                 Location pt = c.clone().add(Math.cos(a)*r, 0, Math.sin(a)*r);
-                w.spawnParticle(Particle.DUST, pt, 1, 0,0,0,0, white);
+                w.spawnParticle(Particle.DUST, pt, 3, 0.1,0.1,0.1,0, white);
             }
         }
 
@@ -1120,13 +1120,13 @@ case ECLIPSE -> {
             // Tick marks
             for (int i = 0; i < 24; i++) {
                 double a = (Math.PI*2.0/24)*i + spin*0.3;
-                Particle.DustOptions white = new Particle.DustOptions(org.bukkit.Color.fromRGB(220,220,255), 1.4f);
+                Particle.DustOptions white = new Particle.DustOptions(org.bukkit.Color.fromRGB(220,220,255), 3.0f);
                 for (int k = -2; k <= 2; k++) {
                     double perp = a + Math.PI/2;
                     Location tick = bigRing.clone().add(
                         Math.cos(a)*21.0 + Math.cos(perp)*k*0.5, 0,
                         Math.sin(a)*21.0 + Math.sin(perp)*k*0.5);
-                    w.spawnParticle(Particle.DUST, tick, 1,0,0,0,0, white);
+                    w.spawnParticle(Particle.DUST, tick, 3,0.1,0.1,0.1,0, white);
                 }
             }
 
