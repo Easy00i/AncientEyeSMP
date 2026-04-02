@@ -454,65 +454,64 @@ case LIGHT -> {
     final int DAMAGE_COOLDOWN_TICKS = 10;    // damage only once per 0.5 seconds per entity
     final java.util.Map<UUID, Integer> lastDamageTick = new java.util.HashMap<>();
 
-    // Start beam runnable
     new BukkitRunnable() {
         int ticks = 0;
 
         @Override
         public void run() {
+            // 1. Agar player offline ho jaye ya 4 second pure ho jaye toh cancel
             if (!p.isOnline() || ticks >= DURATION_TICKS) {
-                // Cleanup: just cancel, no lingering particles
-                cancel();
+                this.cancel(); // Isse particles hamesha ke liye gayab ho jayenge
                 return;
             }
 
-            // Ray trace to find beam endpoint (first solid block or max range)
             Location eyeLoc = p.getEyeLocation();
             Vector dir = eyeLoc.getDirection().normalize();
-            org.bukkit.util.RayTraceResult ray = w.rayTraceBlocks(eyeLoc, dir, MAX_RANGE,
-                    FluidCollisionMode.NEVER, true);
-            double distance = (ray != null && ray.getHitBlock() != null)
-                    ? ray.getHitBlock().getLocation().distance(eyeLoc)
-                    : MAX_RANGE;
-            Location end = eyeLoc.clone().add(dir.clone().multiply(distance));
+            
+            // ✅ FIX 1: Beam ko player ke hitbox se 0.5 blocks aage se shuru karo
+            // Taaki beam aapke apne aap se na takraye
+            Location beamStart = eyeLoc.clone().add(dir.clone().multiply(0.5));
 
-            // --- Spawn particles along beam (thick white beam) ---
-            int steps = (int) (distance * 7);   // 3 particles per block
+            // ✅ FIX 2: RayTrace mein ignore filter lagao
+            org.bukkit.util.RayTraceResult ray = w.rayTraceBlocks(beamStart, dir, MAX_RANGE,
+                    FluidCollisionMode.NEVER, true);
+            
+            double distance = (ray != null && ray.getHitBlock() != null)
+                    ? ray.getHitBlock().getLocation().distance(beamStart)
+                    : MAX_RANGE;
+
+            // --- Particles Spawn Logic ---
+            int steps = (int) (distance * 3); // 3 particles per block kaafi hain
             for (int i = 0; i <= steps; i++) {
                 double t = (double) i / steps;
-                Location point = eyeLoc.clone().add(dir.clone().multiply(t * distance));
-                // Core white dust
-                w.spawnParticle(Particle.DUST, point,1, 0.02, 0.02, 0.02, 0,
-                        new Particle.DustOptions(Color.WHITE, 2.0f));
-                // Outer glow
-                w.spawnParticle(Particle.END_ROD, point, 2, 0.03, 0.03, 0.03, 0.0);
-                // Occasional flash
-                if (i % 4 == 0) {
-                    w.spawnParticle(Particle.FLASH, point, 1, 0, 0, 0, 0);
+                Location point = beamStart.clone().add(dir.clone().multiply(t * distance));
+                
+                // White Core
+                w.spawnParticle(Particle.DUST, point, 1, 0, 0, 0, 0,
+                        new Particle.DustOptions(Color.WHITE, 1.5f));
+                // Outer Glow
+                if (i % 2 == 0) {
+                    w.spawnParticle(Particle.END_ROD, point, 1, 0.01, 0.01, 0.01, 0.01);
                 }
             }
 
-            // --- Damage entities along the beam (with cooldown) ---
-            org.bukkit.util.RayTraceResult entityRay = w.rayTraceEntities(eyeLoc, dir, distance,
+            // --- Damage Logic ---
+            // Yahan bhi beamStart use karo taaki khud ko damage na ho
+            org.bukkit.util.RayTraceResult entityRay = w.rayTraceEntities(beamStart, dir, distance,
                     0.5, e -> e instanceof LivingEntity && !e.equals(p));
+            
             if (entityRay != null && entityRay.getHitEntity() instanceof LivingEntity target) {
                 UUID targetId = target.getUniqueId();
-                int lastTick = lastDamageTick.getOrDefault(targetId, -100);
-                if (ticks - lastTick >= DAMAGE_COOLDOWN_TICKS) {
+                if (ticks - lastDamageTick.getOrDefault(targetId, -100) >= DAMAGE_COOLDOWN_TICKS) {
                     target.damage(DAMAGE_PER_HIT, p);
                     lastDamageTick.put(targetId, ticks);
-                    // Hit effect
-                    target.getWorld().spawnParticle(Particle.FLASH, target.getLocation().add(0, 1, 0),
-                            1, 0, 0, 0, 0);
-                    target.getWorld().playSound(target.getLocation(), Sound.ENTITY_PLAYER_HURT,
-                            0.8f, 1.2f);
+                    target.getWorld().spawnParticle(Particle.FLASH, target.getLocation().add(0, 1, 0), 1);
                 }
             }
 
             ticks++;
         }
     }.runTaskTimer(plugin, 0, 1);
-}
 
             // ── EARTH — Slam ──────────────────────────────────────────────
             // ✅ FIX: BLOCK_CRACK instead of DUST_PLUME
