@@ -292,12 +292,16 @@ public class AnimationTradeManager {
                 cubeAngle += 0.04;
 
               // Isko wahan paste karo jahan ticks badh rahe hain
-        if (ticks == 25) {
-          sender.setGravity(false);    // Player ko hawa mein lock kar dega
-         receiver.setGravity(false); 
-           sender.setVelocity(new Vector(0,0,0)); // Movement rok dega
-         receiver.setVelocity(new Vector(0,0,0));
-      }
+        
+              // FIX: har 5 ticks freeze maintain
+              if (ticks % 5 == 0) {
+                  try {
+                      sender.setGravity(false);
+                      receiver.setGravity(false);
+                      sender.setFallDistance(0f);
+                      receiver.setFallDistance(0f);
+                  } catch (Exception ignored) {}
+              }
                  
 
                 Location sHover = sStartLoc.clone().add(0, 3.0, 0);
@@ -347,11 +351,10 @@ public class AnimationTradeManager {
                 }
 
                 ticks++;
-        } catch (Exception e) {
-            e.printStackTrace();
-            cleanupTrade(sender, receiver, sStartLoc, rStartLoc);
-            this.cancel();
-          }
+               } catch (Exception e) {
+             plugin.getLogger().warning("[Trade] ignored: " + e.getMessage());
+             // trade chalata rahega
+           }
         }
        }.runTaskTimer(plugin, 5, 1);
     }
@@ -470,7 +473,7 @@ public class AnimationTradeManager {
     // ── FREEZE ────────────────────────────────────────────────────────────────
     private void freezePlayer(Player p) {
         p.setWalkSpeed(0f);
-        p.addPotionEffect(new PotionEffect(PotionEffectType.JUMP_BOOST, 300, 128, false, false, false));
+        p.addPotionEffect(new PotionEffect(PotionEffectType.JUMP_BOOST, 300, 10, false, false, false));
         p.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS,   300, 10,  false, false, false));
     }
 
