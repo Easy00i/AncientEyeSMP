@@ -759,7 +759,7 @@ case LIGHT -> {
             // 💨 WIND SHIELD (Aage ki taraf hawa cheerne ka effect)
             Location front = cur.clone().add(finalDashDir.clone().multiply(1.5)).add(0, 1, 0);
             w.spawnParticle(Particle.CLOUD, front, 5, 0.3, 0.3, 0.3, 0.05);
-            w.spawnParticle(Particle.CRIT_MAGIC, front, 10, 0.4, 0.4, 0.4, 0.2);
+            w.spawnParticle(Particle.ENCHANTED_HIT, front, 10, 0.4, 0.4, 0.4, 0.2);
 
             // ⚡ ELECTRIC TRAIL (Piche se bijli nikalna)
             Location back = cur.clone().subtract(finalDashDir.clone().multiply(1.0)).add(0, 1, 0);
