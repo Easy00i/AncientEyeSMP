@@ -693,38 +693,101 @@ case LIGHT -> {
                 }
             }
 
-            // ── TIME — Time Dash ──────────────────────────────────────────
             case TIME -> {
-                Vector dashDir = p.getEyeLocation().getDirection().clone();
-                dashDir.setY(0);
-               if (dashDir.length() < 0.1) dashDir = p.getLocation().getDirection().clone().setY(0);
-               dashDir.normalize();
-             final Vector finalDashDir = dashDir.clone();
-                w.spawnParticle(Particle.ELECTRIC_SPARK, loc, 60, 0.3, 0.5, 0.3, 0.15);
-                w.spawnParticle(Particle.FLASH, loc, 1, 0, 0, 0, 0);
-                w.spawnParticle(Particle.REVERSE_PORTAL, loc, 30, 0.4, 0.6, 0.4, 0.1);
-                w.playSound(loc, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.6f, 2.0f);
-                w.playSound(loc, Sound.ENTITY_ELDER_GUARDIAN_CURSE, 0.4f, 2.0f);
-                p.setVelocity(finalDashDir.clone().multiply(2.2).setY(0.6));
-                p.setFallDistance(0f);
-                new BukkitRunnable() {
-                    int t = 0; double trailAngle = 0;
-                    public void run() {
-                        if (!p.isOnline() || p.isDead() || t++ >= 12) { p.setFallDistance(0f); cancel(); return; }
-                        trailAngle += 0.6;
-                        Location cur = p.getLocation();
-                        w.spawnParticle(Particle.ELECTRIC_SPARK, cur, 8, 0.2, 0.3, 0.2, 0.08);
-                        if (t%2==0) w.spawnParticle(Particle.FLASH, cur, 1, 0, 0, 0, 0);
-                        w.spawnParticle(Particle.REVERSE_PORTAL, cur, 5, 0.2, 0.4, 0.2, 0.06);
-                        for (int i = 0; i < 6; i++) { double a = trailAngle + Math.toRadians(i*60);
-                            w.spawnParticle(Particle.ELECTRIC_SPARK, cur.clone().add(Math.cos(a)*0.4, 0.5+Math.sin(a)*0.3, Math.sin(a)*0.4), 1,0,0,0, 0.04);
+    java.util.UUID id = p.getUniqueId();
+    long now = System.currentTimeMillis();
+    int counts = dashCount.getOrDefault(id, 0);
+
+    // Agar 5 second (5000ms) guzar gaye, toh reset kar do
+    if (counts > 0 && (now - lastDashTime.getOrDefault(id, 0L)) > 5000) {
+        counts = 0; 
+    }
+
+    // Cooldown Check (2 baar se zyada nahi)
+    if (counts >= 2) {
+        p.sendTitle("", "\u00a7c\u00a7lTime Dash on Cooldown!", 0, 20, 10);
+        w.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 0.5f);
+        return;
+    }
+
+    // Dash Count update karo
+    dashCount.put(id, counts + 1);
+    lastDashTime.put(id, now);
+
+    // Dash Direction & Setup
+    Location loc = p.getLocation();
+    Vector dashDir = p.getEyeLocation().getDirection().clone().setY(0).normalize();
+    if (dashDir.length() < 0.1) dashDir = new Vector(1, 0, 0); // Failsafe
+    final Vector finalDashDir = dashDir.clone();
+
+    // Sound & Initial Blast
+    w.playSound(loc, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.5f, 2.0f);
+    w.playSound(loc, Sound.ITEM_TRIDENT_RIPTIDE_3, 1.0f, 0.5f);
+
+    p.setVelocity(finalDashDir.clone().multiply(2.8).setY(0.2)); // 15 block ki speed
+
+    final java.util.HashSet<java.util.UUID> hitTargets = new java.util.HashSet<>();
+
+    new BukkitRunnable() {
+        int t = 0;
+        public void run() {
+            if (!p.isOnline() || p.isDead() || t++ >= 10) { 
+                p.setGliding(false); // Pose normal karna
+                p.setFallDistance(0f); 
+                cancel(); 
+                
+                // Agar ye pehla dash tha, toh 5 second baad clean up (Slowness wagera hatana)
+                if (dashCount.getOrDefault(id, 0) == 1) {
+                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                        if (dashCount.getOrDefault(id, 0) < 2) {
+                            dashCount.put(id, 0); // Reset timer
+                            p.sendMessage("\u00a7e\u00a7oTime flow normalized...");
                         }
-                        w.spawnParticle(Particle.END_ROD, cur, 3, 0.1, 0.2, 0.1, 0.02);
-                        if (t <= 3 && p.getVelocity().length() < 0.5) p.setVelocity(finalDashDir.clone().multiply(1.8).setY(0.5));
-                        p.setFallDistance(0f);
-                    }
-                }.runTaskTimer(plugin, 1L, 1L);
+                    }, 100L); // 5 seconds (100 ticks)
+                }
+                return; 
             }
+
+            Location cur = p.getLocation();
+            
+            // 🏃 PLAYER POSE: Vanilla Gliding (Elytra) pose bina armor stand ke!
+            p.setGliding(true); // Isse player aage ki taraf jhuka hua (running/flying) dikhega
+
+            // 💨 WIND SHIELD (Aage ki taraf hawa cheerne ka effect)
+            Location front = cur.clone().add(finalDashDir.clone().multiply(1.5)).add(0, 1, 0);
+            w.spawnParticle(Particle.CLOUD, front, 5, 0.3, 0.3, 0.3, 0.05);
+            w.spawnParticle(Particle.CRIT_MAGIC, front, 10, 0.4, 0.4, 0.4, 0.2);
+
+            // ⚡ ELECTRIC TRAIL (Piche se bijli nikalna)
+            Location back = cur.clone().subtract(finalDashDir.clone().multiply(1.0)).add(0, 1, 0);
+            w.spawnParticle(Particle.ELECTRIC_SPARK, back, 15, 0.4, 0.4, 0.4, 0.1);
+            Particle.DustOptions redLightning = new Particle.DustOptions(org.bukkit.Color.fromRGB(255, 50, 50), 1.5f);
+            w.spawnParticle(Particle.DUST, back, 10, 0.2, 0.2, 0.2, 0, redLightning);
+
+            // 🕒 TIME HIT DETECTION (Raste mein koi aaya toh Time Rewind)
+            for (org.bukkit.entity.Entity e : cur.getWorld().getNearbyEntities(cur, 2.0, 2.0, 2.0)) {
+                if (e instanceof org.bukkit.entity.LivingEntity victim && !e.equals(p) && !hitTargets.contains(e.getUniqueId())) {
+                    hitTargets.add(e.getUniqueId());
+                    
+                    // Cinematic Rewind Math (Piche dhakelna aur freeze karna)
+                    Vector rewindDir = finalDashDir.clone().multiply(-1.5).setY(0.5);
+                    victim.setVelocity(rewindDir);
+                    
+                    // Slowness 10 for 5 seconds
+                    victim.addPotionEffect(new org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.SLOWNESS, 100, 10, false, false));
+                    victim.addPotionEffect(new org.bukkit.potion.PotionEffect(org.bukkit.potion.PotionEffectType.BLINDNESS, 40, 1, false, false));
+                    
+                    w.spawnParticle(Particle.REVERSE_PORTAL, victim.getLocation().add(0,1,0), 40, 0.5, 0.5, 0.5, 0.1);
+                    w.playSound(victim.getLocation(), Sound.BLOCK_BELL_USE, 1.0f, 0.5f); // Clock tick jaisa sound
+                }
+            }
+
+            // Speed Maintain karna
+            if (p.getVelocity().length() < 1.0) p.setVelocity(finalDashDir.clone().multiply(2.0).setY(0.1));
+            p.setFallDistance(0f);
+        }
+    }.runTaskTimer(plugin, 0L, 1L);
+}
 
             // ── WARRIOR — Charge ──────────────────────────────────────────
             case WARRIOR -> {
