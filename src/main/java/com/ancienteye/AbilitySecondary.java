@@ -718,7 +718,7 @@ case LIGHT -> {
     lastDashTime.put(id, now);
 
     // Dash Direction & Setup
-    Location loc = p.getLocation();
+    Location timeLoc = p.getLocation();
     Vector dashDir = p.getEyeLocation().getDirection().clone().setY(0).normalize();
     if (dashDir.length() < 0.1) dashDir = new Vector(1, 0, 0); // Failsafe
     final Vector finalDashDir = dashDir.clone();
