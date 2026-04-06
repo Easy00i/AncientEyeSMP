@@ -25,6 +25,9 @@ public class AbilitySecondary implements Listener {
     private final AncientEyePlugin plugin;
     private final AbilityLogic logic;
 
+    private static final java.util.HashMap<java.util.UUID, Integer> dashCount = new java.util.HashMap<>();
+    private static final java.util.HashMap<java.util.UUID, Long> lastDashTime = new java.util.HashMap<>();
+
     public AbilitySecondary(AncientEyePlugin plugin, AbilityLogic logic) {
         this.plugin = plugin;
         this.logic  = logic;
