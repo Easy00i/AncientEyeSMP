@@ -610,29 +610,286 @@ case LIGHT -> {
                 }
             }
 
-            // ── RAGE — Smash ──────────────────────────────────────────────
-            case RAGE -> {
-                w.spawnParticle(Particle.EXPLOSION, loc, 5, 0.7, 0, 0.7, 0);
-                w.spawnParticle(Particle.DUST, loc, 100, 1.4, 0.7, 1.4, 0, new Particle.DustOptions(Color.RED, 2.5f));
-                w.spawnParticle(Particle.CRIT, loc, 70, 0.9, 0.5, 0.9, 0.14);
-                w.spawnParticle(Particle.FLAME, loc, 50, 0.8, 0.4, 0.8, 0.1);
-                for (int ring = 1; ring <= 3; ring++) { final int fr = ring;
-                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                        for (int i = 0; i < 20; i++) { double a = Math.toRadians(i*18);
-                            w.spawnParticle(Particle.DUST, loc.clone().add(Math.cos(a)*(fr*2.5),0.2,Math.sin(a)*(fr*2.5)), 4, 0, 0.4, 0, 0, new Particle.DustOptions(Color.RED, 2f));
-                        }
-                    }, fr * 3L);
+            // ── RAGE PRIMARY — Demon King Throne ─────────────────────────────────────────
+// 5 block aage throne summon — black netherblock structure
+// Sky red, thorns spin up from ground, lightning, blaze guards
+// Owner safely sits — 5s timeout if not sat, 2s after standing = remove
+case RAGE -> {
+    // ── Throne base location — 5 blocks aage ────────────────────────────
+    final Location throneBase = loc.clone().add(
+        p.getLocation().getDirection().clone().setY(0).normalize().multiply(5));
+    throneBase.setY(loc.getBlockY());
+
+    // ── Sky red effect ────────────────────────────────────────────────────
+    new BukkitRunnable() {
+        int t = 0;
+        public void run() {
+            if (t++ >= 200) { cancel(); return; }
+            for (Player viewer : throneBase.getWorld().getPlayers()) {
+                if (viewer.getLocation().distanceSquared(throneBase) > 60*60) continue;
+                Location sky = viewer.getLocation().clone().add(0, 30, 0);
+                for (int i = 0; i < 8; i++) {
+                    double a = Math.random()*Math.PI*2;
+                    double r = Math.random()*25;
+                    viewer.spawnParticle(Particle.DUST,
+                        sky.clone().add(Math.cos(a)*r, Math.random()*10, Math.sin(a)*r),
+                        1, 0, 0, 0, 0,
+                        new Particle.DustOptions(Color.fromRGB(180, 0, 0), 3.0f));
                 }
-                w.playSound(loc, Sound.ENTITY_RAVAGER_ROAR, 1f, 0.7f);
-                w.playSound(loc, Sound.ENTITY_GENERIC_EXPLODE, 0.9f, 0.8f);
-                p.getNearbyEntities(8, 8, 8).forEach(e -> {
-                    if (e instanceof LivingEntity le && e != p) {
-                        Vector vel = e.getLocation().toVector().subtract(loc.toVector()).normalize().multiply(3.8).setY(1.2);
-                        le.damage(9.0 * dm, p);
-                        Bukkit.getScheduler().runTaskLater(plugin, () -> { if (e.isValid()) e.setVelocity(vel); }, 1L);
-                    }
-                });
             }
+        }
+    }.runTaskTimer(plugin, 0, 2);
+
+    // ── Build throne from blocks ──────────────────────────────────────────
+    // Throne structure: NETHER_BRICKS + BLACKSTONE
+    final java.util.Map<org.bukkit.block.Block, org.bukkit.block.data.BlockData> throneBlocks
+        = new java.util.LinkedHashMap<>();
+
+    // Structure layout (relative to throneBase)
+    // Base platform 3x3
+    int[][] base = {{0,0,0},{1,0,0},{-1,0,0},{0,0,1},{0,0,-1},{1,0,1},{-1,0,1},{1,0,-1},{-1,0,-1}};
+    // Back pillars
+    int[][] pillars = {{-1,1,-1},{1,1,-1},{-1,2,-1},{1,2,-1},{-1,3,-1},{1,3,-1},{-1,4,-1},{1,4,-1}};
+    // Armrests
+    int[][] arms = {{-1,1,0},{1,1,0},{-1,2,0},{1,2,0}};
+    // Back wall
+    int[][] back = {{0,1,-1},{0,2,-1},{0,3,-1},{-1,3,-1},{1,3,-1}};
+    // Top cross
+    int[][] top = {{-2,4,-1},{2,4,-1},{0,5,-1}};
+    // Seat
+    int[][] seat = {{0,1,0}};
+    // Steps
+    int[][] steps = {{0,0,1},{-1,0,1},{1,0,1}};
+
+    org.bukkit.Material THRONE   = org.bukkit.Material.NETHER_BRICKS;
+    org.bukkit.Material DARK     = org.bukkit.Material.BLACKSTONE;
+    org.bukkit.Material SEAT_MAT = org.bukkit.Material.POLISHED_BLACKSTONE;
+    org.bukkit.Material LAVA_MAT = org.bukkit.Material.MAGMA_BLOCK;
+
+    // Place blocks with delay — rise from ground effect
+    int delay = 0;
+    for (int[] b : base) {
+        final int[] fb = b;
+        final org.bukkit.Material mat = DARK;
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            org.bukkit.block.Block blk = throneBase.clone().add(fb[0], fb[1], fb[2]).getBlock();
+            if (blk.getType() == org.bukkit.Material.AIR || !blk.getType().isSolid()) {
+                throneBlocks.put(blk, blk.getBlockData().clone());
+                blk.setType(mat);
+                w.spawnParticle(Particle.LARGE_SMOKE, blk.getLocation().add(0.5,1,0.5), 3, 0.2,0.2,0.2, 0.02);
+            }
+        }, delay++);
+    }
+    for (int[] b : pillars) {
+        final int[] fb = b;
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            org.bukkit.block.Block blk = throneBase.clone().add(fb[0], fb[1], fb[2]).getBlock();
+            if (!blk.getType().isSolid()) {
+                throneBlocks.put(blk, blk.getBlockData().clone());
+                blk.setType(THRONE);
+            }
+        }, 5 + delay++/2);
+    }
+    for (int[][] group : new int[][][] {arms, back, seat, steps, top}) {
+        for (int[] b : group) {
+            final int[] fb = b;
+            final org.bukkit.Material mat2 = (group == seat) ? SEAT_MAT :
+                                             (group == steps) ? LAVA_MAT : THRONE;
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                org.bukkit.block.Block blk = throneBase.clone().add(fb[0], fb[1], fb[2]).getBlock();
+                if (!blk.getType().isSolid()) {
+                    throneBlocks.put(blk, blk.getBlockData().clone());
+                    blk.setType(mat2);
+                }
+            }, 8 + delay++/2);
+        }
+    }
+
+    // ── Thorns — spinning spikes rise from ground ─────────────────────────
+    // 4 thorns around throne, spin + wave animation
+    final org.bukkit.entity.FallingBlock[] thorns = new org.bukkit.entity.FallingBlock[4];
+    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+        w.strikeLightningEffect(throneBase.clone().add(0, 3, 0));
+        w.playSound(throneBase, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 1f, 0.5f);
+
+        for (int i = 0; i < 4; i++) {
+            final int fi = i;
+            double a = Math.toRadians(i * 90);
+            Location thornLoc = throneBase.clone().add(Math.cos(a)*2.5, 0, Math.sin(a)*2.5);
+            org.bukkit.entity.FallingBlock thorn = w.spawnFallingBlock(thornLoc,
+                org.bukkit.Material.NETHER_BRICKS.createBlockData());
+            thorn.setDropItem(false);
+            thorn.setHurtEntities(false);
+            thorn.setGravity(false);
+            thorns[fi] = thorn;
+        }
+
+        // Thorn wave + spin animation
+        new BukkitRunnable() {
+            int t = 0;
+            double thornAngle = 0;
+            public void run() {
+                if (t++ >= 40) { cancel(); return; }
+                thornAngle += 0.08;
+
+                for (int i = 0; i < 4; i++) {
+                    if (thorns[i] == null || !thorns[i].isValid()) continue;
+                    double baseAngle = Math.toRadians(i * 90) + thornAngle;
+                    double wave = Math.sin(t * 0.3) * 0.3; // up-down wave
+                    double r = 2.5;
+                    double targetY = throneBase.getY() + 1.0 + (t * 0.08) + wave;
+                    Location newLoc = throneBase.clone().add(
+                        Math.cos(baseAngle)*r, targetY, Math.sin(baseAngle)*r);
+                    thorns[i].teleport(newLoc);
+
+                    // Thorn particles
+                    w.spawnParticle(Particle.LARGE_SMOKE, newLoc, 2, 0.1, 0.1, 0.1, 0.01);
+                    w.spawnParticle(Particle.DUST, newLoc, 1, 0, 0, 0, 0,
+                        new Particle.DustOptions(Color.fromRGB(80, 0, 0), 1.5f));
+                }
+            }
+        }.runTaskTimer(plugin, 0, 1);
+
+    }, 15L);
+
+    // ── Throne seat detection + state ────────────────────────────────────
+    final boolean[] ownerSeated  = {false};
+    final boolean[] throneActive = {true};
+    final org.bukkit.entity.Blaze[] guards = {null, null};
+
+    // Seat location — 1 block above throne seat
+    final Location seatLoc = throneBase.clone().add(0, 2, 0);
+
+    // Summon blaze guards when owner sits
+    final Runnable summonGuards = () -> {
+        for (int i = 0; i < 2; i++) {
+            double a = Math.toRadians(i * 180);
+            Location gLoc = throneBase.clone().add(Math.cos(a)*3, 0, Math.sin(a)*3);
+            org.bukkit.entity.Blaze blaze = (org.bukkit.entity.Blaze)
+                w.spawnEntity(gLoc, org.bukkit.entity.EntityType.BLAZE);
+            blaze.setTarget(null);
+            blaze.setAware(false); // don't move or attack
+            blaze.setCustomName("§4§lGuard");
+            blaze.setCustomNameVisible(true);
+            guards[i] = blaze;
+        }
+    };
+
+    // Main throne maintenance task
+    new BukkitRunnable() {
+        int seatedTicks    = 0;
+        int unseatedTicks  = 0;
+        int totalTicks     = 0;
+        int lightningTimer = 0;
+
+        public void run() {
+            totalTicks++;
+            lightningTimer++;
+
+            if (!throneActive[0] || !p.isOnline()) {
+                removeThroneAll();
+                cancel(); return;
+            }
+
+            // Check if owner is sitting on throne (within 1.5 blocks of seat)
+            boolean onThrone = p.getLocation().distanceSquared(seatLoc) < 1.5*1.5;
+
+            if (onThrone) {
+                // Owner sat — summon guards once
+                if (!ownerSeated[0]) {
+                    ownerSeated[0] = true;
+                    unseatedTicks  = 0;
+                    summonGuards.run();
+                    p.sendTitle("§4§lDEMON THRONE", "§7Power flows through you...", 5, 40, 10);
+                    w.playSound(seatLoc, Sound.ENTITY_WITHER_AMBIENT, 1f, 0.4f);
+                }
+                seatedTicks++;
+                unseatedTicks = 0;
+
+                // Damage nearby enemies while seated
+                if (totalTicks % 20 == 0) {
+                    for (org.bukkit.entity.Entity e : w.getNearbyEntities(throneBase, 8, 8, 8)) {
+                        if (!(e instanceof LivingEntity le)) continue;
+                        if (e.equals(p)) continue;
+                        if (guards[0] != null && e.equals(guards[0])) continue;
+                        if (guards[1] != null && e.equals(guards[1])) continue;
+                        if (e instanceof Player ep && (ep.getGameMode()==GameMode.CREATIVE||ep.getGameMode()==GameMode.SPECTATOR)) continue;
+                        le.damage(3.0 * dm, p);
+                    }
+                }
+
+            } else {
+                // Not on throne
+                unseatedTicks++;
+                if (!ownerSeated[0] && totalTicks >= 100) {
+                    // 5s without sitting = remove
+                    throneActive[0] = false;
+                    removeThroneAll();
+                    p.sendMessage("§c§lThrone faded — you didn't claim it.");
+                    cancel(); return;
+                }
+                if (ownerSeated[0] && unseatedTicks >= 40) {
+                    // Stood up 2s ago = remove
+                    throneActive[0] = false;
+                    removeThroneAll();
+                    cancel(); return;
+                }
+            }
+
+            // Periodic lightning on throne
+            if (lightningTimer >= 60) {
+                lightningTimer = 0;
+                w.strikeLightningEffect(seatLoc);
+                w.playSound(seatLoc, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 0.7f, 0.6f);
+            }
+
+            // Ambient particles
+            if (totalTicks % 5 == 0) {
+                double ra = Math.random()*Math.PI*2;
+                w.spawnParticle(Particle.LARGE_SMOKE,
+                    throneBase.clone().add(Math.cos(ra)*2, Math.random()*4, Math.sin(ra)*2),
+                    1, 0.1, 0.1, 0.1, 0.01);
+                w.spawnParticle(Particle.FLAME,
+                    throneBase.clone().add(Math.cos(ra)*1.5, 1+Math.random()*2, Math.sin(ra)*1.5),
+                    1, 0.05, 0.05, 0.05, 0.02);
+            }
+        }
+
+        void removeThroneAll() {
+            // Remove blocks — restore originals
+            for (java.util.Map.Entry<org.bukkit.block.Block, org.bukkit.block.data.BlockData> entry
+                    : throneBlocks.entrySet()) {
+                entry.getKey().setBlockData(entry.getValue());
+            }
+            throneBlocks.clear();
+
+            // Remove blaze guards
+            for (org.bukkit.entity.Blaze g : guards) {
+                if (g != null && g.isValid()) {
+                    g.getWorld().spawnParticle(Particle.LARGE_SMOKE, g.getLocation(), 10, 0.3,0.5,0.3, 0.05);
+                    g.remove();
+                }
+            }
+            // Remove thorns
+            for (org.bukkit.entity.FallingBlock thorn : thorns) {
+                if (thorn != null && thorn.isValid()) thorn.remove();
+            }
+            // Sound
+            if (p.isOnline()) {
+                w.playSound(throneBase, Sound.BLOCK_BEACON_DEACTIVATE, 1f, 0.5f);
+                w.spawnParticle(Particle.LARGE_SMOKE, throneBase.clone().add(0,2,0), 30, 1,2,1, 0.05);
+            }
+        }
+    }.runTaskTimer(plugin, 20L, 1L);
+
+    // Sounds + initial particles
+    w.playSound(loc, Sound.ENTITY_RAVAGER_ROAR, 1f, 0.4f);
+    w.playSound(loc, Sound.ENTITY_WITHER_AMBIENT, 0.8f, 0.3f);
+    w.spawnParticle(Particle.LARGE_SMOKE, throneBase, 20, 1,1,1, 0.05);
+    w.spawnParticle(Particle.DUST, throneBase, 40, 1.5,0.5,1.5, 0,
+        new Particle.DustOptions(Color.fromRGB(120,0,0), 2.5f));
+}
+
 
             // ── SPIRIT — Block Projectiles ────────────────────────────────
             case SPIRIT -> {
