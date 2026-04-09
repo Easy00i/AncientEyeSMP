@@ -318,6 +318,30 @@ public void onMinionDamage(EntityDamageByEntityEvent event) {
         }
     }
 
+    // HELPERS mein add karo
+// Fire beam from point A to point B — like anime/movie fire beam
+public void drawFireBeam(Location from, Location to) {
+    Vector dir = to.toVector().subtract(from.toVector());
+    double len = dir.length();
+    if (len == 0) return;
+    Vector step = dir.clone().normalize().multiply(0.4);
+    int steps = (int)(len / 0.4);
+
+    for (int i = 0; i <= steps; i++) {
+        Location pt = from.clone().add(step.clone().multiply(i));
+
+        // Core — bright yellow/orange
+        from.getWorld().spawnParticle(Particle.DUST, pt, 2, 0.03, 0.03, 0.03, 0,
+            new Particle.DustOptions(Color.fromRGB(255, 160, 0), 1.8f));
+        // Flame
+        from.getWorld().spawnParticle(Particle.FLAME, pt, 1, 0.04, 0.04, 0.04, 0.01);
+        // Glow every 3rd
+        if (i % 3 == 0)
+            from.getWorld().spawnParticle(Particle.DUST, pt, 1, 0.06, 0.06, 0.06, 0,
+                new Particle.DustOptions(Color.fromRGB(255, 80, 0), 1.4f));
+    }
+}            
+
     double ecfg(String eye, String key, double def) {
         return plugin.getConfig().getDouble("event-eyes."+eye+"."+key, def);
     }
