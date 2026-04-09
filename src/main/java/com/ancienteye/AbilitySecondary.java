@@ -1413,14 +1413,14 @@ case METEOR -> {
         @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST)
         public void onTeleport(org.bukkit.event.player.PlayerTeleportEvent e) {
             if (done[0]) return;
-            if (!e.getEntity().getUniqueId().equals(target.getUniqueId())) return;
+            if (!e.getPlayer().getUniqueId().equals(target.getUniqueId())) return;
             // Block all teleport causes except plugin-set
             e.setCancelled(true);
         }
         @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST)
         public void onEntityTeleport(org.bukkit.event.entity.EntityTeleportEvent e) {
             if (done[0]) return;
-            if (!e.getPlayer().getUniqueId().equals(target.getUniqueId())) return;
+            if (!e.getEntity().getUniqueId().equals(target.getUniqueId())) return;
             e.setCancelled(true); // block enderman teleport
         }
     };
