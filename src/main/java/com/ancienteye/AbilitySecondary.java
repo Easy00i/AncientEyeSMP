@@ -1392,42 +1392,211 @@ Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 p.sendTitle("§6§l⚡ TITAN SHOCKWAVE!", "§7The ground shatters!", 5, 70, 15);
             }
 
-            // ── METEOR — Rain ─────────────────────────────────────────────
-            case METEOR -> {
-                double mDmg = logic.ecfg("METEOR", "secondary-damage", 8.0);
-                w.playSound(p.getLocation(), Sound.ENTITY_GHAST_WARN, 1f, 0.5f);
-                new BukkitRunnable() {
-                    int count = 0;
-                    public void run() {
-                        if (count >= 20 || !p.isOnline()) { cancel(); return; }
-                        count++;
-                        double rx = (Math.random()*80)-40, rz = (Math.random()*80)-40;
-                        Location dropLoc = p.getLocation().clone().add(rx, 40, rz);
-                        new BukkitRunnable() {
-                            Location current = dropLoc.clone();
-                            Vector direction = new Vector(0, -1, 0);
-                            public void run() {
-                                if (current.getBlock().getType().isSolid() || current.getY() <= current.getWorld().getMinHeight()) {
-                                    // ✅ FIX: explosion — block break + owner safe
-                                    current.getWorld().createExplosion(current, 4f, false, false, p);
-                                    w.spawnParticle(Particle.EXPLOSION_EMITTER, current, 3, 1, 1, 1, 0);
-                                    w.playSound(current, Sound.ENTITY_GENERIC_EXPLODE, 1.5f, 0.5f);
-                                    logic.applySafeDamage(p, current, 6.0, mDmg);
-                                    cancel(); return;
-                                }
-                                w.spawnParticle(Particle.LARGE_SMOKE, current, 5, 0.2, 0.2, 0.2, 0.02);
-                                w.spawnParticle(Particle.LAVA, current, 8, 0.3, 0.3, 0.3, 0.05);
-                                for (int t = 0; t < 5; t++) {
-                                    Location tail = current.clone().subtract(direction.clone().multiply(t*0.3));
-                                    w.spawnParticle(Particle.FLAME, tail, 10, 0.2, 0.2, 0.2, 0.08);
-                                    if (t>2) w.spawnParticle(Particle.DUST, tail, 5, 0.3, 0.3, 0.3, 0, new Particle.DustOptions(Color.fromRGB(80,40,0), 2.0f));
-                                }
-                                current.add(0, -1.2, 0);
-                            }
-                        }.runTaskTimer(plugin, 0, 1);
+            // ── METEOR SECONDARY — 4 Pillar Trap ──────────────────────────────────────────
+// Aim based — enemy ke 4 side par 4 pillars rise
+// Enemy freeze 6s, fire beam from all 4 pillars, 2 hearts/s
+// Pillars 8 blocks tall, remove after 6s — no glitch, owner safe
+case METEOR -> {
+    // ── Aim — get target ─────────────────────────────────────────────────
+    LivingEntity target = logic.aim(p, 30);
+    if (target == null) {
+        p.sendMessage("\u00a7cNo target in range!");
+        return;
+    }
+
+    final Location center = target.getLocation().clone();
+    final boolean[] done  = {false};
+
+    // ── Block teleport/enderman escape ───────────────────────────────────
+    // Register temp listener to cancel teleport attempts
+    final org.bukkit.event.Listener trapListener = new org.bukkit.event.Listener() {
+        @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST)
+        public void onTeleport(org.bukkit.event.player.PlayerTeleportEvent e) {
+            if (done[0]) return;
+            if (!e.getEntity().getUniqueId().equals(target.getUniqueId())) return;
+            // Block all teleport causes except plugin-set
+            e.setCancelled(true);
+        }
+        @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST)
+        public void onEntityTeleport(org.bukkit.event.entity.EntityTeleportEvent e) {
+            if (done[0]) return;
+            if (!e.getEntity().getUniqueId().equals(target.getUniqueId())) return;
+            e.setCancelled(true); // block enderman teleport
+        }
+    };
+    plugin.getServer().getPluginManager().registerEvents(trapListener, plugin);
+
+    // ── Sound + announcement ─────────────────────────────────────────────
+    w.playSound(p.getLocation(), Sound.ENTITY_WITHER_SHOOT, 1f, 0.4f);
+    w.playSound(center, Sound.ENTITY_ENDER_DRAGON_GROWL, 1f, 0.6f);
+    p.sendTitle("\u00a76\u00a7lPILLAR TRAP", "\u00a77Rising...", 5, 40, 10);
+
+    // ── Pillar block storage ──────────────────────────────────────────────
+    final java.util.List<org.bukkit.block.Block> pillarBlocks = new java.util.ArrayList<>();
+    final int PILLAR_H = 8;
+    final double RADIUS = 3.0;
+
+    // 4 pillars at N/S/E/W
+    final double[] pillarAngles = {0, 90, 180, 270};
+    final Location[] pillarBases = new Location[4];
+    for (int i = 0; i < 4; i++) {
+        double a = Math.toRadians(pillarAngles[i]);
+        pillarBases[i] = center.clone().add(Math.cos(a)*RADIUS, 0, Math.sin(a)*RADIUS);
+        // Snap to ground
+        pillarBases[i].setY(center.getBlockY());
+    }
+
+    // ── PHASE 1: Rise pillars layer by layer (2 seconds = 40 ticks) ──────
+    new BukkitRunnable() {
+        int layer = 0;
+        public void run() {
+            if (layer >= PILLAR_H) { cancel(); return; }
+
+            for (int i = 0; i < 4; i++) {
+                Location base = pillarBases[i];
+                // Each pillar = 2x2 of QUARTZ_PILLAR for column look
+                for (int dx = 0; dx <= 1; dx++) {
+                    for (int dz = 0; dz <= 1; dz++) {
+                        org.bukkit.block.Block blk = base.clone()
+                            .add(dx-0, layer, dz-0).getBlock();
+                        if (!blk.getType().isSolid()) {
+                            // Alternate for column texture
+                            org.bukkit.Material mat = (layer == 0 || layer == PILLAR_H-1)
+                                ? org.bukkit.Material.CHISELED_QUARTZ_BLOCK
+                                : (layer % 2 == 0)
+                                    ? org.bukkit.Material.QUARTZ_PILLAR
+                                    : org.bukkit.Material.QUARTZ_BRICKS;
+                            blk.setType(mat);
+                            pillarBlocks.add(blk);
+                            // Rise particles
+                            w.spawnParticle(Particle.DUST,
+                                blk.getLocation().add(0.5,1,0.5), 2, 0.2,0.2,0.2, 0,
+                                new Particle.DustOptions(Color.fromRGB(255,200,50), 1.5f));
+                        }
                     }
-                }.runTaskTimer(plugin, 0, 8);
+                }
             }
+
+            // Sound per layer
+            w.playSound(center, Sound.BLOCK_STONE_PLACE, 0.8f, 0.5f + layer*0.08f);
+            layer++;
+        }
+    }.runTaskTimer(plugin, 0, 2); // 1 layer every 2 ticks = 16 ticks total
+
+    // ── PHASE 2: After pillars up — freeze + beam + damage ───────────────
+    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+        if (!target.isValid()) return;
+
+        // Freeze target
+        target.setVelocity(new Vector(0, 0, 0));
+        if (target instanceof Player pt) {
+            pt.setWalkSpeed(0f);
+            pt.addPotionEffect(new PotionEffect(PotionEffectType.JUMP_BOOST, 120, 128, false, false, false));
+            pt.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS,   120, 10,  false, false, false));
+        }
+        // Float target 3 blocks up
+        target.addPotionEffect(new PotionEffect(PotionEffectType.LEVITATION, 120, 2, false, false, false));
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+            if (target.isValid()) {
+                target.removePotionEffect(PotionEffectType.LEVITATION);
+                target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 120, 0, false, false, false));
+            }
+        }, 20L); // float up for 1s then lock
+
+        w.playSound(center, Sound.ENTITY_ELDER_GUARDIAN_CURSE, 1f, 0.5f);
+        w.playSound(center, Sound.BLOCK_BEACON_ACTIVATE, 1f, 0.8f);
+
+        // Beam animation — har tick 4 beams from pillars to target
+        new BukkitRunnable() {
+            int ticks = 0;
+            public void run() {
+                if (ticks++ >= 120 || !target.isValid() || done[0]) {
+                    // 6s done — cleanup
+                    done[0] = true;
+                    cleanup();
+                    cancel(); return;
+                }
+
+                // Maintain freeze every 5 ticks
+                if (ticks % 5 == 0) {
+                    target.setVelocity(new Vector(0, 0, 0));
+                    if (target instanceof Player pt) {
+                        pt.setWalkSpeed(0f);
+                    }
+                }
+
+                Location tLoc = center.clone().add(0, 3, 0); // 3 blocks up
+
+                // Draw fire beam from each pillar to target
+                for (int i = 0; i < 4; i++) {
+                    Location pillarTop = pillarBases[i].clone().add(1, PILLAR_H + 0.5, 1);
+                    drawFireBeam(pillarTop, tLoc);
+                }
+
+                // Damage every 10 ticks (0.5s) = 2 hearts per second
+                if (ticks % 10 == 0) {
+                    if (target.isValid() && !target.equals(p)) {
+                        target.damage(4.0 * logic.getDmg(p), p); // 2 hearts
+                        w.spawnParticle(Particle.FLAME,
+                            target.getLocation().add(0,1,0), 10, 0.4,0.6,0.4, 0.06);
+                    }
+                }
+
+                // Pillar fire effect
+                if (ticks % 3 == 0) {
+                    for (Location pb : pillarBases) {
+                        Location top = pb.clone().add(1, PILLAR_H, 1);
+                        w.spawnParticle(Particle.FLAME, top, 3, 0.3,0.1,0.3, 0.08);
+                        w.spawnParticle(Particle.LAVA, top, 1, 0.2,0.1,0.2, 0.05);
+                    }
+                }
+                // Sound
+                if (ticks % 20 == 0) {
+                    w.playSound(center, Sound.BLOCK_BEACON_AMBIENT, 1f, 1.2f);
+                }
+            }
+
+            void cleanup() {
+                // Unregister trap listener
+                org.bukkit.event.HandlerList.unregisterAll(trapListener);
+
+                // Unfreeze target
+                if (target.isValid()) {
+                    target.removePotionEffect(PotionEffectType.LEVITATION);
+                    target.removePotionEffect(PotionEffectType.SLOW_FALLING);
+                    if (target instanceof Player pt) {
+                        pt.setWalkSpeed(0.2f);
+                        pt.removePotionEffect(PotionEffectType.JUMP_BOOST);
+                        pt.removePotionEffect(PotionEffectType.SLOWNESS);
+                    }
+                }
+
+                // Remove pillar blocks
+                for (org.bukkit.block.Block blk : pillarBlocks) {
+                    if (blk.getType() == org.bukkit.Material.QUARTZ_PILLAR
+                            || blk.getType() == org.bukkit.Material.QUARTZ_BRICKS
+                            || blk.getType() == org.bukkit.Material.CHISELED_QUARTZ_BLOCK) {
+                        blk.setType(org.bukkit.Material.AIR);
+                        w.spawnParticle(Particle.DUST,
+                            blk.getLocation().add(0.5,0.5,0.5), 3, 0.2,0.2,0.2, 0,
+                            new Particle.DustOptions(Color.fromRGB(255,200,50), 1.2f));
+                    }
+                }
+                pillarBlocks.clear();
+
+                // Final explosion
+                w.strikeLightningEffect(center);
+                w.spawnParticle(Particle.EXPLOSION_EMITTER, center.clone().add(0,3,0), 3, 1,1,1, 0);
+                w.playSound(center, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 1f, 0.6f);
+            }
+        }.runTaskTimer(plugin, 0, 1);
+
+    }, 20L); // 20 ticks after pillars start = pillars fully up
+
+    // ── Draw fire beam helper ─────────────────────────────────────────────
+}
+                
+
 // ── MIRAGE — Warden Minions ────────────────────────────────────
 case MIRAGE -> {
     w.playSound(p.getLocation(), Sound.ENTITY_ILLUSIONER_MIRROR_MOVE, 1.5f, 0.5f);
