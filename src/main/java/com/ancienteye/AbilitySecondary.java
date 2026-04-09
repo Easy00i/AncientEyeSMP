@@ -1361,12 +1361,9 @@ Bukkit.getScheduler().runTaskLater(plugin, () -> {
                 p.sendTitle("§6§l⚡ TITAN SHOCKWAVE!", "§7The ground shatters!", 5, 70, 15);
             }
 
-            // ── METEOR SECONDARY — 4 Pillar Trap ──────────────────────────────────────────
-// Aim based — enemy ke 4 side par 4 pillars rise
-// Enemy freeze 6s, fire beam from all 4 pillars, 2 hearts/s
-// Pillars 8 blocks tall, remove after 6s — no glitch, owner safe
+// ── METEOR SECONDARY — 4 Pillar Trap (Thin, Black, 4 blocks away) ─────────
 case METEOR -> {
-    // ── Aim — get target ─────────────────────────────────────────────────
+    // ── Aim ─────────────────────────────────────────────────────────────────
     LivingEntity target = logic.aim(p, 30);
     if (target == null) {
         p.sendMessage("\u00a7cNo target in range!");
@@ -1377,20 +1374,18 @@ case METEOR -> {
     final boolean[] done  = {false};
 
     // ── Block teleport/enderman escape ───────────────────────────────────
-    // Register temp listener to cancel teleport attempts
     final org.bukkit.event.Listener trapListener = new org.bukkit.event.Listener() {
         @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST)
         public void onTeleport(org.bukkit.event.player.PlayerTeleportEvent e) {
             if (done[0]) return;
             if (!e.getPlayer().getUniqueId().equals(target.getUniqueId())) return;
-            // Block all teleport causes except plugin-set
             e.setCancelled(true);
         }
         @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST)
         public void onEntityTeleport(org.bukkit.event.entity.EntityTeleportEvent e) {
             if (done[0]) return;
             if (!e.getEntity().getUniqueId().equals(target.getUniqueId())) return;
-            e.setCancelled(true); // block enderman teleport
+            e.setCancelled(true);
         }
     };
     plugin.getServer().getPluginManager().registerEvents(trapListener, plugin);
@@ -1403,19 +1398,18 @@ case METEOR -> {
     // ── Pillar block storage ──────────────────────────────────────────────
     final java.util.List<org.bukkit.block.Block> pillarBlocks = new java.util.ArrayList<>();
     final int PILLAR_H = 8;
-    final double RADIUS = 3.0;
+    final double RADIUS = 4.0;   // ✅ 4 blocks away from enemy
 
-    // 4 pillars at N/S/E/W
+    // 4 pillars at N/S/E/W – each 1x1 (thin)
     final double[] pillarAngles = {0, 90, 180, 270};
     final Location[] pillarBases = new Location[4];
     for (int i = 0; i < 4; i++) {
         double a = Math.toRadians(pillarAngles[i]);
-        pillarBases[i] = center.clone().add(Math.cos(a)*RADIUS, 0, Math.sin(a)*RADIUS);
-        // Snap to ground
+        pillarBases[i] = center.clone().add(Math.cos(a) * RADIUS, 0, Math.sin(a) * RADIUS);
         pillarBases[i].setY(center.getBlockY());
     }
 
-    // ── PHASE 1: Rise pillars layer by layer (2 seconds = 40 ticks) ──────
+    // ── PHASE 1: Rise pillars layer by layer (thin, nether bricks) ─────────
     new BukkitRunnable() {
         int layer = 0;
         public void run() {
@@ -1423,34 +1417,23 @@ case METEOR -> {
 
             for (int i = 0; i < 4; i++) {
                 Location base = pillarBases[i];
-                // Each pillar = 2x2 of QUARTZ_PILLAR for column look
-                for (int dx = 0; dx <= 1; dx++) {
-                    for (int dz = 0; dz <= 1; dz++) {
-                        org.bukkit.block.Block blk = base.clone()
-                            .add(dx-0, layer, dz-0).getBlock();
-                        if (!blk.getType().isSolid()) {
-                            // Alternate for column texture
-                            org.bukkit.Material mat = (layer == 0 || layer == PILLAR_H-1)
-                                ? org.bukkit.Material.CHISELED_QUARTZ_BLOCK
-                                : (layer % 2 == 0)
-                                    ? org.bukkit.Material.QUARTZ_PILLAR
-                                    : org.bukkit.Material.QUARTZ_BRICKS;
-                            blk.setType(mat);
-                            pillarBlocks.add(blk);
-                            // Rise particles
-                            w.spawnParticle(Particle.DUST,
-                                blk.getLocation().add(0.5,1,0.5), 2, 0.2,0.2,0.2, 0,
-                                new Particle.DustOptions(Color.fromRGB(255,200,50), 1.5f));
-                        }
-                    }
+                // Single block per layer (thin pillar)
+                org.bukkit.block.Block blk = base.clone().add(0, layer, 0).getBlock();
+                if (!blk.getType().isSolid()) {
+                    // Use nether bricks (blackish)
+                    blk.setType(org.bukkit.Material.NETHER_BRICKS);
+                    pillarBlocks.add(blk);
+                    // Rise particles
+                    w.spawnParticle(Particle.DUST,
+                        blk.getLocation().add(0.5, 1, 0.5), 2, 0.2, 0.2, 0.2, 0,
+                        new Particle.DustOptions(Color.fromRGB(80, 80, 80), 1.5f));
                 }
             }
-
             // Sound per layer
-            w.playSound(center, Sound.BLOCK_STONE_PLACE, 0.8f, 0.5f + layer*0.08f);
+            w.playSound(center, Sound.BLOCK_STONE_PLACE, 0.8f, 0.5f + layer * 0.08f);
             layer++;
         }
-    }.runTaskTimer(plugin, 0, 2); // 1 layer every 2 ticks = 16 ticks total
+    }.runTaskTimer(plugin, 0, 2);
 
     // ── PHASE 2: After pillars up — freeze + beam + damage ───────────────
     Bukkit.getScheduler().runTaskLater(plugin, () -> {
@@ -1470,66 +1453,54 @@ case METEOR -> {
                 target.removePotionEffect(PotionEffectType.LEVITATION);
                 target.addPotionEffect(new PotionEffect(PotionEffectType.SLOW_FALLING, 120, 0, false, false, false));
             }
-        }, 20L); // float up for 1s then lock
+        }, 20L);
 
         w.playSound(center, Sound.ENTITY_ELDER_GUARDIAN_CURSE, 1f, 0.5f);
         w.playSound(center, Sound.BLOCK_BEACON_ACTIVATE, 1f, 0.8f);
 
-        // Beam animation — har tick 4 beams from pillars to target
+        // Beam animation
         new BukkitRunnable() {
             int ticks = 0;
             public void run() {
                 if (ticks++ >= 120 || !target.isValid() || done[0]) {
-                    // 6s done — cleanup
                     done[0] = true;
                     cleanup();
                     cancel(); return;
                 }
 
-                // Maintain freeze every 5 ticks
                 if (ticks % 5 == 0) {
                     target.setVelocity(new Vector(0, 0, 0));
-                    if (target instanceof Player pt) {
-                        pt.setWalkSpeed(0f);
-                    }
+                    if (target instanceof Player pt) pt.setWalkSpeed(0f);
                 }
 
-                Location tLoc = center.clone().add(0, 3, 0); // 3 blocks up
+                Location tLoc = center.clone().add(0, 3, 0);
 
-                // Draw fire beam from each pillar to target
                 for (int i = 0; i < 4; i++) {
-                    Location pillarTop = pillarBases[i].clone().add(1, PILLAR_H + 0.5, 1);
+                    Location pillarTop = pillarBases[i].clone().add(0, PILLAR_H, 0);
                     drawFireBeam(pillarTop, tLoc);
                 }
 
-                // Damage every 10 ticks (0.5s) = 2 hearts per second
                 if (ticks % 10 == 0) {
                     if (target.isValid() && !target.equals(p)) {
-                        target.damage(4.0 * logic.getDmg(p), p); // 2 hearts
-                        w.spawnParticle(Particle.FLAME,
-                            target.getLocation().add(0,1,0), 10, 0.4,0.6,0.4, 0.06);
+                        target.damage(4.0 * logic.getDmg(p), p);
+                        w.spawnParticle(Particle.FLAME, target.getLocation().add(0,1,0), 10, 0.4,0.6,0.4, 0.06);
                     }
                 }
 
-                // Pillar fire effect
                 if (ticks % 3 == 0) {
                     for (Location pb : pillarBases) {
-                        Location top = pb.clone().add(1, PILLAR_H, 1);
+                        Location top = pb.clone().add(0, PILLAR_H, 0);
                         w.spawnParticle(Particle.FLAME, top, 3, 0.3,0.1,0.3, 0.08);
                         w.spawnParticle(Particle.LAVA, top, 1, 0.2,0.1,0.2, 0.05);
                     }
                 }
-                // Sound
                 if (ticks % 20 == 0) {
                     w.playSound(center, Sound.BLOCK_BEACON_AMBIENT, 1f, 1.2f);
                 }
             }
 
             void cleanup() {
-                // Unregister trap listener
                 org.bukkit.event.HandlerList.unregisterAll(trapListener);
-
-                // Unfreeze target
                 if (target.isValid()) {
                     target.removePotionEffect(PotionEffectType.LEVITATION);
                     target.removePotionEffect(PotionEffectType.SLOW_FALLING);
@@ -1539,32 +1510,23 @@ case METEOR -> {
                         pt.removePotionEffect(PotionEffectType.SLOWNESS);
                     }
                 }
-
-                // Remove pillar blocks
                 for (org.bukkit.block.Block blk : pillarBlocks) {
-                    if (blk.getType() == org.bukkit.Material.QUARTZ_PILLAR
-                            || blk.getType() == org.bukkit.Material.QUARTZ_BRICKS
-                            || blk.getType() == org.bukkit.Material.CHISELED_QUARTZ_BLOCK) {
+                    if (blk.getType() == org.bukkit.Material.NETHER_BRICKS) {
                         blk.setType(org.bukkit.Material.AIR);
                         w.spawnParticle(Particle.DUST,
                             blk.getLocation().add(0.5,0.5,0.5), 3, 0.2,0.2,0.2, 0,
-                            new Particle.DustOptions(Color.fromRGB(255,200,50), 1.2f));
+                            new Particle.DustOptions(Color.fromRGB(80,80,80), 1.2f));
                     }
                 }
                 pillarBlocks.clear();
-
-                // Final explosion
                 w.strikeLightningEffect(center);
                 w.spawnParticle(Particle.EXPLOSION_EMITTER, center.clone().add(0,3,0), 3, 1,1,1, 0);
                 w.playSound(center, Sound.ENTITY_LIGHTNING_BOLT_THUNDER, 1f, 0.6f);
             }
         }.runTaskTimer(plugin, 0, 1);
-
-    }, 20L); // 20 ticks after pillars start = pillars fully up
-
-    // ── Draw fire beam helper ─────────────────────────────────────────────
+    }, 20L);
 }
-    
+
                 
 // ── MIRAGE — Warden Minions ────────────────────────────────────
 case MIRAGE -> {
