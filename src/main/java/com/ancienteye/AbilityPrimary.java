@@ -478,29 +478,293 @@ case TITAN -> {
                     }
                 });
             }
+// ── WIND PRIMARY — Ancient Eagle Spirit ──────────────────────────────────────
+// Owner ke peeche large white eagle particle structure
+// Wings animate up/down — each flap = shockwave + damage
+// 6 seconds, no armor stands, pure particles, no glitch
+case WIND -> {
+    // ── Direction setup ───────────────────────────────────────────────────
+    final Vector fwd   = p.getLocation().getDirection().clone().setY(0).normalize();
+    final Vector right = new Vector(-fwd.getZ(), 0, fwd.getX()).normalize();
+    // Eagle base: 1 block BEHIND owner, at ground level
+    final Location eagleBase = loc.clone().subtract(fwd.clone().multiply(2));
+    eagleBase.setY(loc.getY());
 
-            // ── WIND — Dash ───────────────────────────────────────────────
-            case WIND -> {
-                w.spawnParticle(Particle.WHITE_ASH, loc, 80, 0.8, 0.8, 0.8, 0.18);
-                w.spawnParticle(Particle.CLOUD, loc, 40, 0.5, 0.5, 0.5, 0.08);
-                p.setVelocity(dir.clone().multiply(3.5).setY(0.2));
-                w.playSound(loc, Sound.ENTITY_PHANTOM_DEATH, 0.8f, 2.0f);
-                new BukkitRunnable() { int t = 0;
-                    public void run() {
-                        if (t++ >= 10) { cancel(); return; }
-                        Location cur = p.getLocation();
-                        for (int i = 0; i < 6; i++) { double a = Math.toRadians(i*60+t*30);
-                            w.spawnParticle(Particle.WHITE_ASH, cur.clone().add(Math.cos(a)*1.2,0.5,Math.sin(a)*1.2), 2,0,0,0, 0.05);
-                        }
-                        p.getNearbyEntities(2, 2, 2).forEach(e -> {
-                            if (e instanceof LivingEntity && e != p) {
-                                Vector vel = e.getLocation().toVector().subtract(cur.toVector()).normalize().multiply(1.8).setY(0.4);
-                                Bukkit.getScheduler().runTaskLater(plugin, () -> { if (e.isValid()) e.setVelocity(vel); }, 1L);
-                            }
-                        });
-                    }
-                }.runTaskTimer(plugin, 0, 1);
+    p.sendTitle("\u00a7f\u00a7lWIND EAGLE", "\u00a77Ancient guardian rises...", 5, 50, 10);
+    w.playSound(eagleBase, Sound.ENTITY_PHANTOM_FLAP,        1.5f, 0.25f);
+    w.playSound(eagleBase, Sound.ENTITY_ENDER_DRAGON_FLAP,   1f,   0.4f);
+    w.playSound(eagleBase, Sound.ENTITY_PHANTOM_AMBIENT,     1f,   0.3f);
+    w.spawnParticle(Particle.CLOUD, eagleBase.clone().add(0,4,0), 30, 1.5,2,1.5, 0.12);
+
+    new BukkitRunnable() {
+        int    ticks    = 0;
+        double wingAng  = 0;
+        double prevWing = 0;
+
+        // ── Draw point at right/up/fwd offset from eagleBase ─────────────
+        void P(double r, double u, double f,
+               Particle.DustOptions d) {
+            Location l = eagleBase.clone()
+                .add(right.getX()*r + fwd.getX()*f,
+                     u,
+                     right.getZ()*r + fwd.getZ()*f);
+            w.spawnParticle(Particle.DUST, l, 1, 0,0,0,0, d);
+        }
+        void G(double r, double u, double f) { // END_ROD glow
+            Location l = eagleBase.clone()
+                .add(right.getX()*r + fwd.getX()*f,
+                     u,
+                     right.getZ()*r + fwd.getZ()*f);
+            w.spawnParticle(Particle.END_ROD, l, 1, 0,0,0,0);
+        }
+
+        @Override
+        public void run() {
+            if (ticks++ >= 120 || !p.isOnline()) {
+                w.playSound(eagleBase, Sound.ENTITY_PHANTOM_DEATH, 1f, 0.5f);
+                w.spawnParticle(Particle.CLOUD, eagleBase.clone().add(0,4,0), 40, 2,2,2, 0.08);
+                cancel(); return;
             }
+
+            Particle.DustOptions W  = new Particle.DustOptions(Color.fromRGB(240,250,255), 1.8f);
+            Particle.DustOptions W2 = new Particle.DustOptions(Color.fromRGB(190,230,255), 1.5f);
+            Particle.DustOptions W3 = new Particle.DustOptions(Color.fromRGB(150,210,255), 1.3f);
+
+            // Wing oscillation — smooth sine wave
+            prevWing = wingAng;
+            wingAng  = Math.sin(ticks * 0.22) * 0.75; // ±43 degrees
+            boolean flap = (prevWing >= 0 && wingAng < 0); // peak → down = flap
+
+            // ════════════════════════════════════════════════════════════
+            // EAGLE BODY — center vertical oval (y 2.0 to 6.5)
+            // ════════════════════════════════════════════════════════════
+            for (int i = 0; i < 20; i++) {
+                double t  = i / 19.0;
+                double by = 2.0 + t * 4.5;
+                double br = 1.3 * Math.sin(t * Math.PI); // oval
+                for (int j = 0; j < 10; j++) {
+                    double a  = Math.toRadians(j * 36);
+                    double rx = Math.cos(a) * br;
+                    double fz = Math.sin(a) * br * 0.55;
+                    P(rx, by, fz, W);
+                }
+            }
+            // Body center spine
+            for (double y = 2.0; y <= 6.5; y += 0.5) {
+                P(0, y, 0, W);
+            }
+
+            // ════════════════════════════════════════════════════════════
+            // HEAD — sphere at y=8.0, face forward
+            // ════════════════════════════════════════════════════════════
+            for (int i = 0; i < 20; i++) {
+                double a  = Math.toRadians(i * 18);
+                double hr = 1.6;
+                // Horizontal ring
+                P(Math.cos(a)*hr,       8.0,            Math.sin(a)*hr*0.4, W);
+                // Vertical ring front
+                P(Math.cos(a)*hr*0.5,   8.0+Math.sin(a)*hr*0.6, Math.sin(a)*hr*0.3, W);
+            }
+            // Eye sockets + glowing eyes
+            P( 0.7, 8.3, 1.0, W2); P( 0.7, 8.3, 1.0, W2);
+            P(-0.7, 8.3, 1.0, W2); P(-0.7, 8.3, 1.0, W2);
+            G( 0.6, 8.4, 1.1);
+            G(-0.6, 8.4, 1.1);
+            // Forehead ridge
+            for (double r = -0.8; r <= 0.8; r += 0.4) P(r, 9.0, 0.3, W);
+            for (double r = -0.6; r <= 0.6; r += 0.4) P(r, 9.3, 0.0, W);
+            // Beak — forward taper
+            for (int k = 0; k <= 5; k++) {
+                double bf = 0.5 + k*0.3;
+                double bw = 0.4 - k*0.07;
+                P( bw, 7.9-k*0.07, bf, W);
+                P(-bw, 7.9-k*0.07, bf, W);
+                P(0,   7.7-k*0.07, bf, W);
+            }
+            // Beak hook at tip
+            P(0, 7.4, 2.1, W); P(0, 7.2, 2.0, W);
+            // Feather crown on head
+            for (int i = 0; i < 7; i++) {
+                double a   = Math.toRadians(-60 + i*20);
+                double len = 1.2 + Math.sin(ticks*0.15 + i*0.5)*0.2; // subtle sway
+                for (double k = 0.2; k <= len; k += 0.25) {
+                    P(Math.sin(a)*k*0.7, 9.0+k*0.9, Math.cos(a)*k*0.3, W2);
+                }
+            }
+
+            // ════════════════════════════════════════════════════════════
+            // NECK — connect head to body
+            // ════════════════════════════════════════════════════════════
+            for (int i = 0; i < 8; i++) {
+                double t  = i / 7.0;
+                double ny = 6.5 + t * 1.3;
+                double nr = 1.1 - t*0.4;
+                for (int j = 0; j < 8; j++) {
+                    double a = Math.toRadians(j*45);
+                    P(Math.cos(a)*nr, ny, Math.sin(a)*nr*0.4, W);
+                }
+            }
+
+            // ════════════════════════════════════════════════════════════
+            // WINGS — animated, both sides
+            // wingAng = current angle (positive = up, negative = down)
+            // ════════════════════════════════════════════════════════════
+            for (int side = -1; side <= 1; side += 2) {
+                // Wing has 16 segments from body to tip
+                int SEGS = 16;
+                for (int seg = 1; seg <= SEGS; seg++) {
+                    double t = seg / (double)SEGS;
+
+                    // Horizontal extent
+                    double rx = side * seg * 0.65;
+
+                    // Wing height: tip affected more by angle
+                    double wh = Math.sin(wingAng) * t * 4.5;
+
+                    // Wing sweep back (trailing edge)
+                    double sweep = -t * 2.0;
+
+                    double wy = 5.5 + wh;
+
+                    // Leading edge (top of wing)
+                    Particle.DustOptions col = (t > 0.7) ? W3 : (t > 0.4) ? W2 : W;
+                    P(rx, wy,          sweep,       col);
+                    P(rx, wy + 0.15,   sweep + 0.1, col);
+
+                    // Primary feathers — hanging from leading edge
+                    int featherCount = Math.max(1, 4 - (int)(t*3));
+                    for (int f = 1; f <= featherCount; f++) {
+                        double fdy = -f * 0.45;
+                        double fdz = sweep - f * 0.5;
+                        P(rx, wy + fdy, fdz, col);
+                        // Feather tip glow (outer primaries only)
+                        if (t > 0.5 && f == featherCount) G(rx, wy + fdy, fdz);
+                    }
+
+                    // Secondary feathers (inner half only)
+                    if (seg <= 8) {
+                        for (int sf = 1; sf <= 3; sf++) {
+                            P(rx, wy - sf*0.3, sweep - sf*0.25, W2);
+                        }
+                    }
+
+                    // Wing membrane fill (dots between segments)
+                    if (seg > 1) {
+                        double prevRx = side * (seg-1) * 0.65;
+                        double midRx  = (rx + prevRx) / 2.0;
+                        P(midRx, wy, sweep - 0.3, W2);
+                    }
+                }
+
+                // Wing root shoulder
+                for (int k = 0; k < 4; k++) {
+                    P(side*(0.4+k*0.25), 5.5+k*0.1, -k*0.1, W);
+                }
+            }
+
+            // ════════════════════════════════════════════════════════════
+            // TAIL — fan behind body
+            // ════════════════════════════════════════════════════════════
+            for (int i = 0; i < 9; i++) {
+                double ta = Math.toRadians(-40 + i*10);
+                for (double tl = 0.3; tl <= 2.8; tl += 0.35) {
+                    double tailWave = Math.sin(ticks*0.2) * 0.15 * tl;
+                    P(Math.sin(ta)*tl, 2.5 - tl*0.15 + tailWave, -tl*0.9, W2);
+                }
+            }
+            // Tail glow tips
+            for (int i = 0; i < 5; i++) {
+                double ta = Math.toRadians(-20 + i*10);
+                G(Math.sin(ta)*2.8, 2.0, -2.5);
+            }
+
+            // ════════════════════════════════════════════════════════════
+            // LEGS — from body bottom to ground
+            // ════════════════════════════════════════════════════════════
+            for (int side = -1; side <= 1; side += 2) {
+                // Upper thigh
+                for (int k = 0; k <= 5; k++) {
+                    double ly = 2.2 - k*0.38;
+                    double lr = 0.5 + k*0.04;
+                    P(side*lr, ly, k*0.08, W);
+                }
+                // Lower leg + ankle
+                P(side*0.6, 0.7, 0.35, W);
+                P(side*0.55, 0.45, 0.5, W);
+                P(side*0.5, 0.2, 0.6, W);
+                // Talons — 3 forward, 1 back
+                double[][] talons = {{0.5,0.0,1.0},{0.8,0.0,0.7},{0.2,0.0,0.9},{0.5,0.0,-0.3}};
+                for (double[] t : talons) {
+                    for (double k = 0; k <= 1.0; k += 0.3) {
+                        P(side*(t[0] - k*(t[0]-0.5)*0.5), t[1], t[2]*k + 0.6*(1-k), W2);
+                    }
+                }
+            }
+
+            // ════════════════════════════════════════════════════════════
+            // WING FLAP → SHOCKWAVE
+            // ════════════════════════════════════════════════════════════
+            if (flap) {
+                w.playSound(eagleBase, Sound.ENTITY_PHANTOM_FLAP,      1.5f, 0.3f);
+                w.playSound(eagleBase, Sound.ENTITY_ENDER_DRAGON_FLAP, 1f,   0.5f);
+                w.playSound(eagleBase, Sound.ENTITY_PHANTOM_BITE,      0.8f, 0.6f);
+
+                // 3 expanding rings shooting forward
+                for (int ring = 1; ring <= 4; ring++) {
+                    final int fr = ring;
+                    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                        double dist = fr * 2.5;
+                        Location wCenter = eagleBase.clone()
+                            .add(fwd.getX()*dist, 4.0, fwd.getZ()*dist);
+                        double rSize = 1.5 + fr * 0.8;
+                        int pts = 28;
+                        for (int i = 0; i < pts; i++) {
+                            double a = Math.toRadians(i * (360.0/pts));
+                            Location wl = wCenter.clone()
+                                .add(right.getX()*Math.cos(a)*rSize,
+                                     Math.sin(a)*rSize,
+                                     right.getZ()*Math.cos(a)*rSize);
+                            w.spawnParticle(Particle.DUST, wl, 1, 0.05,0.05,0.05, 0,
+                                new Particle.DustOptions(Color.fromRGB(200,245,255), 1.8f));
+                            w.spawnParticle(Particle.END_ROD, wl, 1, 0.03,0.03,0.03, 0.01);
+                        }
+                        w.playSound(wCenter, Sound.BLOCK_GLASS_BREAK, 0.5f, 1.8f);
+                    }, fr * 2L);
+                }
+
+                // Damage enemies forward
+                Location atkLoc = eagleBase.clone().add(fwd.getX()*8, 3, fwd.getZ()*8);
+                for (org.bukkit.entity.Entity e : w.getNearbyEntities(atkLoc, 10, 6, 10)) {
+                    if (!(e instanceof LivingEntity le)) continue;
+                    if (e.equals(p)) continue;
+                    if (e instanceof Player ep &&
+                        (ep.getGameMode()==GameMode.CREATIVE||ep.getGameMode()==GameMode.SPECTATOR)) continue;
+                    le.damage(4.0 * dm, p);
+                    Vector knock = fwd.clone().multiply(2.5).setY(0.6);
+                    Bukkit.getScheduler().runTaskLater(plugin,
+                        () -> { if (e.isValid()) e.setVelocity(knock); }, 1L);
+                }
+            }
+
+            // Ambient wind swirls
+            if (ticks % 4 == 0) {
+                double ra = Math.random()*Math.PI*2;
+                double rr = 2 + Math.random()*4;
+                double ry = 1 + Math.random()*7;
+                Location al = eagleBase.clone()
+                    .add(right.getX()*Math.cos(ra)*rr + fwd.getX()*Math.sin(ra)*rr,
+                         ry,
+                         right.getZ()*Math.cos(ra)*rr + fwd.getZ()*Math.sin(ra)*rr);
+                w.spawnParticle(Particle.CLOUD, al, 1, 0.1,0.1,0.1, 0.03);
+            }
+
+            // Eagle cry every 2s
+            if (ticks % 40 == 0) {
+                w.playSound(eagleBase, Sound.ENTITY_PHANTOM_AMBIENT, 0.9f, 0.35f);
+            }
+        }
+    }.runTaskTimer(plugin, 0, 1);
+}
 
             // ── POISON — Strike ───────────────────────────────────────────
             case POISON -> {
