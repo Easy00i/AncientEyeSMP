@@ -17,6 +17,7 @@ import java.util.Arrays;
 public class PlayerJoinListener implements Listener {
 
     private final AncientEyePlugin plugin;
+    private final String guiTitle = "§8Choose Your Path";
 
     public PlayerJoinListener(AncientEyePlugin plugin) {
         this.plugin = plugin;
@@ -36,11 +37,12 @@ public class PlayerJoinListener implements Listener {
             return;
         }
 
-        openLifeChoiceGUI(p);
+        // Delay added: 5 ticks taaki join process finish ho jaye aur GUI open ho sake
+        Bukkit.getScheduler().runTaskLater(plugin, () -> openLifeChoiceGUI(p), 5L);
     }
 
-    private void openLifeChoiceGUI(Player p) {
-        Inventory gui = Bukkit.createInventory(null, 9, "§8Choose Your Path");
+    public void openLifeChoiceGUI(Player p) {
+        Inventory gui = Bukkit.createInventory(null, 9, guiTitle);
 
         ItemStack peaceful = new ItemStack(Material.LILY_OF_THE_VALLEY);
         ItemMeta peacefulMeta = peaceful.getItemMeta();
@@ -54,39 +56,43 @@ public class PlayerJoinListener implements Listener {
         powerMeta.setLore(Arrays.asList("§7Get an Ancient Eye", "§7and unlock special powers!"));
         power.setItemMeta(powerMeta);
 
+        // Peaceful Left (Slot 2) aur Power Right (Slot 6) par rakha hai
         gui.setItem(2, peaceful);
         gui.setItem(6, power);
 
         p.openInventory(gui);
+    }
 
-        // Register listener – no unregister needed, safe
-        plugin.getServer().getPluginManager().registerEvents(new Listener() {
-            public void onInventoryClick(InventoryClickEvent e) {
-                if (!e.getInventory().equals(gui)) return;
-                e.setCancelled(true);
+    @EventHandler
+    public void onInventoryClick(InventoryClickEvent e) {
+        if (!e.getView().getTitle().equals(guiTitle)) return;
+        
+        e.setCancelled(true);
+        if (!(e.getWhoClicked() instanceof Player p)) return;
 
-                if (e.getCurrentItem() == null) return;
-                ItemStack clicked = e.getCurrentItem();
+        ItemStack clicked = e.getCurrentItem();
+        if (clicked == null || clicked.getType() == Material.AIR) return;
 
-                if (clicked.getType() == Material.LILY_OF_THE_VALLEY) {
-                    p.closeInventory();
-                    plugin.getPlayerData().setPeaceful(p);
-                    p.sendMessage("§aLol, you chose Peaceful Life. Good luck! 🤞");
-                } else if (clicked.getType() == Material.BLAZE_ROD) {
-                    p.closeInventory();
-                    p.sendMessage("§cYou chose Power Life! The ritual begins...");
-                    plugin.getTradeManager().startSmpRitual(p);
-                }
+        if (clicked.getType() == Material.LILY_OF_THE_VALLEY) {
+            p.closeInventory();
+            plugin.getPlayerData().setPeaceful(p);
+            p.sendMessage("§aLol, you chose Peaceful Life. Good luck! 🤞");
+        } else if (clicked.getType() == Material.BLAZE_ROD) {
+            p.closeInventory();
+            p.sendMessage("§cYou chose Power Life! The ritual begins...");
+            plugin.getTradeManager().startSmpRitual(p);
+        }
+    }
+
+    @EventHandler
+    public void onInventoryClose(InventoryCloseEvent e) {
+        if (!e.getView().getTitle().equals(guiTitle)) return;
+        
+        if (e.getPlayer() instanceof Player player) {
+            // Agar player ne choose nahi kiya aur band kiya, toh wapas open hoga
+            if (!plugin.getPlayerData().isPeaceful(player) && plugin.getPlayerData().getEye(player) == EyeType.NONE) {
+                Bukkit.getScheduler().runTaskLater(plugin, () -> openLifeChoiceGUI(player), 5L);
             }
-
-            public void onInventoryClose(InventoryCloseEvent e) {
-                if (!e.getInventory().equals(gui)) return;
-                if (e.getPlayer() instanceof Player player) {
-                    if (!plugin.getPlayerData().isPeaceful(player) && plugin.getPlayerData().getEye(player) == EyeType.NONE) {
-                        Bukkit.getScheduler().runTaskLater(plugin, () -> openLifeChoiceGUI(player), 1L);
-                    }
-                }
-            }
-        }, plugin);
+        }
     }
 }
