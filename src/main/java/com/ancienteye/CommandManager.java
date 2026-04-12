@@ -27,13 +27,6 @@ public class CommandManager implements CommandExecutor, TabCompleter {
         if (!(sender instanceof Player p)) return true;
 
         switch (cmd.getName().toLowerCase()) {
-            case "smpstart" -> { // PUBLIC
-                if (plugin.getPlayerData().getEye(p) != EyeType.NONE) {
-                    p.sendMessage("§cYou already have an Eye!");
-                    return true;
-                }
-                plugin.getTradeManager().startSmpRitual(p);
-            }
             case "trade" -> { // PUBLIC
                 if (args.length == 0) { p.sendMessage("§cUsage: /trade <player>"); return true; }
                 Player target = Bukkit.getPlayer(args[0]);
@@ -78,14 +71,14 @@ public class CommandManager implements CommandExecutor, TabCompleter {
                         p.sendMessage("§aGave " + eye.name() + " to " + target.getName());
                     } catch (Exception e) { p.sendMessage("§cInvalid Eye Type!"); }
                 }
-                
-                if (args.length == 2 && args[0].equalsIgnoreCase("reset")) {
-                    Player target = Bukkit.getPlayer(args[1]);
-                    if (target != null) {
-                        plugin.getPlayerData().setEye(target, EyeType.NONE, false);
-                        p.sendMessage("§aEye reset for " + target.getName());
-                    }
-                }
+        if (args.length == 2 && args[0].equalsIgnoreCase("reset")) {
+            Player target = Bukkit.getPlayer(args[1]);
+              if (target != null) {
+                 plugin.getPlayerData().setEye(target, EyeType.NONE, false);
+                    plugin.getPlayerData().setPeaceful(target); // ✅ ADD THIS LINE (reset peaceful flag)
+                      p.sendMessage("§aEye reset for " + target.getName() + " – They can choose again.");
+               }
+             }
             }
             case "event" -> { // ADMIN ONLY
                 if (!p.hasPermission("eye.admin")) {
