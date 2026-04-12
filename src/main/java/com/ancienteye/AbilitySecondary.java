@@ -642,7 +642,7 @@ case CRYSTAL -> {
                                         le.setVelocity(new org.bukkit.util.Vector(0, -1.2, 0));
                                         le.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 30, 2, false, false));
                                         // Additional visual
-                                        w.spawnParticle(Particle.BLOCK_CRACK, le.getLocation().add(0,1,0), 20, 0.3,0.3,0.3, 0.05,
+                                        w.spawnParticle(Particle.DUST, le.getLocation().add(0,1,0), 20, 0.3,0.3,0.3, 0.05,
                                             org.bukkit.Material.AMETHYST_BLOCK.createBlockData());
                                     }
                                 }
