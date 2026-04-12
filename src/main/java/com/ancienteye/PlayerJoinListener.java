@@ -90,7 +90,6 @@ public class PlayerJoinListener implements Listener {
                 }
             }
 
-            @EventHandler
             public void onInventoryClose(InventoryCloseEvent e) {
                 if (!e.getInventory().equals(gui)) return;
                 if (e.getPlayer() instanceof Player player) {
