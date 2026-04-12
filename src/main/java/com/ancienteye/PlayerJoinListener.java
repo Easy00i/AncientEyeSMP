@@ -90,6 +90,7 @@ public class PlayerJoinListener implements Listener {
                 }
             }
 
+            // ✅ FIX: @EventHandler hata diya (anonymous class mein nahi chahiye)
             public void onInventoryClose(InventoryCloseEvent e) {
                 if (!e.getInventory().equals(gui)) return;
                 if (e.getPlayer() instanceof Player player) {
