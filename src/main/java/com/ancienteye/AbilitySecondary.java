@@ -542,26 +542,129 @@ case LIGHT -> {
                 });
             }
 
-            // ── CRYSTAL — Spikes ──────────────────────────────────────────
-            case CRYSTAL -> {
-                for (int i = 0; i < 16; i++) { double a = Math.toRadians(i*22.5);
-                    Location sp = loc.clone().add(Math.cos(a)*4, 0, Math.sin(a)*4);
-                    for (int h = 0; h <= 4; h++) {
-                        w.spawnParticle(Particle.DUST, sp.clone().add(0,h*0.5,0), 3, 0.1, 0, 0.1, 0, new Particle.DustOptions(Color.fromRGB(100,200,255), 2.5f));
-                        w.spawnParticle(Particle.END_ROD, sp.clone().add(0,h*0.5,0), 2, 0, 0, 0, 0.01);
-                    }
+            // ── CRYSTAL — Crystal Rain (Aim-based, 5s, 8 crystals) ──────────────────────
+case CRYSTAL -> {
+    // Get target (aim or nearest)
+    LivingEntity target = logic.aim(p, 30);
+    if (target == null) {
+        // fallback to nearest entity in 10 blocks
+        target = p.getWorld().getNearbyEntities(p.getLocation(), 10, 5, 10).stream()
+            .filter(e -> e instanceof LivingEntity && e != p)
+            .map(e -> (LivingEntity) e)
+            .findFirst().orElse(null);
+        if (target == null) {
+            p.sendMessage("§cNo target found!");
+            return;
+        }
+    }
+
+    final LivingEntity finalTarget = target;
+    final int TOTAL_CRYSTALS = 8;
+    final int DURATION_TICKS = 100; // 5 seconds
+    final double FALL_HEIGHT = 25.0; // blocks above target
+    final java.util.List<org.bukkit.entity.FallingBlock> fallingCrystals = new java.util.ArrayList<>();
+
+    // Play start sound and effect
+    w.playSound(loc, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1f, 1.2f);
+    w.playSound(loc, Sound.ENTITY_ILLUSIONER_CAST_SPELL, 1f, 0.8f);
+    p.sendTitle("§b§l❄️ CRYSTAL RAIN", "§7Crystals will fall upon your enemy!", 5, 40, 10);
+
+    // Main runnable to drop crystals over time
+    new BukkitRunnable() {
+        int dropped = 0;
+        int ticks = 0;
+
+        @Override
+        public void run() {
+            if (!finalTarget.isValid() || finalTarget.isDead() || ticks >= DURATION_TICKS) {
+                // Cleanup any remaining falling blocks
+                for (org.bukkit.entity.FallingBlock fb : fallingCrystals) {
+                    if (fb.isValid()) fb.remove();
                 }
-                w.spawnParticle(Particle.END_ROD, loc, 60, 2, 0.4, 2, 0.07);
-                w.playSound(loc, Sound.BLOCK_AMETHYST_CLUSTER_BREAK, 1f, 0.7f);
-                w.playSound(loc, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1f, 0.5f);
-                p.getNearbyEntities(7, 7, 7).forEach(e -> {
-                    if (e instanceof LivingEntity le && e != p) {
-                        le.damage(8.0 * dm, p);
-                        le.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, logic.ticks(70, dr), 2));
-                    }
-                });
+                fallingCrystals.clear();
+                cancel();
+                return;
             }
 
+            // Drop a crystal every 12.5 ticks? Simpler: drop 8 over 100 ticks → every 12-13 ticks
+            // We'll use a separate scheduler for each crystal to ensure they drop at random offsets
+            ticks++;
+            if (dropped < TOTAL_CRYSTALS && ticks >= (dropped + 1) * (DURATION_TICKS / TOTAL_CRYSTALS)) {
+                dropped++;
+                // Schedule the crystal drop with slight random delay for variety
+                Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                    // Get current target location (tracking)
+                    Location targetLoc = finalTarget.getLocation().clone();
+                    Location spawnLoc = targetLoc.clone().add(0, FALL_HEIGHT, 0);
+                    // Random horizontal offset up to 1.5 blocks
+                    double offX = (Math.random() - 0.5) * 2.5;
+                    double offZ = (Math.random() - 0.5) * 2.5;
+                    spawnLoc.add(offX, 0, offZ);
+
+                    // Spawn falling block as crystal (use AMETHYST_BLOCK for visual)
+                    org.bukkit.entity.FallingBlock crystal = w.spawnFallingBlock(spawnLoc, 
+                        org.bukkit.Material.AMETHYST_BLOCK.createBlockData());
+                    crystal.setDropItem(false);
+                    crystal.setHurtEntities(false);
+                    crystal.setVelocity(new org.bukkit.util.Vector(0, -0.5, 0)); // fall speed
+
+                    fallingCrystals.add(crystal);
+
+                    // Particle trail for the falling crystal
+                    new BukkitRunnable() {
+                        int trailTicks = 0;
+                        Location current = spawnLoc.clone();
+                        @Override
+                        public void run() {
+                            if (!crystal.isValid() || trailTicks >= 40) { // ~2 seconds max
+                                this.cancel();
+                                return;
+                            }
+                            trailTicks++;
+                            current = crystal.getLocation();
+                            // Sparkle trail
+                            w.spawnParticle(Particle.END_ROD, current, 2, 0.1, 0.1, 0.1, 0.01);
+                            w.spawnParticle(Particle.DUST, current, 1, 0.1, 0.1, 0.1, 0,
+                                new Particle.DustOptions(Color.fromRGB(150, 200, 255), 1.2f));
+                            // Check if crystal hit ground or entity
+                            if (current.getY() <= targetLoc.getY() + 1.5) {
+                                // Impact effect
+                                w.playSound(current, Sound.BLOCK_AMETHYST_CLUSTER_BREAK, 0.8f, 1.0f);
+                                w.spawnParticle(Particle.EXPLOSION, current, 1, 0.2, 0.2, 0.2, 0);
+                                w.spawnParticle(Particle.DUST, current, 10, 0.3, 0.3, 0.3, 0,
+                                    new Particle.DustOptions(Color.fromRGB(200, 220, 255), 1.5f));
+                                // Damage and push into ground
+                                for (org.bukkit.entity.Entity e : current.getWorld().getNearbyEntities(current, 2, 2, 2)) {
+                                    if (e instanceof LivingEntity le && !e.equals(p)) {
+                                        // Damage half heart (1 health)
+                                        le.damage(1.0, p);
+                                        // Push into ground: strong downward velocity
+                                        le.setVelocity(new org.bukkit.util.Vector(0, -1.2, 0));
+                                        le.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, 30, 2, false, false));
+                                        // Additional visual
+                                        w.spawnParticle(Particle.BLOCK_CRACK, le.getLocation().add(0,1,0), 20, 0.3,0.3,0.3, 0.05,
+                                            org.bukkit.Material.AMETHYST_BLOCK.createBlockData());
+                                    }
+                                }
+                                crystal.remove();
+                                this.cancel();
+                            }
+                        }
+                    }.runTaskTimer(plugin, 0, 1);
+                }, (dropped - 1) * 10L + (long)(Math.random() * 5)); // spread over time
+            }
+        }
+    }.runTaskTimer(plugin, 0, 1);
+
+    // Global cleanup after 5 seconds (extra safety)
+    Bukkit.getScheduler().runTaskLater(plugin, () -> {
+        for (org.bukkit.entity.FallingBlock fb : fallingCrystals) {
+            if (fb.isValid()) fb.remove();
+        }
+        fallingCrystals.clear();
+    }, DURATION_TICKS + 20L);
+}
+                
             // ── ECHO — Sonic Boom / Shockwave ─────────────────────────────
             case ECHO -> {
                 LivingEntity tgt = logic.aim(p, 25);
