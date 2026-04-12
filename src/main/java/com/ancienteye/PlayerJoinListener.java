@@ -8,7 +8,6 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryCloseEvent;
-import org.bukkit.event.HandlerList;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -60,9 +59,8 @@ public class PlayerJoinListener implements Listener {
 
         p.openInventory(gui);
 
-        // Create a named listener instance
-        Listener guiListener = new Listener() {
-    
+        // Register listener – no unregister needed, safe
+        plugin.getServer().getPluginManager().registerEvents(new Listener() {
             public void onInventoryClick(InventoryClickEvent e) {
                 if (!e.getInventory().equals(gui)) return;
                 e.setCancelled(true);
@@ -74,16 +72,13 @@ public class PlayerJoinListener implements Listener {
                     p.closeInventory();
                     plugin.getPlayerData().setPeaceful(p);
                     p.sendMessage("§aLol, you chose Peaceful Life. Good luck! 🤞");
-                    plugin.getServer().getPluginManager().unregisterEvents(this, plugin);
                 } else if (clicked.getType() == Material.BLAZE_ROD) {
                     p.closeInventory();
                     p.sendMessage("§cYou chose Power Life! The ritual begins...");
                     plugin.getTradeManager().startSmpRitual(p);
-                    plugin.getServer().getPluginManager().unregisterEvents(this, plugin);
                 }
             }
 
-            // No @Override, no @EventHandler – just a normal method
             public void onInventoryClose(InventoryCloseEvent e) {
                 if (!e.getInventory().equals(gui)) return;
                 if (e.getPlayer() instanceof Player player) {
@@ -92,8 +87,6 @@ public class PlayerJoinListener implements Listener {
                     }
                 }
             }
-        };
-
-        plugin.getServer().getPluginManager().registerEvents(guiListener, plugin);
+        }, plugin);
     }
 }
