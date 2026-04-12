@@ -178,7 +178,7 @@ public class PlayerDataManager {
                 playerEyes.put(uuid,   EyeType.valueOf(eyeStr));
                 playerLevels.put(uuid, level);
                 playerXP.put(uuid,     xp);
-            }
+    
                if (peaceful) {
                 peacefulPlayers.put(uuid, true);
               }
