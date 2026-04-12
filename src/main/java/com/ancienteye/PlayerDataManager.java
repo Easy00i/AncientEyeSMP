@@ -39,6 +39,7 @@ public class PlayerDataManager {
         playerLevels.put(p.getUniqueId(), 1);
         // FIX 1: XP reset to 0 when a new eye is assigned
         playerXP.put(p.getUniqueId(), 0);
+        peacefulPlayers.remove(p.getUniqueId());
         saveData();
 
         plugin.getAbilityLogic().applyPassiveEffects(p, newEye);
@@ -52,11 +53,21 @@ public class PlayerDataManager {
         }
     }
 
+    public void setPeaceful(Player p) {
+            peacefulPlayers.put(p.getUniqueId(), true);
+           saveData();
+          }
+
+         public boolean isPeaceful(Player p) {
+        return peacefulPlayers.getOrDefault(p.getUniqueId(), false);
+         }
+
     public void resetEye(Player p) {
         playerEyes.remove(p.getUniqueId());
         playerLevels.remove(p.getUniqueId());
         // FIX 2: XP bhi reset hona chahiye
         playerXP.remove(p.getUniqueId());
+        peacefulPlayers.remove(p.getUniqueId());
         saveData();
         p.sendMessage("§cYour Eye has been completely reset by Admin.");
     }
@@ -140,7 +151,11 @@ public class PlayerDataManager {
                 dataConfig.set(path + ".level", playerLevels.getOrDefault(uuid, 1));
                 dataConfig.set(path + ".xp", playerXP.getOrDefault(uuid, 0));
             }
+            if (peacefulPlayers.getOrDefault(uuid, false)) {
+               dataConfig.set(path + ".peaceful", true);
+          }       
         }
+        
         try { 
             dataConfig.save(dataFile); 
         } catch (IOException e) { 
@@ -158,10 +173,16 @@ public class PlayerDataManager {
                 String eyeStr = dataConfig.getString("players." + key + ".eye", "NONE");
                 int    level  = dataConfig.getInt("players." + key + ".level", 1);
                 int    xp     = dataConfig.getInt("players." + key + ".xp",    0);
+                boolean peaceful = dataConfig.getBoolean("players." + key + ".peaceful", false);
 
                 playerEyes.put(uuid,   EyeType.valueOf(eyeStr));
                 playerLevels.put(uuid, level);
                 playerXP.put(uuid,     xp);
+            }
+               if (peaceful) {
+                peacefulPlayers.put(uuid, true);
+              }
+            
             } catch (IllegalArgumentException ex) {
                 plugin.getLogger().warning("[AncientEye] Skipping corrupt data entry: " + key + " — " + ex.getMessage());
             }
