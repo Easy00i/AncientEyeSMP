@@ -49,7 +49,6 @@ public class AncientEyePlugin extends JavaPlugin {
         new ParticleTask(this).runTaskTimer(this, 0, 5L);
 
         // 4. Register Commands
-        registerCommand("smpstart");
         registerCommand("eye");
         registerCommand("trade");
         registerCommand("event");
