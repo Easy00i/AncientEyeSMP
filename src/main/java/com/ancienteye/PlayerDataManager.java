@@ -17,6 +17,7 @@ public class PlayerDataManager {
     private final Map<UUID, EyeType> playerEyes   = new HashMap<>();
     private final Map<UUID, Integer> playerLevels = new HashMap<>();
     private final Map<UUID, Integer> playerXP     = new HashMap<>();
+    private final Map<UUID, Boolean> peacefulPlayers = new HashMap<>();
 
     private File              dataFile;
     private FileConfiguration dataConfig;
