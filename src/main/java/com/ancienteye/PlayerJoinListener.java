@@ -62,7 +62,7 @@ public class PlayerJoinListener implements Listener {
 
         // Create a named listener instance
         Listener guiListener = new Listener() {
-            @Override
+    
             public void onInventoryClick(InventoryClickEvent e) {
                 if (!e.getInventory().equals(gui)) return;
                 e.setCancelled(true);
