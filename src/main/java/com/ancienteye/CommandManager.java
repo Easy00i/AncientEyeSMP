@@ -71,14 +71,13 @@ public class CommandManager implements CommandExecutor, TabCompleter {
                         p.sendMessage("§aGave " + eye.name() + " to " + target.getName());
                     } catch (Exception e) { p.sendMessage("§cInvalid Eye Type!"); }
                 }
-        if (args.length == 2 && args[0].equalsIgnoreCase("reset")) {
-            Player target = Bukkit.getPlayer(args[1]);
-              if (target != null) {
-                 plugin.getPlayerData().setEye(target, EyeType.NONE, false);
-                    plugin.getPlayerData().setPeaceful(target); // ✅ ADD THIS LINE (reset peaceful flag)
-                      p.sendMessage("§aEye reset for " + target.getName() + " – They can choose again.");
+               if (args.length == 2 && args[0].equalsIgnoreCase("reset")) {
+               Player target = Bukkit.getPlayer(args[1]);
+                   if (target != null) {
+                 plugin.getPlayerData().resetEye(target); // ✅ ek line se sab ho jayega
+               p.sendMessage("§aEye reset for " + target.getName() + " – They can choose again.");
                }
-             }
+              }
             }
             case "event" -> { // ADMIN ONLY
                 if (!p.hasPermission("eye.admin")) {
