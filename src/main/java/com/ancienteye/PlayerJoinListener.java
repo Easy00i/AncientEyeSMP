@@ -74,12 +74,12 @@ public class PlayerJoinListener implements Listener {
                     p.closeInventory();
                     plugin.getPlayerData().setPeaceful(p);
                     p.sendMessage("§aLol, you chose Peaceful Life. Good luck! 🤞");
-                    org.bukkit.event.HandlerList.unregister(guiListener);
+                    plugin.getServer().getPluginManager().unregisterEvents(this, plugin);
                 } else if (clicked.getType() == Material.BLAZE_ROD) {
                     p.closeInventory();
                     p.sendMessage("§cYou chose Power Life! The ritual begins...");
                     plugin.getTradeManager().startSmpRitual(p);
-                    org.bukkit.event.HandlerList.unregister(guiListener);
+                    plugin.getServer().getPluginManager().unregisterEvents(this, plugin);
                 }
             }
 
