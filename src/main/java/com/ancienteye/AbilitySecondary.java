@@ -620,7 +620,7 @@ case CRYSTAL -> {
                             if (e instanceof Player ep &&
                                 (ep.getGameMode()==GameMode.CREATIVE||ep.getGameMode()==GameMode.SPECTATOR)) continue;
 
-                            le.damage(ecfg("CRYSTAL","primary-damage",2.0) * dm, p);
+                            le.damage(logic.ecfg("CRYSTAL","primary-damage",2.0) * dm, p);
 
                             // FIX: strong downward push — into ground
                             Bukkit.getScheduler().runTaskLater(plugin, () -> {
