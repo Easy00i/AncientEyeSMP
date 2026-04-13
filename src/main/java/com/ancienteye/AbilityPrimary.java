@@ -900,26 +900,288 @@ case WIND -> {
                 p.sendTitle("§d§lTIME SLOW", "§7Enemies frozen in time!", 5, 100, 10);
             }
 
-            // ── WARRIOR — War Cry ─────────────────────────────────────────
-            case WARRIOR -> {
-                p.addPotionEffect(new PotionEffect(PotionEffectType.STRENGTH,   logic.ticks(160, dr), 2));
-                p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, logic.ticks(120, dr), 1));
-                w.spawnParticle(Particle.DUST, loc, 100, 0.7, 1.4, 0.7, 0, new Particle.DustOptions(Color.fromRGB(220,80,20), 2.5f));
-                w.spawnParticle(Particle.CRIT, loc, 50, 0.5, 1.0, 0.5, 0.12);
-                w.spawnParticle(Particle.FLAME, loc, 30, 0.4, 0.8, 0.4, 0.07);
-                for (int i = 0; i < 20; i++) { double a = Math.toRadians(i*18);
-                    w.spawnParticle(Particle.DUST, loc.clone().add(Math.cos(a)*2.5,0.5,Math.sin(a)*2.5), 4, 0, 0.4, 0, 0, new Particle.DustOptions(Color.fromRGB(220,80,20), 2f));
+            // ── WARRIOR SECONDARY — Spirit Swords ─────────────────────────────────────────
+// 3 swords (L:2 + Head:1) form 3s, hold 4s with blood drip, then track+hit enemy
+// Aim-lock on target — tracks even if fleeing, ignores other entities
+case WARRIOR -> {
+    // ── Aim lock target ───────────────────────────────────────────────────
+    LivingEntity locked = logic.aim(p, 40);
+    if (locked == null) {
+        p.sendMessage("\u00a7cNo target to lock!");
+        return;
+    }
+    final LivingEntity target = locked;
+
+    p.sendTitle("\u00a76\u00a7lSWORD SUMMON", "\u00a77Blades forming...", 5, 40, 10);
+    w.playSound(loc, Sound.BLOCK_ANVIL_LAND,         1f, 1.5f);
+    w.playSound(loc, Sound.ENTITY_IRON_GOLEM_ATTACK, 1f, 0.5f);
+
+    // ── Sword draw helper ─────────────────────────────────────────────────
+    // Sword = handle (back) + guard (cross) + blade (front)
+    // origin = sword center, fwd = blade direction, up = up direction
+    // Returns: draws sword particles at given pose
+
+    // Phase state
+    final int[] phase = {0}; // 0=forming, 1=hold, 2=shoot
+    final boolean[] hit = {false, false, false};
+
+    // Sword world positions (updated each tick)
+    // Each sword: Location center, Vector bladeDir
+    // 3 swords: [0]=left-low [1]=left-high [2]=head
+    final Location[] swordLoc = {
+        loc.clone(), loc.clone(), loc.clone()
+    };
+    final boolean[] swordAlive = {true, true, true};
+
+    new BukkitRunnable() {
+        int  ticks    = 0;
+        double wave   = 0;
+        double spin   = 0;
+
+        // ── Draw one sword ────────────────────────────────────────────────
+        void drawSword(Location center, Vector fwd, Vector up, float progress) {
+            // progress 0.0→1.0 (forming animation)
+            Vector right2 = fwd.clone().crossProduct(up).normalize();
+            Particle.DustOptions BLADE   = new Particle.DustOptions(Color.fromRGB(200,220,255), 1.6f);
+            Particle.DustOptions GUARD   = new Particle.DustOptions(Color.fromRGB(180,150, 80), 1.5f);
+            Particle.DustOptions HANDLE  = new Particle.DustOptions(Color.fromRGB(120, 70, 30), 1.4f);
+            Particle.DustOptions GLOW    = new Particle.DustOptions(Color.fromRGB(255,240,200), 1.2f);
+
+            // Blade length determined by progress
+            double bladeLen = 2.2 * progress;
+            int bPts = Math.max(1, (int)(bladeLen / 0.22));
+            for (int i = 0; i <= bPts; i++) {
+                double t = i / (double)bPts;
+                double taper = 1.0 - t * 0.7; // taper to tip
+                Location bp = center.clone().add(
+                    fwd.getX()*t*bladeLen,
+                    up.getY()*0 + fwd.getY()*t*bladeLen,
+                    fwd.getZ()*t*bladeLen);
+                w.spawnParticle(Particle.DUST, bp, 1, 0,0,0,0, BLADE);
+                // Blade edge glow
+                if (i % 2 == 0)
+                    w.spawnParticle(Particle.END_ROD, bp, 1, 0.02,0.02,0.02, 0.001);
+                // Blade width (flat sword shape)
+                if (taper > 0.3) {
+                    Location bp2 = bp.clone().add(right2.getX()*taper*0.18,
+                                                   right2.getY()*taper*0.18,
+                                                   right2.getZ()*taper*0.18);
+                    Location bp3 = bp.clone().subtract(right2.getX()*taper*0.18,
+                                                        right2.getY()*taper*0.18,
+                                                        right2.getZ()*taper*0.18);
+                    w.spawnParticle(Particle.DUST, bp2, 1, 0,0,0,0, BLADE);
+                    w.spawnParticle(Particle.DUST, bp3, 1, 0,0,0,0, BLADE);
                 }
-                w.playSound(loc, Sound.ENTITY_IRON_GOLEM_HURT, 1f, 0.6f);
-                w.playSound(loc, Sound.ENTITY_RAVAGER_ROAR, 0.9f, 0.8f);
-                p.getNearbyEntities(8, 8, 8).forEach(e -> {
-                    if (e instanceof LivingEntity le && e != p) {
-                        le.addPotionEffect(new PotionEffect(PotionEffectType.SLOWNESS, logic.ticks(60, dr), 1));
-                        le.damage(3.0 * dm, p);
-                    }
-                });
-                p.sendTitle("§6§l⚔ WAR CRY!", "§7+Strength II  +Resistance", 5, 50, 10);
             }
+
+            if (progress < 0.4) return; // guard + handle only after partial form
+
+            // Guard — cross perpendicular
+            for (int k = -3; k <= 3; k++) {
+                if (k == 0) continue;
+                Location gp = center.clone().add(
+                    right2.getX()*k*0.2, right2.getY()*k*0.2, right2.getZ()*k*0.2);
+                w.spawnParticle(Particle.DUST, gp, 1, 0,0,0,0, GUARD);
+            }
+            // Guard depth
+            for (int k = -2; k <= 2; k++) {
+                Location gp = center.clone().add(
+                    up.getX()*k*0.15 - fwd.getX()*0.1,
+                    up.getY()*k*0.15 - fwd.getY()*0.1,
+                    up.getZ()*k*0.15 - fwd.getZ()*0.1);
+                w.spawnParticle(Particle.DUST, gp, 1, 0,0,0,0, GUARD);
+            }
+
+            if (progress < 0.7) return;
+
+            // Handle
+            for (int k = 1; k <= 4; k++) {
+                Location hp = center.clone().subtract(
+                    fwd.getX()*k*0.22, fwd.getY()*k*0.22, fwd.getZ()*k*0.22);
+                w.spawnParticle(Particle.DUST, hp, 1, 0,0,0,0, HANDLE);
+            }
+            // Pommel
+            Location pommel = center.clone().subtract(
+                fwd.getX()*1.0, fwd.getY()*1.0, fwd.getZ()*1.0);
+            w.spawnParticle(Particle.DUST, pommel, 2, 0.05,0.05,0.05, 0, GLOW);
+        }
+
+        @Override
+        public void run() {
+            ticks++;
+            wave += 0.08;
+            spin += 0.04;
+
+            if (!p.isOnline() || (!target.isValid() && phase[0] < 2)) {
+                cancel(); return;
+            }
+
+            // ── Player look direction (horizontal) ────────────────────────
+            Vector pFwd   = p.getLocation().getDirection().clone().normalize();
+            Vector pRight = new Vector(-pFwd.getZ(), 0, pFwd.getX()).normalize();
+            Vector pUp    = new Vector(0, 1, 0);
+            Location pLoc = p.getLocation().clone().add(0, 1.0, 0);
+
+            // ── PHASE 0: FORMING (0-60 ticks = 3s) ───────────────────────
+            if (phase[0] == 0) {
+                float prog = ticks / 60f;
+
+                // Sword positions: Left-Low, Left-High, Head
+                double wv = Math.sin(wave) * 0.15 * prog;
+
+                Location sL1 = pLoc.clone()
+                    .add(pRight.clone().multiply(-1.5))
+                    .add(0, -0.3 + wv, 0);
+                Location sL2 = pLoc.clone()
+                    .add(pRight.clone().multiply(-1.5))
+                    .add(0,  0.7 + wv, 0);
+                Location sH  = pLoc.clone().add(0, 1.5 + wv, 0);
+
+                swordLoc[0] = sL1; swordLoc[1] = sL2; swordLoc[2] = sH;
+
+                // Spin during formation
+                double spinAngle = spin * 2;
+                Vector spinFwd = new Vector(
+                    Math.cos(spinAngle)*pFwd.getX() - Math.sin(spinAngle)*pFwd.getZ(),
+                    pFwd.getY(),
+                    Math.sin(spinAngle)*pFwd.getX() + Math.cos(spinAngle)*pFwd.getZ()).normalize();
+
+                drawSword(sL1, spinFwd, pUp, Math.min(1f, prog * 2));
+                drawSword(sL2, spinFwd, pUp, Math.min(1f, prog * 2));
+                drawSword(sH,  spinFwd, pUp, Math.min(1f, prog * 2));
+
+                // Formation sparks
+                if (ticks % 5 == 0) {
+                    for (Location sl : new Location[]{sL1, sL2, sH}) {
+                        w.spawnParticle(Particle.CRIT, sl, 3, 0.3,0.3,0.3, 0.08);
+                        w.spawnParticle(Particle.END_ROD, sl, 1, 0.2,0.2,0.2, 0.02);
+                    }
+                    w.playSound(p.getLocation(), Sound.BLOCK_ANVIL_USE, 0.4f, 1.8f);
+                }
+
+                if (ticks >= 60) {
+                    phase[0] = 1;
+                    w.playSound(p.getLocation(), Sound.ENTITY_WITHER_SHOOT, 1f, 1.2f);
+                    p.sendTitle("\u00a76\u00a7lBLADES READY", "\u00a77Unleashing...", 3, 60, 10);
+                }
+
+            // ── PHASE 1: HOLD (60-140 ticks = 4s) ────────────────────────
+            } else if (phase[0] == 1) {
+                int holdTick = ticks - 60;
+
+                double wv = Math.sin(wave) * 0.25; // gentle wave
+                // Slow spin during hold
+                Vector holdFwd = new Vector(
+                    Math.cos(spin)*pFwd.getX() - Math.sin(spin)*pFwd.getZ(),
+                    pFwd.getY(),
+                    Math.sin(spin)*pFwd.getX() + Math.cos(spin)*pFwd.getZ()).normalize();
+
+                Location sL1 = pLoc.clone().add(pRight.clone().multiply(-1.5)).add(0,-0.3+wv,0);
+                Location sL2 = pLoc.clone().add(pRight.clone().multiply(-1.5)).add(0, 0.7+wv,0);
+                Location sH  = pLoc.clone().add(0, 1.5+wv, 0);
+
+                swordLoc[0] = sL1; swordLoc[1] = sL2; swordLoc[2] = sH;
+
+                drawSword(sL1, holdFwd, pUp, 1.0f);
+                drawSword(sL2, holdFwd, pUp, 1.0f);
+                drawSword(sH,  holdFwd, pUp, 1.0f);
+
+                // Blood drip to ground (movie effect)
+                if (holdTick % 8 == 0) {
+                    for (Location sl : new Location[]{sL1, sL2, sH}) {
+                        w.spawnParticle(Particle.DRIPPING_LAVA,
+                            sl.clone().add(0.0, -0.2, 0.0), 2, 0.15,0,0.15, 0.01);
+                        w.spawnParticle(Particle.FALLING_LAVA,
+                            sl.clone().add(0.0, -0.1, 0.0), 1, 0.1,0,0.1, 0.01);
+                        // Red dust blood
+                        w.spawnParticle(Particle.DUST,
+                            sl.clone().add(0, -0.5, 0), 1, 0.08,0.3,0.08, 0,
+                            new Particle.DustOptions(Color.fromRGB(180,0,0), 1.5f));
+                    }
+                }
+
+                if (holdTick >= 80) {
+                    phase[0] = 2;
+                    w.playSound(p.getLocation(), Sound.ENTITY_RAVAGER_ROAR, 1f, 0.6f);
+                    w.playSound(p.getLocation(), Sound.ENTITY_IRON_GOLEM_ATTACK, 1f, 1.5f);
+                    // Launch sparks
+                    for (Location sl : swordLoc) {
+                        w.spawnParticle(Particle.EXPLOSION, sl, 1, 0.2,0.2,0.2, 0);
+                        w.spawnParticle(Particle.END_ROD, sl, 8, 0.4,0.4,0.4, 0.1);
+                    }
+                }
+
+            // ── PHASE 2: SHOOT + TRACK ────────────────────────────────────
+            } else {
+                // All 3 swords track target — separate sub-tasks already launched
+                // but we do it inline for simplicity
+                boolean anyAlive = false;
+                for (int i = 0; i < 3; i++) {
+                    if (!swordAlive[i]) continue;
+                    anyAlive = true;
+
+                    if (!target.isValid() || target.isDead()) {
+                        swordAlive[i] = false; continue;
+                    }
+
+                    // Move sword toward target — smooth lerp
+                    Location tLoc = target.getLocation().clone().add(0, 0.8, 0);
+                    Location cur  = swordLoc[i].clone();
+                    Vector toTarget = tLoc.toVector().subtract(cur.toVector());
+                    double dist = toTarget.length();
+
+                    // Speed: slightly less than sprint (player sprint ~5.6 b/s, sword ~4.5)
+                    double speed = 0.22; // per tick = ~4.4 b/s
+                    if (dist < 0.5) {
+                        // HIT
+                        swordAlive[i] = false;
+                        // Damage on first hit only (combined)
+                        if (!hit[i]) {
+                            hit[i] = true;
+                            target.damage(16.0 * dm, p); // 8 hearts
+                            w.spawnParticle(Particle.CRIT,
+                                tLoc, 20, 0.5,0.5,0.5, 0.12);
+                            w.spawnParticle(Particle.DUST,
+                                tLoc, 15, 0.4,0.3,0.4, 0,
+                                new Particle.DustOptions(Color.fromRGB(180,0,0), 1.8f));
+                            w.spawnParticle(Particle.EXPLOSION, tLoc, 1, 0,0,0, 0);
+                            w.playSound(tLoc, Sound.ENTITY_PLAYER_HURT,         1f, 0.7f);
+                            w.playSound(tLoc, Sound.ENTITY_IRON_GOLEM_ATTACK,   1f, 0.9f);
+                            w.playSound(tLoc, Sound.ENTITY_RAVAGER_ATTACK,      1f, 0.8f);
+                        }
+                        continue;
+                    }
+
+                    // Move toward target (ignore others)
+                    Vector moveVec = toTarget.normalize().multiply(Math.min(speed, dist));
+                    swordLoc[i] = cur.clone().add(moveVec);
+
+                    // Orient blade toward target
+                    Vector bladeDir = toTarget.clone().normalize();
+                    drawSword(swordLoc[i], bladeDir, pUp, 1.0f);
+
+                    // Trailing trail
+                    w.spawnParticle(Particle.END_ROD,
+                        swordLoc[i], 2, 0.05,0.05,0.05, 0.01);
+                    w.spawnParticle(Particle.DUST,
+                        swordLoc[i].clone().subtract(bladeDir.clone().multiply(0.3)),
+                        2, 0.1,0.1,0.1, 0,
+                        new Particle.DustOptions(Color.fromRGB(220,200,100), 1.4f));
+                    // Handle trail
+                    w.spawnParticle(Particle.CRIT,
+                        swordLoc[i].clone().subtract(bladeDir.clone().multiply(0.8)),
+                        1, 0.05,0.05,0.05, 0.03);
+                }
+
+                if (!anyAlive) { cancel(); return; }
+
+                // Timeout safety (15s max tracking)
+                if (ticks > 440) { cancel(); }
+            }
+        }
+    }.runTaskTimer(plugin, 0, 1);
+}
+
 
             // ── EARTH — Earthquake Wall ────────────────────────────────────
             case EARTH -> {
