@@ -807,16 +807,286 @@ case WIND -> {
                 });
             }
 
-            // ── CRYSTAL — Shield ──────────────────────────────────────────
-            case CRYSTAL -> {
-                p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, logic.ticks(200, dr), 4));
-                logic.crystalAura(p);
-                w.spawnParticle(Particle.END_ROD, loc, 60, 1.2, 1.8, 1.2, 0.06);
-                w.spawnParticle(Particle.DUST, loc, 40, 1.0, 1.5, 1.0, 0, new Particle.DustOptions(Color.fromRGB(100,220,255), 2f));
-                w.playSound(loc, Sound.BLOCK_AMETHYST_CLUSTER_BREAK, 1f, 1.5f);
-                w.playSound(loc, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1f, 1.2f);
-                p.sendTitle("§b§l💎 CRYSTAL SHIELD", "§7Resistance V Active!", 5, 45, 10);
+            // ── CRYSTAL SECONDARY — Magic Circle + Healing Light ─────────────────────────
+// Photo jaisa cyan magic circle ground par, owner center mein
+// Outer ring + inner rings + star + triangles + satellites + spokes
+// Sun/divine light from above — 5s, heals HP + hunger + repairs armor
+// Nobody can enter 3x3 radius, no damage from outside
+case CRYSTAL -> {
+    final Location center = p.getLocation().clone();
+    final boolean[] active = {true};
+
+    w.playSound(center, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 2f, 0.6f);
+    w.playSound(center, Sound.BLOCK_BEACON_ACTIVATE,      1f, 1.2f);
+    w.playSound(center, Sound.ENTITY_PLAYER_LEVELUP,      1f, 0.8f);
+    p.sendTitle("\u00a7b\u00a7lANCIENT SEAL",
+        "\u00a77The circle protects you...", 5, 80, 10);
+
+    // ── Heal + armor repair immediately ───────────────────────────────────
+    p.setHealth(Math.min(p.getMaxHealth(), p.getHealth() + p.getMaxHealth()));
+    p.setFoodLevel(20);
+    p.setSaturation(20f);
+    // Repair armor
+    for (org.bukkit.inventory.ItemStack item : p.getInventory().getArmorContents()) {
+        if (item == null || item.getType().isAir()) continue;
+        if (item.getItemMeta() instanceof org.bukkit.inventory.meta.Damageable d) {
+            d.setDamage(0);
+            item.setItemMeta((org.bukkit.inventory.meta.ItemMeta) d);
+        }
+    }
+    // Resistance + shield
+    p.addPotionEffect(new PotionEffect(PotionEffectType.RESISTANCE, 100, 4, false, false, false));
+
+    new BukkitRunnable() {
+        int    ticks = 0;
+        double spin  = 0;
+
+        // ── Ring draw helper (photo: cyan DUST) ───────────────────────────
+        void ring(double r, int pts, double off) {
+            Particle.DustOptions C1 = new Particle.DustOptions(Color.fromRGB(0,220,230), 1.6f);
+            Particle.DustOptions C2 = new Particle.DustOptions(Color.fromRGB(80,240,255), 1.4f);
+            for (int i = 0; i < pts; i++) {
+                double a = (Math.PI*2/pts)*i + off;
+                Location pt = center.clone().add(Math.cos(a)*r, 0.05, Math.sin(a)*r);
+                w.spawnParticle(Particle.DUST, pt, 1, 0,0,0,0, C1);
+                if (i % 3 == 0)
+                    w.spawnParticle(Particle.DUST, pt, 1, 0.03,0,0.03,0, C2);
             }
+        }
+
+        // ── Line from a to b ──────────────────────────────────────────────
+        void line(Location a, Location b, int steps) {
+            Particle.DustOptions CL = new Particle.DustOptions(Color.fromRGB(0,210,220), 1.4f);
+            for (int i = 0; i <= steps; i++) {
+                double t = i / (double)steps;
+                Location pt = new Location(w,
+                    a.getX() + (b.getX()-a.getX())*t,
+                    0.05 + center.getY(),
+                    a.getZ() + (b.getZ()-a.getZ())*t);
+                w.spawnParticle(Particle.DUST, pt, 1, 0,0,0,0, CL);
+            }
+        }
+
+        // ── Small circle at satellite point ──────────────────────────────
+        void sat(double cx, double cz, double r, int pts, double off, int type) {
+            Particle.DustOptions CS = new Particle.DustOptions(
+                type == 0 ? Color.fromRGB(0,220,230) : Color.fromRGB(100,255,255), 1.3f);
+            for (int i = 0; i < pts; i++) {
+                double a = (Math.PI*2/pts)*i + off;
+                Location pt = center.clone().add(cx + Math.cos(a)*r, 0.05, cz + Math.sin(a)*r);
+                w.spawnParticle(Particle.DUST, pt, 1, 0,0,0,0, CS);
+            }
+        }
+
+        public void run() {
+            ticks++;
+            if (ticks > 100 || !p.isOnline()) { // 5s
+                active[0] = false;
+                // Remove effects
+                w.spawnParticle(Particle.END_ROD, center.clone().add(0,0.1,0),
+                    30, 4,0.1,4, 0.05);
+                w.playSound(center, Sound.BLOCK_AMETHYST_CLUSTER_BREAK, 1f, 1.8f);
+                cancel(); return;
+            }
+
+            spin += 0.018; // slow smooth spin
+
+            // ── Block entities from entering ──────────────────────────────
+            for (org.bukkit.entity.Entity e : w.getNearbyEntities(center, 3.5, 3, 3.5)) {
+                if (e.equals(p)) continue;
+                if (!(e instanceof LivingEntity)) continue;
+                // Push away
+                Vector push = e.getLocation().toVector()
+                    .subtract(center.toVector()).setY(0);
+                if (push.lengthSquared() < 0.01) push = new Vector(1,0,0);
+                e.setVelocity(push.normalize().multiply(0.8).setY(0.1));
+            }
+
+            // ── Continuous heal every 2s ──────────────────────────────────
+            if (ticks % 40 == 0) {
+                p.setHealth(Math.min(p.getMaxHealth(), p.getHealth() + 4));
+                p.setFoodLevel(20);
+            }
+
+            // ══════════════════════════════════════════════════════════════
+            // PHOTO JAISI MAGIC CIRCLE STRUCTURE
+            // All rings flat on ground (y=0.05)
+            // ══════════════════════════════════════════════════════════════
+
+            // Outer ring (biggest) — 2 concentric
+            ring(12.0, 200, spin);
+            ring(11.3, 190, -spin*0.8);
+            ring(10.5, 180,  spin*0.6);
+
+            // Tick marks on outer ring (photo: segments between beads)
+            for (int i = 0; i < 40; i++) {
+                double a = (Math.PI*2/40)*i + spin;
+                double r1 = 10.7, r2 = 11.0;
+                Location p1 = center.clone().add(Math.cos(a)*r1, 0.05, Math.sin(a)*r1);
+                Location p2 = center.clone().add(Math.cos(a)*r2, 0.05, Math.sin(a)*r2);
+                line(p1, p2, 3);
+            }
+            // Bead dots on outer ring
+            for (int i = 0; i < 60; i++) {
+                double a = (Math.PI*2/60)*i - spin;
+                Location bead = center.clone().add(Math.cos(a)*11.6, 0.05, Math.sin(a)*11.6);
+                w.spawnParticle(Particle.END_ROD, bead, 1, 0.01,0,0.01, 0.001);
+            }
+
+            // Mid ring
+            ring(8.5, 140,  spin*1.2);
+            ring(7.8, 128, -spin*1.1);
+
+            // Inner rings
+            ring(5.5, 100,  spin*1.5);
+            ring(4.8,  88, -spin*1.4);
+            ring(4.0,  75,  spin*1.8);
+
+            // Innermost
+            ring(2.5,  55,  spin*2.0);
+            ring(1.8,  40, -spin*2.5);
+            ring(1.0,  25,  spin*3.0);
+
+            // ── 8-pointed star (photo: big star inside mid ring) ──────────
+            int starPts = 8;
+            for (int i = 0; i < starPts; i++) {
+                double a1 = (Math.PI*2/starPts)*i + spin;
+                double a2 = (Math.PI*2/starPts)*((i+2)%starPts) + spin; // skip-2
+                double a3 = (Math.PI*2/starPts)*((i+3)%starPts) + spin; // skip-3
+                Location from = center.clone().add(Math.cos(a1)*7.5, 0.05, Math.sin(a1)*7.5);
+                Location to2  = center.clone().add(Math.cos(a2)*7.5, 0.05, Math.sin(a2)*7.5);
+                Location to3  = center.clone().add(Math.cos(a3)*7.5, 0.05, Math.sin(a3)*7.5);
+                line(from, to2, 20);
+                line(from, to3, 20);
+            }
+
+            // ── Inner triangles (photo: 2 triangles = hexagram inner) ─────
+            for (int tri = 0; tri < 2; tri++) {
+                double triOff = tri == 0 ? spin : -spin + Math.PI/3;
+                for (int i = 0; i < 3; i++) {
+                    double a1 = (Math.PI*2/3)*i + triOff;
+                    double a2 = (Math.PI*2/3)*((i+1)%3) + triOff;
+                    Location from = center.clone().add(Math.cos(a1)*4.5, 0.05, Math.sin(a1)*4.5);
+                    Location to   = center.clone().add(Math.cos(a2)*4.5, 0.05, Math.sin(a2)*4.5);
+                    line(from, to, 14);
+                }
+            }
+
+            // ── Spokes — outer to inner (photo: 8 spokes) ────────────────
+            for (int i = 0; i < 8; i++) {
+                double a = (Math.PI*2/8)*i + spin;
+                Location inner = center.clone().add(Math.cos(a)*2.6, 0.05, Math.sin(a)*2.6);
+                Location outer = center.clone().add(Math.cos(a)*7.6, 0.05, Math.sin(a)*7.6);
+                line(inner, outer, 15);
+            }
+
+            // ── Satellites on outer ring (photo: 4 swirl + 4 snowflake) ──
+            for (int i = 0; i < 8; i++) {
+                double a  = (Math.PI*2/8)*i + spin;
+                double sx = Math.cos(a)*9.0;
+                double sz = Math.sin(a)*9.0;
+
+                if (i % 2 == 0) {
+                    // Swirl satellite (3 concentric rings)
+                    sat(sx, sz, 0.9, 18, -spin*2.5, 0);
+                    sat(sx, sz, 0.55, 12,  spin*3.0, 0);
+                    sat(sx, sz, 0.22,  8,  spin*4.0, 1);
+                    // Center dot
+                    w.spawnParticle(Particle.END_ROD,
+                        center.clone().add(sx, 0.05, sz), 1, 0.02,0,0.02, 0.001);
+                } else {
+                    // Snowflake satellite (6 spokes)
+                    for (int sp = 0; sp < 6; sp++) {
+                        double sa = (Math.PI/3)*sp + spin*2;
+                        Location sc = center.clone().add(sx, 0.05, sz);
+                        for (double r = 0.15; r <= 0.85; r += 0.18) {
+                            Location sp1 = sc.clone().add(Math.cos(sa)*r, 0, Math.sin(sa)*r);
+                            w.spawnParticle(Particle.DUST, sp1, 1, 0,0,0,0,
+                                new Particle.DustOptions(Color.fromRGB(150,240,255), 1.2f));
+                        }
+                        // Branch marks
+                        for (double r = 0.35; r <= 0.65; r += 0.25) {
+                            double ba = sa + Math.PI/6;
+                            Location br = sc.clone().add(Math.cos(sa)*r + Math.cos(ba)*0.2, 0,
+                                                          Math.sin(sa)*r + Math.sin(ba)*0.2);
+                            w.spawnParticle(Particle.DUST, br, 1, 0,0,0,0,
+                                new Particle.DustOptions(Color.fromRGB(150,240,255), 1.1f));
+                        }
+                    }
+                }
+            }
+
+            // ── Connection dots (photo: small circles on star vertices) ───
+            for (int i = 0; i < 8; i++) {
+                double a = (Math.PI*2/8)*i + spin;
+                sat(Math.cos(a)*7.5, Math.sin(a)*7.5, 0.3, 8, -spin*3, 1);
+            }
+            // Inner connection dots
+            for (int i = 0; i < 3; i++) {
+                double a = (Math.PI*2/3)*i + spin;
+                sat(Math.cos(a)*4.5, Math.sin(a)*4.5, 0.25, 7, spin*3, 1);
+            }
+
+            // ── CENTER SNOWFLAKE (photo: large snowflake in center) ───────
+            for (int sp = 0; sp < 12; sp++) {
+                double sa = (Math.PI/6)*sp + spin*1.5;
+                for (double r = 0.1; r <= 1.5; r += 0.15) {
+                    w.spawnParticle(Particle.DUST,
+                        center.clone().add(Math.cos(sa)*r, 0.05, Math.sin(sa)*r),
+                        1, 0,0,0,0,
+                        new Particle.DustOptions(Color.fromRGB(0,220,230), 1.4f));
+                }
+                if (sp % 2 == 0) {
+                    for (double r = 0.5; r <= 1.0; r += 0.45) {
+                        double ba = sa + Math.PI/8;
+                        w.spawnParticle(Particle.DUST,
+                            center.clone().add(
+                                Math.cos(sa)*r + Math.cos(ba)*0.25, 0.05,
+                                Math.sin(sa)*r + Math.sin(ba)*0.25),
+                            1,0,0,0,0,
+                            new Particle.DustOptions(Color.fromRGB(100,240,255), 1.2f));
+                    }
+                }
+            }
+
+            // ── DIVINE LIGHT — sun beam from above ────────────────────────
+            // Column of golden/white light falling on owner
+            if (ticks % 2 == 0) {
+                for (double y = 0.5; y <= 15; y += 0.8) {
+                    double spread = (y / 15.0) * 1.5; // wider at top
+                    double a = Math.random()*Math.PI*2;
+                    double r = Math.random()*spread;
+                    Location lp = center.clone().add(
+                        Math.cos(a)*r, y, Math.sin(a)*r);
+                    // Alternating gold/white
+                    Color lc = (ticks + (int)(y*3)) % 4 < 2
+                        ? Color.fromRGB(255, 240, 120)
+                        : Color.fromRGB(255, 255, 220);
+                    w.spawnParticle(Particle.DUST, lp, 1, 0.05,0,0.05,0,
+                        new Particle.DustOptions(lc, 1.8f));
+                }
+                // Outer light ring at ground — 3x3 radius = 1.5 blocks
+                for (int i = 0; i < 20; i++) {
+                    double a = (Math.PI*2/20)*i + spin*2;
+                    Location lr = center.clone().add(Math.cos(a)*1.5, 0.3, Math.sin(a)*1.5);
+                    w.spawnParticle(Particle.END_ROD, lr, 1, 0.03,0.05,0.03, 0.002);
+                }
+            }
+
+            // Glowing ground under owner
+            if (ticks % 3 == 0) {
+                w.spawnParticle(Particle.END_ROD,
+                    center.clone().add(0, 0.1, 0), 2, 1.5,0.05,1.5, 0.01);
+            }
+
+            // Sound pulse
+            if (ticks % 20 == 0) {
+                w.playSound(center, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.7f, 1.0f + (ticks/100f));
+            }
+        }
+    }.runTaskTimer(plugin, 0, 1);
+}
+
 
             // ── ECHO — Sonar Pulse ────────────────────────────────────────
             case ECHO -> {
