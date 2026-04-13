@@ -13,11 +13,18 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
+import java.util.UUID;
 
 public class PlayerJoinListener implements Listener {
 
     private final AncientEyePlugin plugin;
     private final String guiTitle = "§8Choose Your Path";
+    
+    // Naya Fix: Ye un players ko track karega jo Power choose kar chuke hain
+    // Taaki close event GUI ko galti se dobara na khol de.
+    private final Set<UUID> pendingSpin = new HashSet<>();
 
     public PlayerJoinListener(AncientEyePlugin plugin) {
         this.plugin = plugin;
@@ -37,7 +44,7 @@ public class PlayerJoinListener implements Listener {
             return;
         }
 
-        // Delay added: 5 ticks taaki join process finish ho jaye aur GUI open ho sake
+        // Delay added: 5 ticks
         Bukkit.getScheduler().runTaskLater(plugin, () -> openLifeChoiceGUI(p), 5L);
     }
 
@@ -56,7 +63,6 @@ public class PlayerJoinListener implements Listener {
         powerMeta.setLore(Arrays.asList("§7Get an Ancient Eye", "§7and unlock special powers!"));
         power.setItemMeta(powerMeta);
 
-        // Peaceful Left (Slot 2) aur Power Right (Slot 6) par rakha hai
         gui.setItem(2, peaceful);
         gui.setItem(6, power);
 
@@ -67,20 +73,34 @@ public class PlayerJoinListener implements Listener {
     public void onInventoryClick(InventoryClickEvent e) {
         if (!e.getView().getTitle().equals(guiTitle)) return;
         
+        // 100% Item nikalna block
         e.setCancelled(true);
+        
         if (!(e.getWhoClicked() instanceof Player p)) return;
 
         ItemStack clicked = e.getCurrentItem();
         if (clicked == null || clicked.getType() == Material.AIR) return;
 
         if (clicked.getType() == Material.LILY_OF_THE_VALLEY) {
-            p.closeInventory();
             plugin.getPlayerData().setPeaceful(p);
-            p.sendMessage("§aLol, you chose Peaceful Life. Good luck! 🤞");
-        } else if (clicked.getType() == Material.BLAZE_ROD) {
             p.closeInventory();
-            p.sendMessage("§cYou chose Power Life! The ritual begins...");
-            plugin.getTradeManager().startSmpRitual(p);
+            
+            // Chat message hataya, Screen par Title lagaya
+            p.sendTitle("§a§lPEACEFUL LIFE🤡", "§7lol You chose a normal life 🤞", 10, 60, 10);
+            
+        } else if (clicked.getType() == Material.BLAZE_ROD) {
+            // Player ko pending list mein daal diya taaki GUI wapas na khule
+            pendingSpin.add(p.getUniqueId());
+            p.closeInventory();
+            
+            // Chat message hataya, Screen par Title lagaya
+            p.sendTitle("§c§lPOWER LIFE💀", "§7The ritual begins...", 10, 60, 10);
+            
+            // 3 Seconds (60 Ticks) ka delay, uske baad Spin start!
+            Bukkit.getScheduler().runTaskLater(plugin, () -> {
+                plugin.getTradeManager().startSmpRitual(p);
+                pendingSpin.remove(p.getUniqueId()); // Spin start hone par list se hata diya
+            }, 60L);
         }
     }
 
@@ -89,7 +109,10 @@ public class PlayerJoinListener implements Listener {
         if (!e.getView().getTitle().equals(guiTitle)) return;
         
         if (e.getPlayer() instanceof Player player) {
-            // Agar player ne choose nahi kiya aur band kiya, toh wapas open hoga
+            // MAIN FIX: Agar player Spin start hone ka wait kar raha hai, toh GUI wapas MAT kholo
+            if (pendingSpin.contains(player.getUniqueId())) return;
+
+            // Agar player ne escape dabakar bina kuch choose kiye band kiya, tabhi wapas open hoga
             if (!plugin.getPlayerData().isPeaceful(player) && plugin.getPlayerData().getEye(player) == EyeType.NONE) {
                 Bukkit.getScheduler().runTaskLater(plugin, () -> openLifeChoiceGUI(player), 5L);
             }
