@@ -1115,22 +1115,150 @@ case RAGE -> {
     }.runTaskTimer(plugin, 0L, 1L);
 }
 
-            // ── WARRIOR — Charge ──────────────────────────────────────────
-            case WARRIOR -> {
-                p.setVelocity(dir.clone().multiply(3.0).setY(0.3));
-                w.spawnParticle(Particle.CRIT, loc, 60, 0.5, 0.8, 0.5, 0.12);
-                w.spawnParticle(Particle.FLAME, loc, 30, 0.4, 0.6, 0.4, 0.08);
-                w.playSound(loc, Sound.ENTITY_RAVAGER_ROAR, 1f, 1.0f);
-                Bukkit.getScheduler().runTaskLater(plugin, () -> {
-                    p.getNearbyEntities(3, 3, 3).forEach(e -> {
-                        if (e instanceof LivingEntity le && e != p) {
-                            Vector vel = dir.clone().multiply(2.5).setY(0.5);
-                            le.damage(6.0 * dm, p);
-                            Bukkit.getScheduler().runTaskLater(plugin, () -> { if (e.isValid()) e.setVelocity(vel); }, 1L);
-                        }
-                    });
-                }, 8L);
+    // ── WARRIOR PRIMARY — Ravager Mount ───────────────────────────────────────────
+// Shift+Q → Ravager summon + owner rides simultaneously
+// Owner steers with aim, Ravager attacks enemies, 10s then remove
+case WARRIOR -> {
+    // ── Spawn Ravager at player location ─────────────────────────────────
+    org.bukkit.entity.Ravager ravager =
+        (org.bukkit.entity.Ravager) w.spawnEntity(loc, org.bukkit.entity.EntityType.RAVAGER);
+
+    // Setup Ravager
+    ravager.setCustomName("\u00a74\u00a7lWar Beast");
+    ravager.setCustomNameVisible(false);
+    ravager.setInvulnerable(true);    // players can't kill it
+    ravager.setRemoveWhenFarAway(false);
+    ravager.setAware(false);          // we control it manually
+    ravager.setTarget(null);
+
+    // ── Owner rides immediately ───────────────────────────────────────────
+    ravager.addPassenger(p);
+
+    // Sounds + effects
+    w.playSound(loc, Sound.ENTITY_RAVAGER_ROAR,     2f, 0.7f);
+    w.playSound(loc, Sound.ENTITY_RAVAGER_CELEBRATE, 1f, 0.5f);
+    w.spawnParticle(Particle.EXPLOSION_EMITTER, loc, 2, 0.5,0,0.5, 0);
+    w.spawnParticle(Particle.DUST, loc, 40, 1.5,0.5,1.5, 0,
+        new Particle.DustOptions(Color.fromRGB(180,50,0), 2.5f));
+    p.sendTitle("\u00a74\u00a7lWAR BEAST", "\u00a77Ride and destroy!", 5, 40, 10);
+
+    final boolean[] removed = {false};
+
+    // ── Main control task ─────────────────────────────────────────────────
+    new BukkitRunnable() {
+        int ticks = 0;
+
+        public void run() {
+            ticks++;
+
+            // ── Cleanup conditions ────────────────────────────────────────
+            if (removed[0] || !ravager.isValid() || !p.isOnline()) {
+                doRemove(); cancel(); return;
             }
+            // 10s = 200 ticks
+            if (ticks >= 200) {
+                doRemove(); cancel(); return;
+            }
+            // Player dismounted manually
+            if (!ravager.getPassengers().contains(p)) {
+                doRemove(); cancel(); return;
+            }
+
+            // ── Steer Ravager based on player aim ─────────────────────────
+            Vector lookDir = p.getLocation().getDirection().clone();
+            lookDir.setY(0).normalize();
+            double speed = 0.45;
+
+            // Set velocity in look direction
+            ravager.setVelocity(lookDir.clone().multiply(speed).setY(-0.1));
+
+            // Face ravager in look direction
+            Location ravLoc = ravager.getLocation();
+            float yaw = p.getLocation().getYaw();
+            ravLoc.setYaw(yaw);
+            ravager.teleport(ravLoc);
+
+            // ── Attack nearby enemies (ravager charges into them) ─────────
+            if (ticks % 8 == 0) {
+                for (org.bukkit.entity.Entity e :
+                        ravager.getNearbyEntities(2.5, 2.5, 2.5)) {
+                    if (!(e instanceof LivingEntity le)) continue;
+                    if (e.equals(p)) continue;
+                    if (e.equals(ravager)) continue;
+                    if (e instanceof Player ep &&
+                        (ep.getGameMode()==GameMode.CREATIVE||ep.getGameMode()==GameMode.SPECTATOR)) continue;
+
+                    le.damage(4.0 * dm, p);
+                    // Knockback in look direction
+                    Vector knock = lookDir.clone().multiply(2.5).setY(0.6);
+                    Bukkit.getScheduler().runTaskLater(plugin,
+                        () -> { if (e.isValid()) e.setVelocity(knock); }, 1L);
+
+                    // Hit effect
+                    w.spawnParticle(Particle.CRIT,
+                        le.getLocation().add(0,1,0), 10, 0.3,0.3,0.3, 0.1);
+                    w.playSound(le.getLocation(),
+                        Sound.ENTITY_RAVAGER_ATTACK, 0.8f, 0.9f);
+                }
+            }
+
+            // ── Ambient particles + hooves ────────────────────────────────
+            if (ticks % 3 == 0) {
+                w.spawnParticle(Particle.DUST,
+                    ravager.getLocation().add(0, 0.2, 0),
+                    5, 0.8,0.1,0.8, 0,
+                    new Particle.DustOptions(Color.fromRGB(180,50,0), 1.5f));
+            }
+            if (ticks % 10 == 0) {
+                w.spawnParticle(Particle.LARGE_SMOKE,
+                    ravager.getLocation().add(0,0.1,0), 3, 0.5,0.1,0.5, 0.02);
+            }
+
+            // Ravager roar every 3s
+            if (ticks % 60 == 0) {
+                w.playSound(ravager.getLocation(),
+                    Sound.ENTITY_RAVAGER_AMBIENT, 1f, 0.8f);
+            }
+
+            // Countdown action bar
+            int secLeft = (200 - ticks) / 20;
+            p.sendActionBar("\u00a74\u00a7lWAR BEAST \u00a7f\u258f\u00a77 " + secLeft + "s");
+        }
+
+        void doRemove() {
+            if (removed[0]) return;
+            removed[0] = true;
+
+            // Dismount safely — put player on ground
+            if (ravager.isValid()) {
+                ravager.eject();
+                Location safeLoc = ravager.getLocation().clone();
+                // Find solid ground
+                while (!safeLoc.getBlock().getType().isSolid() && safeLoc.getY() > 0) {
+                    safeLoc.subtract(0, 0.5, 0);
+                }
+                safeLoc.add(0, 1, 0);
+                if (p.isOnline()) {
+                    p.teleport(safeLoc);
+                    p.setFallDistance(0f);
+                }
+
+                // Remove ravager with effect
+                w.spawnParticle(Particle.LARGE_SMOKE,
+                    ravager.getLocation().add(0,1,0), 20, 1,1,1, 0.05);
+                w.spawnParticle(Particle.EXPLOSION_EMITTER,
+                    ravager.getLocation(), 1, 0,0,0, 0);
+                w.playSound(ravager.getLocation(),
+                    Sound.ENTITY_RAVAGER_DEATH, 1f, 0.8f);
+                ravager.remove();
+            }
+            if (p.isOnline()) {
+                p.sendActionBar("");
+                p.sendTitle("", "\u00a77War Beast faded.", 5, 30, 10);
+            }
+        }
+    }.runTaskTimer(plugin, 0, 1);
+}
 
 // ── OCEAN — Tsunami Wave with Water Flood ─────────────────────
 case OCEAN -> {
