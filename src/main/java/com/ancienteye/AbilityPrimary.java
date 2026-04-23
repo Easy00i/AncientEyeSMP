@@ -222,7 +222,7 @@ public class AbilityPrimary implements Listener {
                 w.playSound(loc, Sound.ENTITY_PLAYER_HURT_FREEZE, 1f, 1.5f);
                 w.playSound(loc, Sound.BLOCK_GLASS_BREAK, 0.8f, 1.8f);
                 w.playSound(loc, Sound.ENTITY_ELDER_GUARDIAN_CURSE, 0.5f, 1.8f);
-                p.sendTitle("\u00a7b\u00a7lICE SHIELD", "\u00a77Protected for 5 seconds!", 5, 60, 10);
+                p.sendMessage("\u00a7b\u00a7lICE SHIELD", "\u00a77Protected for 5 seconds!", 5, 60, 10);
                 final boolean[] shieldActive = {true};
                 final org.bukkit.event.Listener shieldListener = new org.bukkit.event.Listener() {
                     @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST)
@@ -357,7 +357,7 @@ case TITAN -> {
 
     p.setMetadata("TitanMode", new org.bukkit.metadata.FixedMetadataValue(plugin, true));
 
-    p.sendTitle("§6§lTITAN FORM", "§eYou are Unstoppable!", 5, 40, 5);
+    p.sendMessage("§6§lTITAN FORM", "§eYou are Unstoppable!", 5, 40, 5);
 
     new BukkitRunnable() {
         int ticks = 0;
@@ -492,7 +492,7 @@ case WIND -> {
     final Location eagleBase = loc.clone().subtract(fwd.clone().multiply(2));
     eagleBase.setY(loc.getY());
 
-    p.sendTitle("\u00a7f\u00a7lWIND EAGLE", "\u00a77Ancient guardian rises...", 5, 50, 10);
+    p.sendMessage("\u00a7f\u00a7lWIND EAGLE", "\u00a77Ancient guardian rises...", 5, 50, 10);
     w.playSound(eagleBase, Sound.ENTITY_PHANTOM_FLAP,        1.5f, 0.25f);
     w.playSound(eagleBase, Sound.ENTITY_ENDER_DRAGON_FLAP,   1f,   0.4f);
     w.playSound(eagleBase, Sound.ENTITY_PHANTOM_AMBIENT,     1f,   0.3f);
@@ -821,7 +821,7 @@ case CRYSTAL -> {
     w.playSound(center, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 2f, 0.6f);
     w.playSound(center, Sound.BLOCK_BEACON_ACTIVATE,      1f, 1.2f);
     w.playSound(center, Sound.ENTITY_PLAYER_LEVELUP,      1f, 0.8f);
-    p.sendTitle("\u00a7b\u00a7lANCIENT SEAL",
+    p.sendMessage("\u00a7b\u00a7lANCIENT SEAL",
         "\u00a77The circle protects you...", 5, 80, 10);
 
     // ── Heal + armor repair immediately ───────────────────────────────────
@@ -1114,7 +1114,7 @@ case CRYSTAL -> {
                     Bukkit.getScheduler().runTaskLater(plugin, () -> { if (le.isValid()) le.setGlowing(false); }, logic.ticks(140, dr));
                     if (le instanceof Player ep) p.sendActionBar("§3🔍 §fRevealed: §b" + ep.getName());
                 });
-                p.sendTitle("§3§lSONAR PULSE", "§7All enemies revealed!", 5, 50, 10);
+                p.sendMessage("§3§lSONAR PULSE", "§7All enemies revealed!", 5, 50, 10);
             }
 
             // ── RAGE — Rage Mode ──────────────────────────────────────────
@@ -1130,7 +1130,7 @@ case CRYSTAL -> {
                 }
                 w.playSound(loc, Sound.ENTITY_RAVAGER_ROAR, 1f, 0.8f);
                 w.playSound(loc, Sound.ENTITY_WITHER_HURT, 0.7f, 1.2f);
-                p.sendTitle("§c§l⚡ RAGE MODE!", "§7+Haste III  +Strength  +Speed", 5, 50, 10);
+                p.sendMessage("§c§l⚡ RAGE MODE!", "§7+Haste III  +Strength  +Speed", 5, 50, 10);
             }
 
             // ── SPIRIT — Heal ─────────────────────────────────────────────
@@ -1146,7 +1146,7 @@ case CRYSTAL -> {
                 }
                 w.playSound(loc, Sound.ENTITY_WITCH_CELEBRATE, 1f, 1.3f);
                 w.playSound(loc, Sound.BLOCK_BEACON_AMBIENT, 1f, 1.5f);
-                p.sendTitle("§a§l✦ SPIRIT HEAL", "§7Health Restored!", 5, 45, 10);
+                p.sendMessage("§a§l✦ SPIRIT HEAL", "§7Health Restored!", 5, 45, 10);
             }
 
             // ── TIME — Time Slow ──────────────────────────────────────────
@@ -1169,7 +1169,7 @@ case CRYSTAL -> {
                         w.spawnParticle(Particle.REVERSE_PORTAL, le.getLocation(), 20, 0.3, 0.6, 0.3, 0.06);
                     }
                 });
-                p.sendTitle("§d§lTIME SLOW", "§7Enemies frozen in time!", 5, 100, 10);
+                p.sendMessage("§d§lTIME SLOW", "§7Enemies frozen in time!", 5, 100, 10);
             }
 
             // ── WARRIOR SECONDARY — Spirit Swords ─────────────────────────────────────────
@@ -1184,7 +1184,7 @@ case WARRIOR -> {
     }
     final LivingEntity target = locked;
 
-    p.sendTitle("\u00a76\u00a7lSWORD SUMMON", "\u00a77Blades forming...", 5, 40, 10);
+    p.sendMessage("\u00a76\u00a7lSWORD SUMMON", "\u00a77Blades forming...", 5, 40, 10);
     w.playSound(loc, Sound.BLOCK_ANVIL_LAND,         1f, 1.5f);
     w.playSound(loc, Sound.ENTITY_IRON_GOLEM_ATTACK, 1f, 0.5f);
 
@@ -1591,7 +1591,7 @@ case MIRAGE -> {
     w.playSound(p.getLocation(), Sound.ENTITY_ILLUSIONER_PREPARE_MIRROR, 1.5f, 0.7f);
     w.playSound(p.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1f, 0.5f);
     w.playSound(base, Sound.ENTITY_ENDER_DRAGON_GROWL, 1f, 0.6f);
-    p.sendTitle("\u00a7c\u00a7lMIRAGE", "\u00a77Ancient circle summoned...", 5, 50, 10);
+    p.sendMessage("\u00a7c\u00a7lMIRAGE", "\u00a77Ancient circle summoned...", 5, 50, 10);
 
     java.util.List<org.bukkit.entity.FallingBlock> floatingBlocks = new java.util.ArrayList<>();
     for (int fx = -3; fx <= 3; fx++) {
@@ -1840,7 +1840,7 @@ case ECLIPSE -> {
 
     w.playSound(center, Sound.ENTITY_WITHER_AMBIENT,        1f, 0.3f);
     w.playSound(center, Sound.ENTITY_ENDER_DRAGON_GROWL,    1f, 0.5f);
-    p.sendTitle("\u00a75\u00a7lECLIPSE", "\u00a78Darkness descends...", 5, 60, 10);
+    p.sendMessage("\u00a75\u00a7lECLIPSE", "\u00a78Darkness descends...", 5, 60, 10);
 
     new BukkitRunnable() {
         int    ticks = 0;
@@ -2019,7 +2019,7 @@ case GUARDIAN -> {
     p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED,       logic.ticks(100, dr), 1, false, false, true));
     p.playSound(p.getLocation(), Sound.ENTITY_ELDER_GUARDIAN_CURSE, 1.5f, 0.6f);
     p.playSound(p.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1.2f, 0.8f);
-    p.sendTitle("§b§l🌀 GUARDIAN RING", "§7The heavens are watching...", 5, 40, 10);
+    p.sendMessage("§b§l🌀 GUARDIAN RING", "§7The heavens are watching...", 5, 40, 10);
 
     // Store meteor entity for cleanup
     final org.bukkit.entity.ItemDisplay[] meteorEntity = {null};
