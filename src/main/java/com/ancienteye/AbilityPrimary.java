@@ -1537,37 +1537,241 @@ case WARRIOR -> {
                 }, 200L);
             }
 
-            // ── METEOR PRIMARY — Launch ────────────────────────────────────
-            case METEOR -> {
-                double dmg = logic.ecfg("METEOR", "primary-damage", 15.0);
-                p.setVelocity(p.getLocation().getDirection().multiply(1.8).setY(1.5));
-                w.playSound(p.getLocation(), Sound.ENTITY_ENDER_DRAGON_FLAP, 1.5f, 0.5f);
-                new BukkitRunnable() {
-                    public void run() {
-                        if (!p.isOnline() || p.isDead()) { cancel(); return; }
-                        p.setFallDistance(0.0f);
-                        w.spawnParticle(Particle.FLAME, p.getLocation(), 20, 0.5, 0.5, 0.5, 0.05);
-                        w.spawnParticle(Particle.CAMPFIRE_COSY_SMOKE, p.getLocation(), 10, 0.3, 0.3, 0.3, 0.02);
-                        if (p.getVelocity().getY() < -0.1 && p.isOnGround()) {
-                            w.playSound(p.getLocation(), Sound.ENTITY_GENERIC_EXPLODE, 3f, 0.5f);
-                            w.spawnParticle(Particle.EXPLOSION_EMITTER, p.getLocation(), 4);
-                            w.spawnParticle(Particle.LAVA, p.getLocation(), 80, 3, 1, 3, 0.5);
-                            for (int i = 0; i < 360; i+=10) {
-                                Location circle = p.getLocation().add(Math.cos(Math.toRadians(i))*4, 0.2, Math.sin(Math.toRadians(i))*4);
-                                w.spawnParticle(Particle.FLAME, circle, 2, 0, 0, 0, 0.2);
-                            }
-                            logic.applySafeDamage(p, p.getLocation(), 7.0, dmg);
-                            p.getLocation().getWorld().getNearbyEntities(p.getLocation(), 7, 7, 7).forEach(e -> {
-                                if (e instanceof LivingEntity le && e != p) {
-                                    Vector push = le.getLocation().toVector().subtract(p.getLocation().toVector()).normalize();
-                                    le.setVelocity(push.multiply(2.5).setY(1.2));
-                                }
-                            });
-                            cancel();
+            // ── GRAVITY PRIMARY — Black Hole ─────────────────────────────────────────────
+// 5 blocks above owner — 10H x 12W black hole
+// Photo jaisa: yellow/orange/red accretion disk + black center
+// Pulls blocks + entities, 8s, owner safe, no glitch
+case METEOR -> {
+    // Black hole center — 5 blocks above owner
+    final Location bhCenter = loc.clone().add(0, 5, 0);
+    final boolean[] done    = {false};
+
+    w.playSound(loc, Sound.BLOCK_BEACON_ACTIVATE,   1f, 0.3f);
+    w.playSound(loc, Sound.ENTITY_ENDERMAN_SCREAM,  1f, 0.4f);
+    w.playSound(loc, Sound.ENTITY_WITHER_AMBIENT,   1f, 0.3f);
+    w.playSound(loc, Sound.BLOCK_PORTAL_AMBIENT,    2f, 0.2f);
+    p.sendMessage("\u00a78\u00a7lBLACK HOLE", "\u00a77Gravity singularity!", 5, 50, 10);
+
+    // Store pulled blocks to restore later
+    final java.util.List<org.bukkit.entity.FallingBlock> fallingBlocks
+        = new java.util.ArrayList<>();
+
+    new BukkitRunnable() {
+        int    ticks = 0;
+        double spin  = 0;
+
+        // ── Accretion disk ring ───────────────────────────────────────────
+        // tilt: disk is tilted like photo (not flat horizontal)
+        void diskRing(double radius, int pts, double off, Color col, float size, double tiltY, double tiltZ) {
+            Particle.DustOptions d = new Particle.DustOptions(col, size);
+            for (int i=0; i<pts; i++) {
+                double a = (Math.PI*2/pts)*i + off;
+                // Tilted disk: XZ plane tilted by tiltY
+                double x = Math.cos(a) * radius;
+                double z = Math.sin(a) * radius;
+                double y = Math.sin(a) * radius * tiltY;
+                Location pt = bhCenter.clone().add(x, y, z * tiltZ);
+                w.spawnParticle(Particle.DUST, pt, 1, 0,0,0,0, d);
+            }
+        }
+
+        // ── Radial streak (like photo bright bands) ───────────────────────
+        void streak(double angle, double innerR, double outerR, Color col) {
+            Particle.DustOptions d = new Particle.DustOptions(col, 1.8f);
+            for (double r=innerR; r<=outerR; r+=0.3) {
+                double x = Math.cos(angle)*r;
+                double y = Math.sin(angle)*r * 0.5;
+                double z = Math.sin(angle)*r;
+                Location pt = bhCenter.clone().add(x, y, z);
+                w.spawnParticle(Particle.DUST, pt, 1, 0,0,0,0, d);
+                w.spawnParticle(Particle.END_ROD, pt, 1, 0.02,0.02,0.02,0.001);
+            }
+        }
+
+        @Override
+        public void run() {
+            ticks++;
+            spin += 0.06; // fast spin
+
+            if (!p.isOnline() || done[0]) {
+                cleanup(); cancel(); return;
+            }
+            if (ticks >= 160) { // 8s
+                done[0] = true;
+                cleanup(); cancel(); return;
+            }
+
+            // ════════════════════════════════════════════════════════════
+            // BLACK HOLE VISUAL — photo jaisa
+            // ════════════════════════════════════════════════════════════
+
+            // ── DARK CENTER — black sphere (void) ────────────────────────
+            // Photo: dark semicircle in center
+            // Simulate with SQUID_INK + black DUST at center
+            for (int i=0; i<20; i++) {
+                double a  = Math.random()*Math.PI*2;
+                double r  = Math.random()*3.5;
+                double ay = Math.random()*Math.PI;
+                double x  = Math.sin(ay)*Math.cos(a)*r;
+                double y  = Math.cos(ay)*r*0.65;
+                double z  = Math.sin(ay)*Math.sin(a)*r;
+                w.spawnParticle(Particle.SQUID_INK,
+                    bhCenter.clone().add(x,y,z), 1, 0.1,0.1,0.1, 0.01);
+            }
+
+            // ── PHOTON RING (inner glow) — bright white/yellow ────────────
+            // Tight ring just outside event horizon
+            diskRing(4.0, 120, spin,        Color.fromRGB(255,255,200), 1.5f, 0.35, 0.7);
+            diskRing(4.3, 110, -spin*0.9,   Color.fromRGB(255,240,100), 1.4f, 0.35, 0.7);
+            diskRing(3.7,  90,  spin*1.1,   Color.fromRGB(255,250,230), 1.6f, 0.35, 0.7);
+
+            // ── INNER ACCRETION DISK — yellow/orange hot gas ─────────────
+            diskRing(5.0, 140, -spin*0.8,   Color.fromRGB(255,200,0),   1.5f, 0.40, 0.65);
+            diskRing(5.5, 130,  spin*0.7,   Color.fromRGB(255,160,0),   1.4f, 0.42, 0.63);
+            diskRing(6.0, 120, -spin*0.65,  Color.fromRGB(255,120,0),   1.3f, 0.43, 0.62);
+            diskRing(6.5, 110,  spin*0.6,   Color.fromRGB(220,80,0),    1.3f, 0.44, 0.61);
+
+            // ── OUTER ACCRETION DISK — orange/red cooler gas ─────────────
+            diskRing(7.2, 100, -spin*0.5,   Color.fromRGB(200,50,0),    1.3f, 0.45, 0.60);
+            diskRing(7.9,  90,  spin*0.45,  Color.fromRGB(180,30,0),    1.2f, 0.46, 0.59);
+            diskRing(8.6,  80, -spin*0.4,   Color.fromRGB(160,20,0),    1.2f, 0.47, 0.58);
+
+            // ── BRIGHT DIAGONAL STREAK (photo: bright yellow-white band) ─
+            // Diagonal across the disk — most prominent visual
+            double streakA = spin * 0.3;
+            streak(streakA,           3.5,  9.0, Color.fromRGB(255,240,150));
+            streak(streakA + Math.PI, 3.5,  9.0, Color.fromRGB(255,200,80));
+            streak(streakA + 0.15,    4.0,  8.0, Color.fromRGB(255,255,200));
+            streak(streakA - 0.15,    4.0,  8.0, Color.fromRGB(255,180,60));
+
+            // ── GRAVITATIONAL LENSING — bent light curves ─────────────────
+            for (int lane=0; lane<6; lane++) {
+                double laneOff = (Math.PI/3)*lane + spin*0.25;
+                for (double r=4.5; r<=10.0; r+=0.5) {
+                    double bend = (1.0/(r*r)) * 8.0; // bends more near center
+                    double a    = laneOff + bend;
+                    double x    = Math.cos(a)*r;
+                    double y    = Math.sin(a)*r*0.4;
+                    double z    = Math.sin(a)*r*0.7;
+                    Color lc = r < 6
+                        ? Color.fromRGB(255,200,50)
+                        : r < 8
+                            ? Color.fromRGB(200,80,20)
+                            : Color.fromRGB(150,30,10);
+                    w.spawnParticle(Particle.DUST,
+                        bhCenter.clone().add(x,y,z), 1,0,0,0,0,
+                        new Particle.DustOptions(lc, 1.3f));
+                }
+            }
+
+            // ── Spark ejecta (photo: red dots thrown out) ─────────────────
+            if (ticks%2==0) {
+                double ea = Math.random()*Math.PI*2;
+                double er = 6.0 + Math.random()*5.0;
+                double ey = (Math.random()-0.5)*2.0;
+                w.spawnParticle(Particle.DUST,
+                    bhCenter.clone().add(Math.cos(ea)*er, ey, Math.sin(ea)*er),
+                    1,0,0,0,0,
+                    new Particle.DustOptions(Color.fromRGB(200,60,20),1.2f));
+            }
+
+            // ════════════════════════════════════════════════════════════
+            // GRAVITY PULL — entities
+            // ════════════════════════════════════════════════════════════
+            if (ticks%2==0) {
+                for (org.bukkit.entity.Entity e :
+                        w.getNearbyEntities(bhCenter, 18, 12, 18)) {
+                    if (e.equals(p)) continue; // owner safe
+                    if (!(e instanceof LivingEntity||e instanceof org.bukkit.entity.Item)) continue;
+                    if (e instanceof Player ep &&
+                        (ep.getGameMode()==GameMode.CREATIVE||ep.getGameMode()==GameMode.SPECTATOR)) continue;
+
+                    Vector toCenter = bhCenter.toVector()
+                        .subtract(e.getLocation().toVector());
+                    double dist = toCenter.length();
+                    if (dist < 1.0) continue;
+
+                    // Pull strength: stronger when closer
+                    double strength = Math.min(1.8, 12.0/(dist*dist));
+                    Vector pull = toCenter.normalize().multiply(strength);
+                    e.setVelocity(e.getVelocity().add(pull));
+
+                    // Damage if very close
+                    if (dist < 5.0 && e instanceof LivingEntity le && ticks%10==0) {
+                        le.damage(3.0 * dm, p);
+                    }
+                }
+            }
+
+            // ════════════════════════════════════════════════════════════
+            // BLOCK PULL — nearby blocks sucked in as FallingBlocks
+            // ════════════════════════════════════════════════════════════
+            if (ticks%15==0 && ticks < 120) {
+                for (int fx=-8; fx<=8; fx++) {
+                    for (int fy=-6; fy<=6; fy++) {
+                        for (int fz=-8; fz<=8; fz++) {
+                            Location bLoc = bhCenter.clone().add(fx,fy,fz);
+                            org.bukkit.block.Block blk = bLoc.getBlock();
+                            if (!blk.getType().isSolid()) continue;
+                            if (blk.getType()==org.bukkit.Material.BEDROCK) continue;
+                            // Only pull if within 8 blocks and random chance
+                            if (Math.random()>0.08) continue;
+
+                            org.bukkit.Material mat = blk.getType();
+                            blk.setType(org.bukkit.Material.AIR);
+                            org.bukkit.entity.FallingBlock fb = w.spawnFallingBlock(
+                                blk.getLocation().clone().add(0.5,0.5,0.5),
+                                mat.createBlockData());
+                            fb.setDropItem(false);
+                            fb.setHurtEntities(false);
+                            fallingBlocks.add(fb);
+
+                            Vector toCenter = bhCenter.toVector()
+                                .subtract(fb.getLocation().toVector())
+                                .normalize().multiply(0.8);
+                            fb.setVelocity(toCenter);
                         }
                     }
-                }.runTaskTimer(plugin, 5, 1);
+                }
             }
+
+            // Keep FallingBlocks moving toward center
+            if (ticks%3==0) {
+                fallingBlocks.removeIf(fb -> !fb.isValid());
+                for (org.bukkit.entity.FallingBlock fb : fallingBlocks) {
+                    if (!fb.isValid()) continue;
+                    Vector toCenter = bhCenter.toVector()
+                        .subtract(fb.getLocation().toVector());
+                    if (toCenter.length() < 1.5) { fb.remove(); continue; }
+                    fb.setVelocity(fb.getVelocity().add(
+                        toCenter.normalize().multiply(0.25)));
+                }
+            }
+
+            // Ambient sound
+            if (ticks%20==0) {
+                w.playSound(bhCenter, Sound.BLOCK_PORTAL_AMBIENT, 1f, 0.3f);
+            }
+            if (ticks%40==0) {
+                w.playSound(bhCenter, Sound.ENTITY_ENDERMAN_AMBIENT, 0.8f, 0.2f);
+            }
+        }
+
+        void cleanup() {
+            // Remove all falling blocks
+            for (org.bukkit.entity.FallingBlock fb : fallingBlocks)
+                if (fb.isValid()) fb.remove();
+            fallingBlocks.clear();
+
+            // Final collapse effect
+            w.spawnParticle(Particle.EXPLOSION_EMITTER, bhCenter, 3, 1,1,1, 0);
+            w.spawnParticle(Particle.REVERSE_PORTAL, bhCenter, 80, 3,3,3, 0.2);
+            w.playSound(bhCenter, Sound.ENTITY_WITHER_DEATH,     1f, 0.4f);
+            w.playSound(bhCenter, Sound.ENTITY_GENERIC_EXPLODE,  1f, 0.3f);
+        }
+    }.runTaskTimer(plugin, 0, 1);
+}
+
 // MIRAGE PRIMARY — Photo jaisa: UPAR bada ring, neeche chota
 // Laser center se upar tak, rings upar se neeche stack
 case MIRAGE -> {
