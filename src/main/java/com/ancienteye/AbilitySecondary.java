@@ -1543,7 +1543,7 @@ Bukkit.getScheduler().runTaskLater(plugin, () -> {
                         w.spawnParticle(Particle.TOTEM_OF_UNDYING, le.getLocation(), 25, 0.4, 0.7, 0.4, 0.05);
                     }
                 });
-                p.sendMessage("§6§l⚡TITAN SHOCKWAVE §7The ground shatters!);
+                p.sendMessage("§6§l⚡TITAN SHOCKWAVE"!);
             }
 
 // ── METEOR SECONDARY — 4 Pillar Trap (Thin, Black, 4 blocks away) ─────────
