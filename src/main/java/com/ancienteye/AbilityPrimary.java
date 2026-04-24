@@ -222,7 +222,6 @@ public class AbilityPrimary implements Listener {
                 w.playSound(loc, Sound.ENTITY_PLAYER_HURT_FREEZE, 1f, 1.5f);
                 w.playSound(loc, Sound.BLOCK_GLASS_BREAK, 0.8f, 1.8f);
                 w.playSound(loc, Sound.ENTITY_ELDER_GUARDIAN_CURSE, 0.5f, 1.8f);
-                p.sendMessage("p.sendMessage("§b§lICE SHIELD §7- Protected for 5 seconds!");
                 final boolean[] shieldActive = {true};
                 final org.bukkit.event.Listener shieldListener = new org.bukkit.event.Listener() {
                     @org.bukkit.event.EventHandler(priority = org.bukkit.event.EventPriority.HIGHEST)
@@ -357,7 +356,7 @@ case TITAN -> {
 
     p.setMetadata("TitanMode", new org.bukkit.metadata.FixedMetadataValue(plugin, true));
 
-    p.sendMessage("§6§lTITAN FORM", "§eYou are Unstoppable!");
+    p.sendMessage("§6§lTITAN FORM §eYou are Unstoppable!");
 
     new BukkitRunnable() {
         int ticks = 0;
@@ -821,7 +820,6 @@ case CRYSTAL -> {
     w.playSound(center, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 2f, 0.6f);
     w.playSound(center, Sound.BLOCK_BEACON_ACTIVATE,      1f, 1.2f);
     w.playSound(center, Sound.ENTITY_PLAYER_LEVELUP,      1f, 0.8f);
-    p.sendMessage("§cANCIENT SEAL §9- The circle protects you");
 
     // ── Heal + armor repair immediately ───────────────────────────────────
     p.setHealth(Math.min(p.getMaxHealth(), p.getHealth() + p.getMaxHealth()));
@@ -1183,7 +1181,7 @@ case WARRIOR -> {
     }
     final LivingEntity target = locked;
 
-    p.sendMessage("\u00a76\u00a7lSWORD SUMMON \u00a77Blades forming");
+    p.sendMessage("\u00a76SWORD SUMMON \u00aBlades forming");
     w.playSound(loc, Sound.BLOCK_ANVIL_LAND,         1f, 1.5f);
     w.playSound(loc, Sound.ENTITY_IRON_GOLEM_ATTACK, 1f, 0.5f);
 
@@ -1333,7 +1331,6 @@ case WARRIOR -> {
                 if (ticks >= 60) {
                     phase[0] = 1;
                     w.playSound(p.getLocation(), Sound.ENTITY_WITHER_SHOOT, 1f, 1.2f);
-                    p.sendMessage("\u00a76\u00a7lBLADES READY \u00a77Unleashing");
                 }
 
             // ── PHASE 1: HOLD (60-140 ticks = 4s) ────────────────────────
@@ -1549,7 +1546,7 @@ case METEOR -> {
     w.playSound(loc, Sound.ENTITY_ENDERMAN_SCREAM,  1f, 0.4f);
     w.playSound(loc, Sound.ENTITY_WITHER_AMBIENT,   1f, 0.3f);
     w.playSound(loc, Sound.BLOCK_PORTAL_AMBIENT,    2f, 0.2f);
-    p.sendMessage("\u00a78\u00a7lBLACK HOLE \u00a77Gravity singularity!");
+    p.sendMessage("\u00a78BLACK HOLE Gravity singularity!");
 
     // Store pulled blocks to restore later
     final java.util.List<org.bukkit.entity.FallingBlock> fallingBlocks
@@ -1794,7 +1791,6 @@ case MIRAGE -> {
     w.playSound(p.getLocation(), Sound.ENTITY_ILLUSIONER_PREPARE_MIRROR, 1.5f, 0.7f);
     w.playSound(p.getLocation(), Sound.BLOCK_BEACON_ACTIVATE, 1f, 0.5f);
     w.playSound(base, Sound.ENTITY_ENDER_DRAGON_GROWL, 1f, 0.6f);
-    p.sendMessage("\u00a7c\u00a7lMIRAGE \u00a77Ancient circle summoned");
 
     java.util.List<org.bukkit.entity.FallingBlock> floatingBlocks = new java.util.ArrayList<>();
     for (int fx = -3; fx <= 3; fx++) {
@@ -2043,7 +2039,6 @@ case ECLIPSE -> {
 
     w.playSound(center, Sound.ENTITY_WITHER_AMBIENT,        1f, 0.3f);
     w.playSound(center, Sound.ENTITY_ENDER_DRAGON_GROWL,    1f, 0.5f);
-    p.sendMessage("\u00a75\u00a7lECLIPSE \u00a78Darkness descends!");
 
     new BukkitRunnable() {
         int    ticks = 0;
