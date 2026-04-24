@@ -1027,7 +1027,6 @@ case RAGE -> {
 
     // Cooldown Check (2 baar se zyada nahi)
     if (counts >= 2) {
-        p.sendMessage("\u00aTime Dash on Cooldown!");
         w.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 0.5f);
         return;
     }
