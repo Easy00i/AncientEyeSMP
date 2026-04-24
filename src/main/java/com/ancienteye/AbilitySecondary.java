@@ -129,7 +129,7 @@ public class AbilitySecondary implements Listener {
                         Bukkit.getScheduler().runTaskLater(plugin, () -> { if (t.isOnline()) t.setGlowing(false); }, logic.ticks(160, dr));
                     }
                 });
-                p.sendMessage("§b§lPHANTOM REVEAL", "§7All invisible players exposed!", 5, 50, 10);
+                p.sendMessage("§b§lPHANTOM REVEAL §7All invisible players exposed!");
             }
 
             // ── STORM — Electric Ring ─────────────────────────────────────
@@ -271,7 +271,6 @@ public class AbilitySecondary implements Listener {
                 w.spawnParticle(Particle.DUST, loc, 60, 0.4, 0.9, 0.4, 0, new Particle.DustOptions(Color.BLACK, 2f));
                 w.spawnParticle(Particle.PORTAL, loc, 40, 0.3, 0.7, 0.3, 0.07);
                 w.playSound(loc, Sound.ENTITY_ENDERMAN_STARE, 0.6f, 1.3f);
-                p.sendMessage("\u00a78\u00a7lSHADOW CLOAK", "\u00a77You vanish into darkness...", 5, 50, 10);
                 org.bukkit.inventory.PlayerInventory inv = p.getInventory();
                 final ItemStack h = inv.getHelmet()     != null ? inv.getHelmet().clone()     : null;
                 final ItemStack c = inv.getChestplate() != null ? inv.getChestplate().clone() : null;
@@ -289,7 +288,6 @@ public class AbilitySecondary implements Listener {
                     logic.restoreOrDrop(p, oh, () -> i2.setItemInOffHand(oh), i2.getItemInOffHand());
                     w.spawnParticle(Particle.SMOKE, p.getLocation(), 60, 0.5, 1, 0.5, 0.08);
                     w.playSound(p.getLocation(), Sound.ENTITY_ENDERMAN_TELEPORT, 0.8f, 0.8f);
-                    p.sendTitle("\u00a77Shadow Cloak", "\u00a78Faded...", 5, 30, 10);
                 }, logic.ticks(200, dr));
             }
 
@@ -309,7 +307,7 @@ public class AbilitySecondary implements Listener {
                 }
                 w.playSound(loc, Sound.ENTITY_IRON_GOLEM_ATTACK, 1f, 0.6f);
                 w.playSound(loc, Sound.ENTITY_RAVAGER_ROAR, 0.8f, 0.8f);
-                p.sendMessage("§6§l💪 TITAN STRENGTH!", "§7+Strength III active!", 5, 45, 10);
+                p.sendMessage("§6§l💪 TITAN STRENGTH! §7+Strength III active!");
             }
 
             // ── HUNTER — Mark Target ──────────────────────────────────────
@@ -558,7 +556,6 @@ case CRYSTAL -> {
 
     w.playSound(loc, Sound.BLOCK_AMETHYST_BLOCK_CHIME, 1f, 1.2f);
     w.playSound(loc, Sound.ENTITY_ILLUSIONER_CAST_SPELL, 1f, 0.8f);
-    p.sendMessage("\u00a7b\u00a7lCRYSTAL RAIN", "\u00a77Incoming!", 5, 40, 10);
 
     // FIX: Drop all 8 crystals evenly over 100 ticks (5s)
     // Crystal 1 at tick 0, 2 at tick 12, 3 at tick 24 ... 8 at tick 84
@@ -884,7 +881,7 @@ case RAGE -> {
                     ownerSeated[0] = true;
                     unseated = 0;
                     summonGuards.run();
-                    p.sendMessage("\u00a74\u00a7lDEMON THRONE","\u00a77Power flows...",5,40,10);
+                    p.sendMessage("\u00a74\u00a7lDEMON THRONE \u00a77Power flows");
                     w.playSound(seatLoc, Sound.ENTITY_WITHER_AMBIENT, 1f, 0.4f);
                 }
                 unseated = 0;
@@ -1031,7 +1028,7 @@ case RAGE -> {
 
     // Cooldown Check (2 baar se zyada nahi)
     if (counts >= 2) {
-        p.sendMessage("", "\u00a7c\u00a7lTime Dash on Cooldown!", 0, 20, 10);
+        p.sendMessage("\u00a7c\u00a7lTime Dash on Cooldown!");
         w.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 0.5f);
         return;
     }
@@ -1140,7 +1137,6 @@ case WARRIOR -> {
     w.spawnParticle(Particle.EXPLOSION_EMITTER, loc, 2, 0.5,0,0.5, 0);
     w.spawnParticle(Particle.DUST, loc, 40, 1.5,0.5,1.5, 0,
         new Particle.DustOptions(Color.fromRGB(180,50,0), 2.5f));
-    p.sendMessage("\u00a74\u00a7lWAR BEAST", "\u00a77Ride and destroy!", 5, 40, 10);
 
     final boolean[] removed = {false};
 
@@ -1217,7 +1213,7 @@ case WARRIOR -> {
             }
             if (p.isOnline()) {
                 p.sendActionBar("");
-                p.sendMessage("", "\u00a77War Beast faded.", 5, 30, 10);
+                p.sendMessage("\u00a77War Beast faded.");
             }
         }
     }.runTaskTimer(plugin, 0, 1);
@@ -1229,7 +1225,7 @@ case OCEAN -> {
     // Custom effects
     w.playSound(p.getLocation(), Sound.ENTITY_ELDER_GUARDIAN_CURSE, 2f, 0.5f);
     w.playSound(p.getLocation(), Sound.ITEM_BUCKET_EMPTY_FISH, 2f, 0.8f);
-    p.sendMessage("§3§l🌊 TSUNAMI", "§bThe ocean rises!", 5, 60, 10);
+    p.sendMessage("§3§l🌊 TSUNAMI §bThe ocean rises!");
 
     // Aim direction (horizontal only)
     Vector direction = p.getEyeLocation().getDirection().clone();
@@ -1547,7 +1543,7 @@ Bukkit.getScheduler().runTaskLater(plugin, () -> {
                         w.spawnParticle(Particle.TOTEM_OF_UNDYING, le.getLocation(), 25, 0.4, 0.7, 0.4, 0.05);
                     }
                 });
-                p.sendMessage("§6§l⚡ TITAN SHOCKWAVE!", "§7The ground shatters!", 5, 70, 15);
+                p.sendMessage("§6§l⚡TITAN SHOCKWAVE §7The ground shatters!);
             }
 
 // ── METEOR SECONDARY — 4 Pillar Trap (Thin, Black, 4 blocks away) ─────────
@@ -1582,7 +1578,7 @@ case METEOR -> {
     // ── Sound + announcement ─────────────────────────────────────────────
     w.playSound(p.getLocation(), Sound.ENTITY_WITHER_SHOOT, 1f, 0.4f);
     w.playSound(center, Sound.ENTITY_ENDER_DRAGON_GROWL, 1f, 0.6f);
-    p.sendMessage("\u00a76\u00a7lPILLAR TRAP", "\u00a77Rising...", 5, 40, 10);
+    p.sendMessage("\u00a76\u00a7lPILLAR TRAP \u00a77Rising");
 
     // ── Pillar block storage ──────────────────────────────────────────────
     final java.util.List<org.bukkit.block.Block> pillarBlocks = new java.util.ArrayList<>();
