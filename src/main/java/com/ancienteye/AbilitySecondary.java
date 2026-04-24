@@ -329,7 +329,7 @@ public class AbilitySecondary implements Listener {
                     w.playSound(loc, Sound.ENTITY_PLAYER_ATTACK_CRIT, 1f, 1.2f);
                     tgt.setMetadata("hunterMarked", new org.bukkit.metadata.FixedMetadataValue(plugin, p.getUniqueId().toString()));
                     tgt.setGlowing(true);
-                    p.sendMessage("§c§lMARKED!", "§7Target takes extra damage!", 5, 50, 10);
+                    p.sendMessage("§c§lMARKED §7Target takes extra damage!");
                     new BukkitRunnable() {
                         int    ticks = 0;
                         double angle = 0;
@@ -960,7 +960,6 @@ case RAGE -> {
                 p.addPotionEffect(new PotionEffect(PotionEffectType.SPEED,      logic.ticks(80,  dr), 1));
                 w.playSound(loc, Sound.ENTITY_ENDERMAN_TELEPORT, 0.9f, 1.4f);
                 w.playSound(loc, Sound.ENTITY_ILLUSIONER_CAST_SPELL, 0.8f, 1.2f);
-                p.sendMessage("\u00a77\u00a7lSPIRIT FORM", "\u00a78Blocks rising...", 5, 60, 10);
                 int[][] offsets = {{0,0,2},{0,0,-2},{2,0,0},{-2,0,0}};
                 for (int[] off : offsets) {
                     Location sideLoc = loc.clone().add(off[0], 0, off[2]);
@@ -1028,7 +1027,7 @@ case RAGE -> {
 
     // Cooldown Check (2 baar se zyada nahi)
     if (counts >= 2) {
-        p.sendMessage("\u00a7c\u00a7lTime Dash on Cooldown!");
+        p.sendMessage("\u00aTime Dash on Cooldown!");
         w.playSound(p.getLocation(), Sound.BLOCK_NOTE_BLOCK_BASS, 1f, 0.5f);
         return;
     }
