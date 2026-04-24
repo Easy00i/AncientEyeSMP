@@ -1111,7 +1111,7 @@ case CRYSTAL -> {
                     Bukkit.getScheduler().runTaskLater(plugin, () -> { if (le.isValid()) le.setGlowing(false); }, logic.ticks(140, dr));
                     if (le instanceof Player ep) p.sendActionBar("§3🔍 §fRevealed: §b" + ep.getName());
                 });
-                p.sendMessage("§3§lSONAR PULSE" §7 - All enemies revealed!");
+
             }
 
             // ── RAGE — Rage Mode ──────────────────────────────────────────
