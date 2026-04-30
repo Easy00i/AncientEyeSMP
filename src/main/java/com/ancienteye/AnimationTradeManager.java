@@ -408,7 +408,7 @@ public class AnimationTradeManager {
         for (int i = 0; i < 16; i++) {
             double a  = angle*2.0 + Math.toRadians(i*(360.0/16));
             Location pt = body.clone().add(Math.cos(a)*0.7, 0.1, Math.sin(a)*0.7);
-            w.spawnParticle(Particle.SMOKE_NORMAL, pt, 1, 0, 0, 0, 0.01);
+            w.spawnParticle(Particle.SMOKE, pt, 1, 0, 0, 0, 0.01);
         }
         // Crown
         for (int i = 0; i < 10; i++) {
