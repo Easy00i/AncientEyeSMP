@@ -341,8 +341,9 @@ public void run() {
     }
 
     ticks++;
- }
-}.runTaskTimer(plugin, 5, 1);
+   }
+  }.runTaskTimer(plugin, 5, 1);
+}
             
     // ── PURPLE BEAM — accurate braided wire ──────────────────────────────────
     private void drawPurpleBeam(Location a, Location b, double angle,
