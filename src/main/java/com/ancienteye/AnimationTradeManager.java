@@ -244,12 +244,11 @@ public class AnimationTradeManager {
         freezePlayer(sender);
         freezePlayer(receiver);
 
-        // Lift 3 blocks
-        sender.addPotionEffect(new PotionEffect(
-                PotionEffectType.LEVITATION, 30, 2, false, false, false));
-        receiver.addPotionEffect(new PotionEffect(
-                PotionEffectType.LEVITATION, 30, 2, false, false, false));
-
+        Bukkit.getScheduler().runTaskLater(plugin, () -> {
+    if (sender.isOnline()) { sender.setGravity(false); sender.teleport(sStartLoc.clone().add(0, 3.0, 0)); }
+    if (receiver.isOnline()) { receiver.setGravity(false); receiver.teleport(rStartLoc.clone().add(0, 3.0, 0)); }
+      }, 2L);
+        
         // Announcement
         for (Player online : Bukkit.getOnlinePlayers()) {
             online.sendMessage("§8§m================================");
@@ -279,86 +278,70 @@ public class AnimationTradeManager {
             double cubeAngle = 0;
 
             @Override
-            public void run() {    
-             try { 
-                // DISCONNECT CHECK — full reset
-                if (!sender.isOnline() || !receiver.isOnline()) {
-                    cleanupTrade(sender, receiver, sStartLoc, rStartLoc);
-                    this.cancel();
-                    return;
-                }
+public void run() {
 
-                angle     += 0.08;
-                cubeAngle += 0.04;
-
-              // Isko wahan paste karo jahan ticks badh rahe hain
-        
-              // FIX: har 5 ticks freeze maintain
-              if (ticks % 5 == 0) {
-                  try {
-                      sender.setGravity(false);
-                      receiver.setGravity(false);
-                      sender.setFallDistance(0f);
-                      receiver.setFallDistance(0f);
-                  } catch (Exception ignored) {}
-              }
-                 
-
-                Location sHover = sStartLoc.clone().add(0, 3.0, 0);
-                Location rHover = rStartLoc.clone().add(0, 3.0, 0);
-                Location sBody  = sHover.clone().subtract(0, 1.0, 0);
-                Location rBody  = rHover.clone().subtract(0, 1.0, 0);
-
-                // 1. PURPLE BEAM — wire connecting 2 players
-                drawPurpleBeam(sHover, rHover, angle, purpleDust);
-
-                // 2. BLACK AURA — legs to head, orbiting
-                spawnBlackAura(sender,   sBody,  angle,  blackDust);
-                spawnBlackAura(receiver, rBody, -angle,  blackDust);
-
-                // 3. RED MAGIC CUBE — accurate rotating cube
-                spawnRotatingCube(sBody, cubeAngle,           redDust);
-                spawnRotatingCube(rBody, cubeAngle + Math.PI, redDust);
-
-                // 4. EYE COLOR AURA
-                spawnEyeAura(sender,   sBody,  angle * 1.5,  new Particle.DustOptions(sColor, 1.0f));
-                spawnEyeAura(receiver, rBody, -angle * 1.5,  new Particle.DustOptions(rColor, 1.0f));
-
-                // 5. SOUNDS
-                if (ticks % 15 == 0) {
-                    float pitch = 0.5f + (ticks / 200f) * 1.5f;
-                    sender.playSound(sender.getLocation(),     Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.7f, pitch);
-                    receiver.playSound(receiver.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.7f, pitch);
-                }
-                if (ticks % 40 == 0) {
-                    sender.playSound(sender.getLocation(),     Sound.ENTITY_ENDERMAN_AMBIENT, 0.5f, 0.4f);
-                    receiver.playSound(receiver.getLocation(), Sound.ENTITY_ENDERMAN_AMBIENT, 0.5f, 0.4f);
-                }
-
-                // 6. COUNTDOWN TITLE
-                if (ticks % 20 == 0) {
-                    int secLeft = (200 - ticks) / 20;
-                    String sub = secLeft > 0 ? "§e" + secLeft + "s remaining..." : "§a§lNow!";
-                    sender.sendTitle("§5§l⬡ EYE TRADE ⬡",   sub, 0, 25, 0);
-                    receiver.sendTitle("§5§l⬡ EYE TRADE ⬡", sub, 0, 25, 0);
-                }
-
-                // 7. 200 TICKS = 10 SECONDS — SWAP
-                if (ticks >= 200) {
-                    this.cancel();
-                    performSwap(sender, receiver, sEye, rEye, sStartLoc, rStartLoc);
-                    return;
-                }
-
-                ticks++;
-               } catch (Exception e) {
-             plugin.getLogger().warning("[Trade] ignored: " + e.getMessage());
-             // trade chalata rahega
-           }
-        }
-       }.runTaskTimer(plugin, 5, 1);
+    // DISCONNECT CHECK
+    if (!sender.isOnline() || !receiver.isOnline()) {
+        cleanupTrade(sender, receiver, sStartLoc, rStartLoc);
+        this.cancel();
+        return;
     }
 
+    angle     += 0.08;
+    cubeAngle += 0.04;
+
+    // SWAP CHECK — try ke BAHAR hai
+    if (ticks >= 200) {
+        this.cancel();
+        performSwap(sender, receiver, sEye, rEye, sStartLoc, rStartLoc);
+        return;
+    }
+
+    // Gravity lock
+    if (ticks % 5 == 0) {
+        sender.setGravity(false);
+        receiver.setGravity(false);
+        sender.setFallDistance(0f);
+        receiver.setFallDistance(0f);
+    }
+
+    // Sirf particles/sounds try ke andar
+    try {
+        Location sHover = sStartLoc.clone().add(0, 3.0, 0);
+        Location rHover = rStartLoc.clone().add(0, 3.0, 0);
+        Location sBody  = sHover.clone().subtract(0, 1.0, 0);
+        Location rBody  = rHover.clone().subtract(0, 1.0, 0);
+
+        drawPurpleBeam(sHover, rHover, angle, purpleDust);
+        spawnBlackAura(sender,   sBody,  angle,  blackDust);
+        spawnBlackAura(receiver, rBody, -angle,  blackDust);
+        spawnRotatingCube(sBody, cubeAngle,           redDust);
+        spawnRotatingCube(rBody, cubeAngle + Math.PI, redDust);
+        spawnEyeAura(sender,   sBody,  angle * 1.5,  new Particle.DustOptions(sColor, 1.0f));
+        spawnEyeAura(receiver, rBody, -angle * 1.5,  new Particle.DustOptions(rColor, 1.0f));
+
+        if (ticks % 15 == 0) {
+            float pitch = 0.5f + (ticks / 200f) * 1.5f;
+            sender.playSound(sender.getLocation(),     Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.7f, pitch);
+            receiver.playSound(receiver.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME, 0.7f, pitch);
+        }
+        if (ticks % 40 == 0) {
+            sender.playSound(sender.getLocation(),     Sound.ENTITY_ENDERMAN_AMBIENT, 0.5f, 0.4f);
+            receiver.playSound(receiver.getLocation(), Sound.ENTITY_ENDERMAN_AMBIENT, 0.5f, 0.4f);
+        }
+        if (ticks % 20 == 0) {
+            int secLeft = (200 - ticks) / 20;
+            String sub = secLeft > 0 ? "§e" + secLeft + "s remaining..." : "§a§lNow!";
+            sender.sendTitle("§5§l⬡ EYE TRADE ⬡",   sub, 0, 25, 0);
+            receiver.sendTitle("§5§l⬡ EYE TRADE ⬡", sub, 0, 25, 0);
+        }
+
+    } catch (Exception e) {
+        plugin.getLogger().warning("[Trade] particle error: " + e.getMessage());
+    }
+
+    ticks++;
+}
     // ── PURPLE BEAM — accurate braided wire ──────────────────────────────────
     private void drawPurpleBeam(Location a, Location b, double angle,
                                 Particle.DustOptions purpleDust) {
@@ -548,8 +531,10 @@ public class AnimationTradeManager {
             pl.playSound(pl.getLocation(), Sound.UI_TOAST_CHALLENGE_COMPLETE, 1f, 1.0f);
             pl.playSound(pl.getLocation(), Sound.BLOCK_AMETHYST_BLOCK_CHIME,  1f, 1.5f);
             pl.playSound(pl.getLocation(), Sound.ENTITY_ENDER_DRAGON_GROWL,   0.5f, 1.6f);
-            pl.sendTitle("§5§l✨ TRADE COMPLETE!",
-                    "§fYour Eye: §e§l" + plugin.getPlayerData().getEye(pl).name(),
+            // NAYI LINE:
+                   EyeType newEye = plugin.getPlayerData().getEye(pl);
+                     pl.sendTitle("§5§l✨ TRADE COMPLETE!",
+                "§fYour Eye: §e§l" + (newEye != null ? newEye.name() : "Unknown"),
                     10, 100, 20);
         }
 
