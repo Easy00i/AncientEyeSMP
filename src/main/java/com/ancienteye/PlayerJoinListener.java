@@ -45,7 +45,7 @@ public class PlayerJoinListener implements Listener {
         }
 
         // Delay added: 5 ticks
-        Bukkit.getScheduler().runTaskLater(plugin, () -> openLifeChoiceGUI(p), 1200L);
+        Bukkit.getScheduler().runTaskLater(plugin, () -> openLifeChoiceGUI(p), 5L);
     }
 
     public void openLifeChoiceGUI(Player p) {
