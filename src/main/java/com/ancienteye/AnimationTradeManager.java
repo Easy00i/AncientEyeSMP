@@ -309,8 +309,8 @@ public void run() {
     try {
         Location sHover = sStartLoc.clone().add(0, 3.0, 0);
         Location rHover = rStartLoc.clone().add(0, 3.0, 0);
-        Location sBody  = sHover.clone().subtract(0, 1.0, 0);
-        Location rBody  = rHover.clone().subtract(0, 1.0, 0);
+        Location sBody  = sHover.clone().add(0, 0.9, 0);
+        Location rBody  = rHover.clone().add(0, 0.9, 0);
 
         drawPurpleBeam(sHover, rHover, angle, purpleDust);
         spawnBlackAura(sender,   sBody,  angle,  blackDust);
