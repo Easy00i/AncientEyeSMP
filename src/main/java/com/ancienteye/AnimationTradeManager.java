@@ -345,7 +345,7 @@ public void run() {
   }.runTaskTimer(plugin, 5, 1);
 }
             
-    // ── PURPLE BEAM — accurate braided wire ──────────────────────────────────
+        // ── PURPLE BEAM — accurate braided wire ──────────────────────────────────
     private void drawPurpleBeam(Location a, Location b, double angle,
                                 Particle.DustOptions purpleDust) {
         World  w     = a.getWorld();
@@ -363,15 +363,15 @@ public void run() {
         for (int i = 0; i <= steps; i++) {
             double t    = (double) i / steps;
             Location main = a.clone().add(dx*t, dy*t, dz*t);
-            w.spawnParticle(Particle.DUST, main, 1, 0, 0, 0, purpleDust);
-            if (i % 3 == 0) w.spawnParticle(Particle.END_ROD, main, 1, 0, 0, 0, 0);
+            w.spawnParticle(Particle.DUST, main, 1, 0.0, 0.0, 0.0, 0.0, purpleDust);
+            if (i % 3 == 0) w.spawnParticle(Particle.END_ROD, main, 1, 0.0, 0.0, 0.0, 0.0);
 
             double waveAmp = 0.10;
             double wave    = angle + t * Math.PI * 4;
             double ox = perp1.getX()*Math.cos(wave)*waveAmp + perp2.getX()*Math.sin(wave)*waveAmp;
             double oy = perp1.getY()*Math.cos(wave)*waveAmp + perp2.getY()*Math.sin(wave)*waveAmp;
             double oz = perp1.getZ()*Math.cos(wave)*waveAmp + perp2.getZ()*Math.sin(wave)*waveAmp;
-            w.spawnParticle(Particle.DRAGON_BREATH, main.clone().add(ox,oy,oz), 1, 0,0,0,0);
+            w.spawnParticle(Particle.DRAGON_BREATH, main.clone().add(ox,oy,oz), 1, 0.0, 0.0, 0.0, 0.0);
         }
     }
 
@@ -387,20 +387,20 @@ public void run() {
                 double radius = 0.55 - yFrac * 0.15;
                 Location pt   = body.clone().add(
                         Math.cos(helixA)*radius, yFrac*2.0 - 0.9, Math.sin(helixA)*radius);
-                w.spawnParticle(Particle.DUST, pt, 1, 0, 0, 0, blackDust);
+                w.spawnParticle(Particle.DUST, pt, 1, 0.0, 0.0, 0.0, 0.0, blackDust);
             }
         }
         // Mid ring
         for (int i = 0; i < 16; i++) {
             double a  = angle*2.0 + Math.toRadians(i*(360.0/16));
             Location pt = body.clone().add(Math.cos(a)*0.7, 0.1, Math.sin(a)*0.7);
-            w.spawnParticle(Particle.SMOKE, pt, 1, 0, 0, 0, 0.01);
+            w.spawnParticle(Particle.SMOKE, pt, 1, 0.0, 0.0, 0.0, 0.01);
         }
         // Crown
         for (int i = 0; i < 10; i++) {
             double a  = -angle*2.5 + Math.toRadians(i*(360.0/10));
             Location pt = body.clone().add(Math.cos(a)*0.4, 1.7, Math.sin(a)*0.4);
-            w.spawnParticle(Particle.DUST, pt, 1, 0, 0, 0, blackDust);
+            w.spawnParticle(Particle.DUST, pt, 1, 0.0, 0.0, 0.0, 0.0, blackDust);
         }
     }
 
@@ -438,8 +438,8 @@ public void run() {
                         va[0]+(vb[0]-va[0])*t,
                         va[1]+(vb[1]-va[1])*t - r,
                         va[2]+(vb[2]-va[2])*t);
-                w.spawnParticle(Particle.DUST, pt, 1, 0, 0, 0, redDust);
-                if (k%3==0) w.spawnParticle(Particle.CRIT, pt, 1, 0.02, 0.02, 0.02, 0);
+                w.spawnParticle(Particle.DUST, pt, 1, 0.0, 0.0, 0.0, 0.0, redDust);
+                if (k%3==0) w.spawnParticle(Particle.CRIT, pt, 1, 0.02, 0.02, 0.02, 0.0);
             }
         }
     }
@@ -452,9 +452,10 @@ public void run() {
             double a    = angle + Math.toRadians(i*(360.0/20));
             double pulsR = 0.85 + Math.sin(angle*3+i)*0.1;
             Location pt = body.clone().add(Math.cos(a)*pulsR, 0.5, Math.sin(a)*pulsR);
-            w.spawnParticle(Particle.DUST, pt, 1, 0, 0, 0, dust);
+            w.spawnParticle(Particle.DUST, pt, 1, 0.0, 0.0, 0.0, 0.0, dust);
         }
     }
+
 
     // ── FREEZE ────────────────────────────────────────────────────────────────
     private void freezePlayer(Player p) {
