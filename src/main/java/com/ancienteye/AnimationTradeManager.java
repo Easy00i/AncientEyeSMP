@@ -307,18 +307,20 @@ public void run() {
 
     // Sirf particles/sounds try ke andar
     try {
-        Location sHover = sStartLoc.clone().add(0, 3.0, 0);
-        Location rHover = rStartLoc.clone().add(0, 3.0, 0);
-        Location sBody  = sHover.clone().add(0, 0.9, 0);
-        Location rBody  = rHover.clone().add(0, 0.9, 0);
-
-        drawPurpleBeam(sHover, rHover, angle, purpleDust);
-        spawnBlackAura(sender,   sBody,  angle,  blackDust);
-        spawnBlackAura(receiver, rBody, -angle,  blackDust);
-        spawnRotatingCube(sBody, cubeAngle,           redDust);
-        spawnRotatingCube(rBody, cubeAngle + Math.PI, redDust);
-        spawnEyeAura(sender,   sBody,  angle * 1.5,  new Particle.DustOptions(sColor, 1.0f));
-        spawnEyeAura(receiver, rBody, -angle * 1.5,  new Particle.DustOptions(rColor, 1.0f));
+            World sWorld = sender.getWorld();
+            World rWorld = receiver.getWorld();
+            Location sHover = sender.getLocation().clone();
+            Location rHover = receiver.getLocation().clone();
+            Location sBody  = sHover.clone().add(0, 0.9, 0);
+            Location rBody  = rHover.clone().add(0, 0.9, 0);
+        
+drawPurpleBeam(sWorld, sHover, rHover, angle, purpleDust);
+    spawnBlackAura(sWorld, sBody,  angle,  blackDust);
+     spawnBlackAura(rWorld, rBody, -angle,  blackDust);
+       spawnRotatingCube(sWorld, sBody, cubeAngle,           redDust);
+        spawnRotatingCube(rWorld, rBody, cubeAngle + Math.PI, redDust);
+        spawnEyeAura(sWorld, sBody,  angle * 1.5,  new Particle.DustOptions(sColor, 1.0f));
+          spawnEyeAura(rWorld, rBody, -angle * 1.5,  new Particle.DustOptions(rColor, 1.0f));
 
         if (ticks % 15 == 0) {
             float pitch = 0.5f + (ticks / 200f) * 1.5f;
@@ -346,9 +348,8 @@ public void run() {
 }
             
         // ── PURPLE BEAM — accurate braided wire ──────────────────────────────────
-    private void drawPurpleBeam(Location a, Location b, double angle,
-                                Particle.DustOptions purpleDust) {
-        World  w     = a.getWorld();
+    private void drawPurpleBeam(World w, Location a, Location b, double angle,
+                            Particle.DustOptions purpleDust) {
         int    steps = 30;
         double dx    = b.getX() - a.getX();
         double dy    = b.getY() - a.getY();
@@ -376,9 +377,9 @@ public void run() {
     }
 
     // ── BLACK AURA — triple helix, legs to head ───────────────────────────────
-    private void spawnBlackAura(Player p, Location body, double angle,
-                                Particle.DustOptions blackDust) {
-        World w = p.getWorld();
+    private void spawnBlackAura(World w, Location body, double angle,
+                            Particle.DustOptions blackDust) {
+        
         for (int helix = 0; helix < 3; helix++) {
             double hOff = helix * (Math.PI * 2.0 / 3.0);
             for (int y = 0; y <= 20; y++) {
@@ -405,9 +406,8 @@ public void run() {
     }
 
     // ── RED MAGIC CUBE — 8 vertices, 12 edges, rotating ─────────────────────
-    private void spawnRotatingCube(Location center, double cubeAngle,
-                                   Particle.DustOptions redDust) {
-        World  w   = center.getWorld();
+private void spawnRotatingCube(World w, Location center, double cubeAngle,
+                               Particle.DustOptions redDust) {
         double r   = 1.1;
         int    pts = 8;
         double[][] verts = {
@@ -445,9 +445,9 @@ public void run() {
     }
 
     // ── EYE COLOR AURA ────────────────────────────────────────────────────────
-    private void spawnEyeAura(Player p, Location body, double angle,
-                              Particle.DustOptions dust) {
-        World w = p.getWorld();
+    private void spawnEyeAura(World w, Location body, double angle,
+                          Particle.DustOptions dust) {
+        
         for (int i = 0; i < 20; i++) {
             double a    = angle + Math.toRadians(i*(360.0/20));
             double pulsR = 0.85 + Math.sin(angle*3+i)*0.1;
